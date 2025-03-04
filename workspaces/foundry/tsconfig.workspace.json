@@ -1,0 +1,17 @@
+// File generated automatically, use npm run ws:update to update
+{
+    "extends": "../builder/tsconfig.workspace.json",
+    "compilerOptions": {
+        "outDir": "./lib",
+        "rootDir": "./src",
+        "composite": true
+    },
+    "include": [
+        "src"
+    ],
+    "exclude": [
+        "test",
+        "lib"
+    ],
+    "references": []
+}
