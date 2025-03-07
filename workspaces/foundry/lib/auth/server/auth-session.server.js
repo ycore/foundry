@@ -1,7 +1,7 @@
 import { createWorkersKVSessionStorage } from '@react-router/cloudflare';
 import { contextEnv, isDev, isProduction } from '../../common/services/env.js';
 import { emailOptions, sendMail } from '../../email/services/email.server.js';
-import { resolveAuthConfig } from '../config/resolve-config.js';
+import { getAuthConfig } from '../config/auth-config.js';
 import { authRepository } from '../server/auth-repository.server.js';
 import { authTOTP } from './auth-verify.server.js';
 import { resolveAuthenticator } from './authenticator.server.js';
@@ -11,16 +11,16 @@ import { resolveAuthenticator } from './authenticator.server.js';
 //   return (context: AppLoadContext, request: Request) => (lazySessionInstance ??= sessionStorageFactory(context, request));
 // })();
 export const resolveSessionStorage = (() => {
-    let lazySessionInstancePromise;
+    let lazySessionInstance;
     return async (context, request) => {
-        if (!lazySessionInstancePromise) {
-            lazySessionInstancePromise = Promise.resolve(sessionStorageFactory(context, request));
+        if (!lazySessionInstance) {
+            lazySessionInstance = Promise.resolve(sessionStorageFactory(context, request));
         }
-        return await lazySessionInstancePromise;
+        return await lazySessionInstance;
     };
 })();
 export async function sessionStorageFactory(context, request) {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
     if (!contextEnv(context).ADMIN_KV) {
         throw new Error('Missing KV storage configuration');
     }
@@ -62,13 +62,13 @@ export const AuthSession = {
         return email === sessionUser?.email;
     },
     sendVerification: async (context, request, userEmail) => {
-        const authConfig = await resolveAuthConfig();
+        const authConfig = await getAuthConfig();
         const code = await authTOTP.create(userEmail, context);
         const linkRef = { action: 'validate', code, email: userEmail };
         const verifyLink = await authTOTP.link(authConfig.routes.auth.confirm, linkRef, context, request);
         if (authConfig.email.send) {
             const message = await authMailTemplate(context, code, verifyLink);
-            const options = await emailOptions(isDev(context) ? authConfig.email.DEV_TO : userEmail, context);
+            const options = await emailOptions(authConfig.DEV?.email_to ?? userEmail, context);
             await sendMail.mailersend({ message, options });
         }
     },

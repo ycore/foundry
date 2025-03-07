@@ -1,3 +1,4 @@
+import type { KVNamespace } from '@cloudflare/workers-types';
 import type { AppLoadContext } from 'react-router';
 import { AuthError } from '../utils/error-auth.js';
 export interface TOTPConfig {

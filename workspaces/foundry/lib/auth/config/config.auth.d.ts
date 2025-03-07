@@ -1,15 +1,10 @@
-/**
- * Resolves the authentication configuration lazily.
- * @returns {Promise<AuthConfig>} A promise that resolves to the authentication configuration.
- */
-export declare const resolveAuthConfig: () => Promise<{
+declare const authConfig: {
     cookie: {
         maxAge: number;
     };
     email: {
         send: boolean;
         active: string;
-        DEV_TO: any;
     };
     totp: {
         digits: number;
@@ -30,13 +25,12 @@ export declare const resolveAuthConfig: () => Promise<{
             signedout: string;
         };
     };
-    DEV_SIGNIN: {
-        username: any;
-        password: any;
+    DEV: {
+        email_to: undefined;
+        username: undefined;
+        password: undefined;
     };
-    custom: {
-        filepath: string;
-    };
-}>;
-export type AuthConfigPromise = Awaited<ReturnType<typeof resolveAuthConfig>>;
-//# sourceMappingURL=resolve-config.d.ts.map
+};
+export default authConfig;
+export type AuthConfig = typeof authConfig;
+//# sourceMappingURL=config.auth.d.ts.map

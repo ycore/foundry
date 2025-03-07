@@ -1,42 +1,46 @@
-const configInstances = new Map();
-export async function loadConfig(defaultConfig, customConfig) {
-    const configKey = JSON.stringify(defaultConfig);
-    if (configInstances.has(configKey)) {
-        return configInstances.get(configKey);
-    }
-    let config = defaultConfig;
-    config = mergeConfigs(config, customConfig);
-    configInstances.set(configKey, config);
-    return config;
+export function configFactory(defaultConfig) {
+    let cachedConfig = null;
+    return {
+        getConfig: async (options) => {
+            if (cachedConfig)
+                return cachedConfig;
+            cachedConfig = await loadConfig(defaultConfig, options);
+            return cachedConfig;
+        },
+        clearCache: () => {
+            cachedConfig = null;
+        },
+    };
 }
-export async function loadConfigFile(filePath) {
-    try {
-        const module = await import(/* @vite-ignore */ filePath);
-        return (module?.default || module || {});
-    }
-    catch (err) {
-        console.warn(`Failed to load config file at ${filePath}:`, err);
-        return {};
-    }
-}
-export function mergeConfigs(base, override) {
-    if (!override || typeof override !== 'object')
-        return base;
-    if (!base || typeof base !== 'object')
-        return override;
-    const merged = { ...base };
-    for (const key in override) {
-        if (Object.prototype.hasOwnProperty.call(override, key)) {
-            const baseValue = base[key];
-            const overrideValue = override[key];
-            if (baseValue && overrideValue && typeof baseValue === 'object' && typeof overrideValue === 'object') {
-                merged[key] = mergeConfigs(baseValue, overrideValue);
-            }
-            else if (overrideValue !== undefined) {
-                merged[key] = overrideValue;
+export async function loadConfig(defaultConfig, options) {
+    let merged = deepMerge(defaultConfig, options?.customConfig);
+    if (options?.configPath) {
+        try {
+            const fileConfig = await import(/* @vite-ignore */ options.configPath);
+            merged = deepMerge(merged, fileConfig.default);
+        }
+        catch (error) {
+            console.error(error.message);
+            if (!(error instanceof Error && error.message.includes('Cannot find'))) {
+                console.error('Config load error:', error);
             }
         }
     }
     return merged;
+}
+export function deepMerge(defaults, overrides) {
+    if (!overrides)
+        return { ...defaults };
+    // biome-ignore lint/suspicious/noExplicitAny:
+    const result = { ...defaults };
+    for (const [key, value] of Object.entries(overrides)) {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            result[key] = deepMerge(result[key] || {}, value);
+        }
+        else {
+            result[key] = value ?? result[key];
+        }
+    }
+    return result;
 }
 //# sourceMappingURL=load-config.js.map

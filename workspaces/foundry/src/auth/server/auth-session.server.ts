@@ -3,8 +3,8 @@ import type { AppLoadContext, SessionStorage } from 'react-router';
 
 import { contextEnv, isDev, isProduction } from '../../common/services/env.js';
 import { type EmailMessage, emailOptions, sendMail } from '../../email/services/email.server.js';
+import { getAuthConfig } from '../config/auth-config.js';
 import type { ProtectedUser } from '../config/db/schema.js';
-import { resolveAuthConfig } from '../config/resolve-config.js';
 import { authRepository } from '../server/auth-repository.server.js';
 import type { AuthError } from '../utils/error-auth.js';
 import type { Credentials, Verification } from '../utils/valid-auth.js';
@@ -26,18 +26,18 @@ export type ProtectedUserEmail = ProtectedUser['email'];
 // })();
 
 export const resolveSessionStorage = (() => {
-  let lazySessionInstancePromise: Promise<SessionStorage<SessionContext, SessionContext>> | undefined;
+  let lazySessionInstance: Promise<SessionStorage<SessionContext, SessionContext>> | undefined;
 
   return async (context: AppLoadContext, request: Request): Promise<SessionStorage<SessionContext, SessionContext>> => {
-    if (!lazySessionInstancePromise) {
-      lazySessionInstancePromise = Promise.resolve(sessionStorageFactory(context, request));
+    if (!lazySessionInstance) {
+      lazySessionInstance = Promise.resolve(sessionStorageFactory(context, request));
     }
-    return await lazySessionInstancePromise;
+    return await lazySessionInstance;
   };
 })();
 
 export async function sessionStorageFactory(context: AppLoadContext, request: Request) {
-  const authConfig = await resolveAuthConfig();
+  const authConfig = await getAuthConfig();
 
   if (!contextEnv(context).ADMIN_KV) {
     throw new Error('Missing KV storage configuration');
@@ -84,14 +84,14 @@ export const AuthSession = {
     return email === sessionUser?.email;
   },
   sendVerification: async (context: AppLoadContext, request: Request, userEmail: ProtectedUser['email']) => {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
     const code = await authTOTP.create(userEmail, context);
     const linkRef = <VerifyLinkOptions>{ action: 'validate', code, email: userEmail };
 
     const verifyLink = await authTOTP.link(authConfig.routes.auth.confirm, linkRef, context, request);
     if (authConfig.email.send) {
       const message = await authMailTemplate(context, code, verifyLink);
-      const options = await emailOptions(isDev(context) ? authConfig.email.DEV_TO : userEmail, context);
+      const options = await emailOptions(authConfig.DEV?.email_to ?? userEmail, context);
       await sendMail.mailersend({ message, options });
     }
   },
