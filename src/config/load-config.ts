@@ -1,57 +1,48 @@
-export type ConfigPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? ConfigPartial<T[P]> : T[P];
-};
+export type DeepPartial<T> = T extends object ? { [P in keyof T]?: DeepPartial<T[P]> } : T;
 
-interface CustomConfig {
-  custom?: {
-    filepath?: string;
+export function configFactory<T extends object>(defaultConfig: T) {
+  let cachedConfig: T | null = null;
+
+  return {
+    getConfig: async (options?: { customConfig?: DeepPartial<T>; configPath?: string }): Promise<T> => {
+      if (cachedConfig) return cachedConfig;
+      cachedConfig = await loadConfig(defaultConfig, options);
+      return cachedConfig;
+    },
+    clearCache: () => {
+      cachedConfig = null;
+    },
   };
 }
 
-const configInstances = new Map<string, unknown>();
-
-export async function loadConfig<T extends CustomConfig>(defaultConfig: T, customConfig: T): Promise<T> {
-  const configKey = JSON.stringify(defaultConfig);
-
-  if (configInstances.has(configKey)) {
-    return configInstances.get(configKey) as T;
-  }
-
-  let config = defaultConfig;
-  config = mergeConfigs(config, customConfig);
-
-  configInstances.set(configKey, config);
-  return config;
-}
-
-export async function loadConfigFile<T>(filePath: string): Promise<ConfigPartial<T>> {
-  try {
-    const module = await import(/* @vite-ignore */ filePath);
-    return (module?.default || module || {}) as ConfigPartial<T>;
-  } catch (err) {
-    console.warn(`Failed to load config file at ${filePath}:`, err);
-    return {} as ConfigPartial<T>;
-  }
-}
-
-export function mergeConfigs<T extends object>(base: T, override: ConfigPartial<T>): T {
-  if (!override || typeof override !== 'object') return base;
-  if (!base || typeof base !== 'object') return override as T;
-
-  const merged = { ...base };
-
-  for (const key in override) {
-    if (Object.prototype.hasOwnProperty.call(override, key)) {
-      const baseValue = base[key];
-      const overrideValue = override[key];
-
-      if (baseValue && overrideValue && typeof baseValue === 'object' && typeof overrideValue === 'object') {
-        merged[key] = mergeConfigs(baseValue, overrideValue);
-      } else if (overrideValue !== undefined) {
-        merged[key] = overrideValue as T[Extract<keyof T, string>];
+export async function loadConfig<T extends object>(defaultConfig: T, options?: { customConfig?: DeepPartial<T>; configPath?: string }): Promise<T> {
+  let merged = deepMerge(defaultConfig, options?.customConfig);
+  if (options?.configPath) {
+    try {
+      const fileConfig = await import(/* @vite-ignore */ options.configPath);
+      merged = deepMerge(merged, fileConfig.default);
+    } catch (error) {
+      console.error(error.message);
+      if (!(error instanceof Error && error.message.includes('Cannot find'))) {
+        console.error('Config load error:', error);
       }
     }
   }
 
   return merged;
+}
+
+export function deepMerge<T extends object>(defaults: T, overrides?: DeepPartial<T>): T {
+  if (!overrides) return { ...defaults };
+  // biome-ignore lint/suspicious/noExplicitAny:
+  const result = { ...defaults } as Record<string, any>;
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      result[key] = deepMerge(result[key] || {}, value);
+    } else {
+      result[key] = value ?? result[key];
+    }
+  }
+
+  return result as T;
 }

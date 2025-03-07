@@ -8,7 +8,7 @@ import { getMultiAction } from '../../form/server/multi-action.server.js';
 import { safeParse } from '../../form/validate.js';
 import { toast } from '../../vendor/toast.js';
 import type { VerifyActionInputProps, VerifyActions } from '../components/VerifyActionInput.js';
-import { type AuthConfigPromise, resolveAuthConfig } from '../config/resolve-config.js';
+import { type AuthConfig, getAuthConfig } from '../config/auth-config.js';
 import { AuthSession, type ProtectedUserEmail } from '../server/auth-session.server.js';
 import { createVerifyUrl } from '../utils/auth-utils.js';
 import { CredentialSchema, VerificationSchema } from '../utils/valid-auth.js';
@@ -29,12 +29,12 @@ type AuthActionData = {
 
 interface AuthHandlers {
   signinAction: ({ ...args }: ActionFunctionArgs) => Promise<Response | UNSAFE_DataWithResponseInit<AuthActionData>>;
-  signinLoader: ({ ...args }: LoaderFunctionArgs) => Promise<{ authConfig: AuthConfigPromise }>;
+  signinLoader: ({ ...args }: LoaderFunctionArgs) => Promise<{ authConfig: AuthConfig }>;
   signoutAction: ({ ...args }: LoaderFunctionArgs) => Promise<Response>;
   signupAction: ({ ...args }: ActionFunctionArgs) => Promise<Response | UNSAFE_DataWithResponseInit<AuthActionData>>;
-  signupLoader: ({ ...args }: LoaderFunctionArgs) => Promise<{ authConfig: AuthConfigPromise }>;
+  signupLoader: ({ ...args }: LoaderFunctionArgs) => Promise<{ authConfig: AuthConfig }>;
   forgotAction: ({ ...args }: ActionFunctionArgs) => Promise<Response | UNSAFE_DataWithResponseInit<AuthActionData>>;
-  forgotLoader: ({ ...args }: LoaderFunctionArgs) => Promise<{ authConfig: AuthConfigPromise }>;
+  forgotLoader: ({ ...args }: LoaderFunctionArgs) => Promise<{ authConfig: AuthConfig }>;
   verifyAction: ({ ...args }: ActionFunctionArgs) => Promise<Response | UNSAFE_DataWithResponseInit<VerifyActionData> | undefined>;
   verifyLoader: ({ ...args }: LoaderFunctionArgs) => Promise<{ action: VerifyActionInputProps['value']; code?: string; email?: ProtectedUserEmail }>;
   confirmLoader: ({ ...args }: LoaderFunctionArgs) => Promise<Response>;
@@ -43,7 +43,7 @@ interface AuthHandlers {
 
 export const Auth: AuthHandlers = {
   signinAction: async ({ ...args }) => {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
     const clonedFormData = await args.request.clone().formData();
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
@@ -69,7 +69,7 @@ export const Auth: AuthHandlers = {
     return toast.redirectWithSuccess(authConfig.routes.auth.signedin, 'Sign-in successful', { headers });
   },
   signinLoader: async ({ ...args }) => {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
 
     if (await AuthSession.isAuthenticated(args.context, args.request)) {
       throw redirect(authConfig.routes.auth.signedin);
@@ -78,13 +78,13 @@ export const Auth: AuthHandlers = {
     return { authConfig };
   },
   signoutAction: async ({ ...args }) => {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
     const [headers] = await AuthSession.unsetSessionUser(args.context, args.request);
 
     return toast.redirectWithSuccess(authConfig.routes.auth.signedout, 'Signed out', { headers });
   },
   signupAction: async ({ ...args }) => {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
     const clonedFormData = await args.request.clone().formData();
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
@@ -110,7 +110,7 @@ export const Auth: AuthHandlers = {
     return toast.redirectWithSuccess(authConfig.routes.auth.signedin, 'Sign-in successful', { headers });
   },
   signupLoader: async ({ ...args }) => {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
     if (await AuthSession.isAuthenticated(args.context, args.request)) {
       throw redirect(authConfig.routes.auth.signedin);
     }
@@ -118,7 +118,7 @@ export const Auth: AuthHandlers = {
     return { authConfig };
   },
   forgotAction: async ({ ...args }) => {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
     const clonedFormData = await args.request.clone().formData();
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
@@ -143,12 +143,12 @@ export const Auth: AuthHandlers = {
     return toast.redirectWithSuccess(authConfig.routes.auth.signedin, 'Sign-in successful', { headers });
   },
   forgotLoader: async () => {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
 
     return { authConfig };
   },
   verifyAction: async ({ ...args }) => {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
     const clonedFormData = await args.request.clone().formData();
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
@@ -168,7 +168,7 @@ export const Auth: AuthHandlers = {
   confirmLoader: async ({ ...args }) => {
     // TODO: valibot validate parameters
 
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
     // TODO: notAuthenticated check handles /validate action, can add it back in if we allow the /verify sction to do a signin before verifying
     // if (await AuthSession.notAuthenticated(context, request)) {
     //   throw redirect(authConfig.routes.auth.signedout);
@@ -181,7 +181,7 @@ export const Auth: AuthHandlers = {
     throw redirect(safeRedirect([authConfig.routes.auth.verify, args.params.token].join('/'), authConfig.routes.auth.signin));
   },
   destroyUserAction: async ({ ...args }) => {
-    const authConfig = await resolveAuthConfig();
+    const authConfig = await getAuthConfig();
 
     // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
     const [_, headers] = await AuthSession.destroySessionUser(args.context, args.request);
@@ -189,7 +189,7 @@ export const Auth: AuthHandlers = {
   },
 };
 
-const verifyAction: Record<VerifyActions, (authConfig: AuthConfigPromise, args: ActionFunctionArgs) => Promise<Response | UNSAFE_DataWithResponseInit<VerifyActionData> | undefined>> = {
+const verifyAction: Record<VerifyActions, (authConfig: AuthConfig, args: ActionFunctionArgs) => Promise<Response | UNSAFE_DataWithResponseInit<VerifyActionData> | undefined>> = {
   resend: async (authConfig, args) => {
     const [user] = await AuthSession.getSessionUser(args.context, args.request);
     if (!user) {

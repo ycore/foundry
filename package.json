@@ -5,47 +5,81 @@
   "type": "module",
   "exports": {
     "./auth/components": {
+      "development": {
+        "import": "./src/auth/components/index.ts"
+      },
       "types": "./lib/auth/components/index.d.ts",
       "import": "./lib/auth/components/index.js"
     },
     "./auth/config": {
+      "development": {
+        "import": "./src/auth/config/index.ts"
+      },
       "types": "./lib/auth/config/index.d.ts",
       "import": "./lib/auth/config/index.js"
     },
     "./auth/pages": {
+      "development": {
+        "import": "./src/auth/pages/index.ts"
+      },
       "types": "./lib/auth/pages/index.d.ts",
       "import": "./lib/auth/pages/index.js"
     },
     "./auth/routes": {
+      "development": {
+        "import": "./src/auth/routes.ts"
+      },
       "types": "./lib/auth/routes.d.ts",
       "import": "./lib/auth/routes.js"
     },
     "./auth/schema": {
+      "development": {
+        "import": "./src/auth/config/db/schema.ts",
+        "require": "./src/auth/config/db/schema.js"
+      },
       "types": "./lib/auth/config/db/schema.d.ts",
-      "import": "./lib/auth/config/db/schema.js",
-      "require": "./lib/auth/config/db/schema.js"
+      "import": "./src/auth/config/db/schema.ts",
+      "require": "./src/auth/config/db/schema.js"
     },
     "./auth/server": {
+      "development": {
+        "import": "./src/auth/server/index.ts"
+      },
       "types": "./lib/auth/server/index.d.ts",
       "import": "./lib/auth/server/index.js"
     },
     "./common": {
+      "development": {
+        "import": "./src/common/index.ts"
+      },
       "types": "./lib/common/index.d.ts",
       "import": "./lib/common/index.js"
     },
     "./email": {
+      "development": {
+        "import": "./src/email/index.ts"
+      },
       "types": "./lib/email/index.d.ts",
       "import": "./lib/email/index.js"
     },
     "./form": {
+      "development": {
+        "import": "./src/form/index.ts"
+      },
       "types": "./lib/form/index.d.ts",
       "import": "./lib/form/index.js"
     },
     "./form/server": {
+      "development": {
+        "import": "./src/form/server/index.ts"
+      },
       "types": "./lib/form/server/index.d.ts",
       "import": "./lib/form/server/index.js"
     },
     "./vendor": {
+      "development": {
+        "import": "./src/vendor/index.ts"
+      },
       "types": "./lib/vendor/index.d.ts",
       "import": "./lib/vendor/index.js"
     }

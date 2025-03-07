@@ -1,10 +1,11 @@
+import type { KVNamespace } from '@cloudflare/workers-types';
 import { generateTOTP, verifyTOTP } from '@oslojs/otp';
 import type { AppLoadContext } from 'react-router';
 
 import { contextEnv, isDev } from '../../common/services/env.js';
 import { base64Encode, random64, toJweKey } from '../../common/utils/crypto.js';
 import { jose } from '../../vendor/crypto.js';
-import { resolveAuthConfig } from '../config/resolve-config.js';
+import { getAuthConfig } from '../config/auth-config.js';
 import { AUTH_ERRORS, AuthError } from '../utils/error-auth.js';
 
 // Types
@@ -38,7 +39,7 @@ export interface VerifyLinkOptions {
 const KVVerifyTemplate = (email: string) => `totp:${email}`;
 
 export const assignConfig = async (context: AppLoadContext, config?: TOTPConfig) => {
-  const authConfig = await resolveAuthConfig();
+  const authConfig = await getAuthConfig();
 
   const options: TOTPConfigReq = {
     secret: config?.secret ?? contextEnv(context).TOTP_SECRET_KEY,

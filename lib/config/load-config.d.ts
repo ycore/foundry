@@ -1,13 +1,16 @@
-export type ConfigPartial<T> = {
-    [P in keyof T]?: T[P] extends object ? ConfigPartial<T[P]> : T[P];
+export type DeepPartial<T> = T extends object ? {
+    [P in keyof T]?: DeepPartial<T[P]>;
+} : T;
+export declare function configFactory<T extends object>(defaultConfig: T): {
+    getConfig: (options?: {
+        customConfig?: DeepPartial<T>;
+        configPath?: string;
+    }) => Promise<T>;
+    clearCache: () => void;
 };
-interface CustomConfig {
-    custom?: {
-        filepath?: string;
-    };
-}
-export declare function loadConfig<T extends CustomConfig>(defaultConfig: T, customConfig: T): Promise<T>;
-export declare function loadConfigFile<T>(filePath: string): Promise<ConfigPartial<T>>;
-export declare function mergeConfigs<T extends object>(base: T, override: ConfigPartial<T>): T;
-export {};
+export declare function loadConfig<T extends object>(defaultConfig: T, options?: {
+    customConfig?: DeepPartial<T>;
+    configPath?: string;
+}): Promise<T>;
+export declare function deepMerge<T extends object>(defaults: T, overrides?: DeepPartial<T>): T;
 //# sourceMappingURL=load-config.d.ts.map

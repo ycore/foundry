@@ -1,6 +1,6 @@
 import { type RouteConfig, route } from '@react-router/dev/routes';
 
-import authConfig from './config/auth-config.js';
+import authConfig from './config/config.auth.js';
 export const authRoutes = [
   route(`${authConfig.routes.auth.confirm}/:token`, 'routes/auth/confirm.tsx'),
   route(`${authConfig.routes.auth.delete}`, 'routes/auth/delete.tsx'),

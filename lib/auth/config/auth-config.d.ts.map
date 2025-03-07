@@ -1,1 +1,1 @@
-{"version":3,"file":"auth-config.d.ts","sourceRoot":"","sources":["../../../src/auth/config/auth-config.ts"],"names":[],"mappings":"AAAA,QAAA,MAAM,UAAU;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;CAmCf,CAAC;AAEF,MAAM,MAAM,UAAU,GAAG,OAAO,UAAU,CAAC;AAC3C,eAAe,UAAU,CAAC"}
+{"version":3,"file":"auth-config.d.ts","sourceRoot":"","sources":["../../../src/auth/config/auth-config.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,KAAK,UAAU,EAAyB,MAAM,eAAe,CAAC;AAEvE,eAAO,MAAM,aAAa,QAAa,OAAO,CAAC,UAAU,CAGxD,CAAC;AAEF,YAAY,EAAE,UAAU,EAAE,CAAC"}

@@ -16,11 +16,11 @@ export default function Route({ loaderData }: { loaderData: Awaited<ReturnType<t
       <Fieldset>
         <Fieldset.Field>
           <Fieldset.Label htmlFor="email">Email</Fieldset.Label>
-          <Input type="email" name="email" id="email" defaultValue={authConfig?.DEV_SIGNIN.username} disabled={isSubmitting} />
+          <Input type="email" name="email" id="email" defaultValue={authConfig.DEV?.username} disabled={isSubmitting} />
         </Fieldset.Field>
         <Fieldset.Field>
           <Fieldset.Label htmlFor="password">Password</Fieldset.Label>
-          <Input type="password" name="password" id="password" defaultValue={authConfig?.DEV_SIGNIN.password} disabled={isSubmitting} />
+          <Input type="password" name="password" id="password" defaultValue={authConfig.DEV?.password} disabled={isSubmitting} />
         </Fieldset.Field>
       </Fieldset>
       <div className="flex flex-row justify-between">
