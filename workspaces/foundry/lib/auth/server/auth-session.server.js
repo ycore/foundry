@@ -1,7 +1,6 @@
 import { createWorkersKVSessionStorage } from '@react-router/cloudflare';
 import { contextEnv, isDev, isProduction } from '../../common/services/env.js';
 import { emailOptions, sendMail } from '../../email/services/email.server.js';
-import { getAuthConfig } from '../config/auth-config.js';
 import { authRepository } from '../server/auth-repository.server.js';
 import { authTOTP } from './auth-verify.server.js';
 import { resolveAuthenticator } from './authenticator.server.js';
@@ -20,7 +19,7 @@ export const resolveSessionStorage = (() => {
     };
 })();
 export async function sessionStorageFactory(context, request) {
-    const authConfig = await getAuthConfig();
+    const authConfig = await context.di.authConfig();
     if (!contextEnv(context).ADMIN_KV) {
         throw new Error('Missing KV storage configuration');
     }
@@ -62,7 +61,7 @@ export const AuthSession = {
         return email === sessionUser?.email;
     },
     sendVerification: async (context, request, userEmail) => {
-        const authConfig = await getAuthConfig();
+        const authConfig = await context.di.authConfig();
         const code = await authTOTP.create(userEmail, context);
         const linkRef = { action: 'validate', code, email: userEmail };
         const verifyLink = await authTOTP.link(authConfig.routes.auth.confirm, linkRef, context, request);

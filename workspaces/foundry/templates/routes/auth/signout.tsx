@@ -1,4 +1,4 @@
 import { Auth } from '@ycore/foundry/auth/server';
-import type { ActionFunctionArgs } from '@ycore/foundry/vendor';
+import type { ActionFunctionArgs } from 'react-router';
 
 export const action = async ({ ...props }: ActionFunctionArgs) => await Auth.signoutAction(props);

@@ -1,17 +1,17 @@
 import { type ActionFunctionArgs, type LoaderFunctionArgs, type UNSAFE_DataWithResponseInit } from 'react-router';
 import type { VerifyActionInputProps } from '../components/VerifyActionInput.js';
-import { type AuthConfig } from '../config/auth-config.js';
+import type { AuthConfig } from '../config/config.auth.js';
 import { type ProtectedUserEmail } from '../server/auth-session.server.js';
+type AuthActionData = {
+    errors?: {
+        email?: ProtectedUserEmail | [ProtectedUserEmail, ...ProtectedUserEmail[]];
+    };
+};
 type VerifyActionData = {
     errors?: {
         email?: ProtectedUserEmail | [ProtectedUserEmail, ...ProtectedUserEmail[]];
         code?: [string, ...string[]];
         form?: [string, ...string[]];
-    };
-};
-type AuthActionData = {
-    errors?: {
-        email?: ProtectedUserEmail | [ProtectedUserEmail, ...ProtectedUserEmail[]];
     };
 };
 interface AuthHandlers {

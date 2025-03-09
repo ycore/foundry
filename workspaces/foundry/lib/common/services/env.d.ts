@@ -1,6 +1,4 @@
 import type { AppLoadContext } from 'react-router';
-export type EnvKey = keyof Env;
-export type EnvCollection = Array<EnvKey>;
 export declare function validateEnvironment(context: AppLoadContext): void;
 export declare function contextEnv(context: AppLoadContext): Env;
 export declare const isDev: (context: AppLoadContext) => boolean;

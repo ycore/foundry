@@ -3,7 +3,6 @@ import type { AppLoadContext, SessionStorage } from 'react-router';
 
 import { contextEnv, isDev, isProduction } from '../../common/services/env.js';
 import { type EmailMessage, emailOptions, sendMail } from '../../email/services/email.server.js';
-import { getAuthConfig } from '../config/auth-config.js';
 import type { ProtectedUser } from '../config/db/schema.js';
 import { authRepository } from '../server/auth-repository.server.js';
 import type { AuthError } from '../utils/error-auth.js';
@@ -37,7 +36,7 @@ export const resolveSessionStorage = (() => {
 })();
 
 export async function sessionStorageFactory(context: AppLoadContext, request: Request) {
-  const authConfig = await getAuthConfig();
+  const authConfig = await context.di.authConfig();
 
   if (!contextEnv(context).ADMIN_KV) {
     throw new Error('Missing KV storage configuration');
@@ -84,7 +83,8 @@ export const AuthSession = {
     return email === sessionUser?.email;
   },
   sendVerification: async (context: AppLoadContext, request: Request, userEmail: ProtectedUser['email']) => {
-    const authConfig = await getAuthConfig();
+    const authConfig = await context.di.authConfig();
+
     const code = await authTOTP.create(userEmail, context);
     const linkRef = <VerifyLinkOptions>{ action: 'validate', code, email: userEmail };
 

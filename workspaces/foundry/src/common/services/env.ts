@@ -1,11 +1,11 @@
-import type { AppLoadContext } from 'react-router';
+/// <reference path="../../../../../@config/cloudflare/worker-configuration.d.ts" />
+/// <reference path="../../../../../@config/cloudflare/load-context.ts" />
 
-export type EnvKey = keyof Env;
-export type EnvCollection = Array<EnvKey>;
+import type { AppLoadContext } from 'react-router';
 
 export function validateEnvironment(context: AppLoadContext) {
   const env = context.cloudflare.env;
-  const missingKeys = (Object.keys(env) as EnvCollection).filter(key => env[key] === undefined || env[key] === null || key.length === 0);
+  const missingKeys = (Object.keys(env) as Array<keyof Env>).filter(key => env[key] === undefined || env[key] === null || key.length === 0);
 
   if (missingKeys.length > 0) {
     const errorMessage = `Missing environment variables: ${missingKeys.join(', ')}`;
@@ -22,7 +22,7 @@ export function contextEnv(context: AppLoadContext): Env {
   const env = context.cloudflare.env;
 
   return new Proxy(env, {
-    get(target, key: EnvKey) {
+    get(target, key: keyof Env) {
       if (!(key in target)) {
         throw new Error(`Environment variable "${key}" is not defined.`);
       }

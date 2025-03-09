@@ -8,22 +8,17 @@ import { getMultiAction } from '../../form/server/multi-action.server.js';
 import { safeParse } from '../../form/validate.js';
 import { toast } from '../../vendor/toast.js';
 import type { VerifyActionInputProps, VerifyActions } from '../components/VerifyActionInput.js';
-import { type AuthConfig, getAuthConfig } from '../config/auth-config.js';
+import type { AuthConfig } from '../config/config.auth.js';
 import { AuthSession, type ProtectedUserEmail } from '../server/auth-session.server.js';
 import { createVerifyUrl } from '../utils/auth-utils.js';
 import { CredentialSchema, VerificationSchema } from '../utils/valid-auth.js';
 
+type AuthActionData = { errors?: { email?: ProtectedUserEmail | [ProtectedUserEmail, ...ProtectedUserEmail[]] } };
 type VerifyActionData = {
   errors?: {
     email?: ProtectedUserEmail | [ProtectedUserEmail, ...ProtectedUserEmail[]];
     code?: [string, ...string[]];
     form?: [string, ...string[]];
-  };
-};
-
-type AuthActionData = {
-  errors?: {
-    email?: ProtectedUserEmail | [ProtectedUserEmail, ...ProtectedUserEmail[]];
   };
 };
 
@@ -43,7 +38,8 @@ interface AuthHandlers {
 
 export const Auth: AuthHandlers = {
   signinAction: async ({ ...args }) => {
-    const authConfig = await getAuthConfig();
+    const authConfig = await args.context.di.authConfig();
+
     const clonedFormData = await args.request.clone().formData();
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
@@ -69,7 +65,7 @@ export const Auth: AuthHandlers = {
     return toast.redirectWithSuccess(authConfig.routes.auth.signedin, 'Sign-in successful', { headers });
   },
   signinLoader: async ({ ...args }) => {
-    const authConfig = await getAuthConfig();
+    const authConfig = await args.context.di.authConfig();
 
     if (await AuthSession.isAuthenticated(args.context, args.request)) {
       throw redirect(authConfig.routes.auth.signedin);
@@ -78,13 +74,15 @@ export const Auth: AuthHandlers = {
     return { authConfig };
   },
   signoutAction: async ({ ...args }) => {
-    const authConfig = await getAuthConfig();
+    const authConfig = await args.context.di.authConfig();
+
     const [headers] = await AuthSession.unsetSessionUser(args.context, args.request);
 
     return toast.redirectWithSuccess(authConfig.routes.auth.signedout, 'Signed out', { headers });
   },
   signupAction: async ({ ...args }) => {
-    const authConfig = await getAuthConfig();
+    const authConfig = await args.context.di.authConfig();
+
     const clonedFormData = await args.request.clone().formData();
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
@@ -110,7 +108,7 @@ export const Auth: AuthHandlers = {
     return toast.redirectWithSuccess(authConfig.routes.auth.signedin, 'Sign-in successful', { headers });
   },
   signupLoader: async ({ ...args }) => {
-    const authConfig = await getAuthConfig();
+    const authConfig = await args.context.di.authConfig();
     if (await AuthSession.isAuthenticated(args.context, args.request)) {
       throw redirect(authConfig.routes.auth.signedin);
     }
@@ -118,7 +116,7 @@ export const Auth: AuthHandlers = {
     return { authConfig };
   },
   forgotAction: async ({ ...args }) => {
-    const authConfig = await getAuthConfig();
+    const authConfig = await args.context.di.authConfig();
     const clonedFormData = await args.request.clone().formData();
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
@@ -142,18 +140,19 @@ export const Auth: AuthHandlers = {
 
     return toast.redirectWithSuccess(authConfig.routes.auth.signedin, 'Sign-in successful', { headers });
   },
-  forgotLoader: async () => {
-    const authConfig = await getAuthConfig();
+  forgotLoader: async ({ ...args }) => {
+    const authConfig = await args.context.di.authConfig();
 
     return { authConfig };
   },
   verifyAction: async ({ ...args }) => {
-    const authConfig = await getAuthConfig();
+    const authConfig = await args.context.di.authConfig();
+
     const clonedFormData = await args.request.clone().formData();
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
     const action = (await getMultiAction(clonedFormData)) as VerifyActions;
-    const operation = verifyAction[action];
+    const operation = verifyMultiAction[action];
     if (!operation) {
       throw new Error(`Unsupported action: ${action}`);
     }
@@ -167,8 +166,8 @@ export const Auth: AuthHandlers = {
   },
   confirmLoader: async ({ ...args }) => {
     // TODO: valibot validate parameters
+    const authConfig = await args.context.di.authConfig();
 
-    const authConfig = await getAuthConfig();
     // TODO: notAuthenticated check handles /validate action, can add it back in if we allow the /verify sction to do a signin before verifying
     // if (await AuthSession.notAuthenticated(context, request)) {
     //   throw redirect(authConfig.routes.auth.signedout);
@@ -181,7 +180,7 @@ export const Auth: AuthHandlers = {
     throw redirect(safeRedirect([authConfig.routes.auth.verify, args.params.token].join('/'), authConfig.routes.auth.signin));
   },
   destroyUserAction: async ({ ...args }) => {
-    const authConfig = await getAuthConfig();
+    const authConfig = await args.context.di.authConfig();
 
     // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
     const [_, headers] = await AuthSession.destroySessionUser(args.context, args.request);
@@ -189,7 +188,7 @@ export const Auth: AuthHandlers = {
   },
 };
 
-const verifyAction: Record<VerifyActions, (authConfig: AuthConfig, args: ActionFunctionArgs) => Promise<Response | UNSAFE_DataWithResponseInit<VerifyActionData> | undefined>> = {
+const verifyMultiAction: Record<VerifyActions, (authConfig: AuthConfig, args: ActionFunctionArgs) => Promise<Response | UNSAFE_DataWithResponseInit<VerifyActionData> | undefined>> = {
   resend: async (authConfig, args) => {
     const [user] = await AuthSession.getSessionUser(args.context, args.request);
     if (!user) {

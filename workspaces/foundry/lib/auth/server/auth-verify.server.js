@@ -2,11 +2,10 @@ import { generateTOTP, verifyTOTP } from '@oslojs/otp';
 import { contextEnv, isDev } from '../../common/services/env.js';
 import { base64Encode, random64, toJweKey } from '../../common/utils/crypto.js';
 import { jose } from '../../vendor/crypto.js';
-import { getAuthConfig } from '../config/auth-config.js';
 import { AUTH_ERRORS, AuthError } from '../utils/error-auth.js';
 const KVVerifyTemplate = (email) => `totp:${email}`;
 export const assignConfig = async (context, config) => {
-    const authConfig = await getAuthConfig();
+    const authConfig = await context.di.authConfig();
     const options = {
         secret: config?.secret ?? contextEnv(context).TOTP_SECRET_KEY,
         kv: config?.kv ?? contextEnv(context).ADMIN_KV,
