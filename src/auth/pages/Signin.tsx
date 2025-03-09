@@ -1,6 +1,7 @@
 import { Button, Fieldset, Input, Link } from '@ycore/componentry/catalyst';
 import { Spinner } from '@ycore/componentry/core';
 import { AuthenticityTokenInput, HoneypotInputs } from '@ycore/foundry/form';
+import React from 'react';
 import { Form, useNavigation } from 'react-router';
 import type { action, loader } from '~/routes/auth/signin';
 

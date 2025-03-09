@@ -1,10 +1,11 @@
+export type Senders = 'sendgridapi' | 'resend' | 'mailersend';
 declare const authConfig: {
     cookie: {
         maxAge: number;
     };
     email: {
         send: boolean;
-        active: string;
+        active: Senders;
     };
     totp: {
         digits: number;

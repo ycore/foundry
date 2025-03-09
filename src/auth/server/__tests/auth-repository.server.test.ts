@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { resolveDatabase } from '../../../database/services/database.server';
-import { hashPassword } from '../../auth-hash';
+import { resolveDatabase } from '../../../common/services/database';
 import { users } from '../../config/db/schema';
-import { AuthError } from '../../error-auth';
+import { hashPassword } from '../../utils';
+import { AuthError } from '../../utils';
 import { authRepository } from '../auth-repository.server';
 
 vi.mock('../../../database/services/database.server');
@@ -146,7 +146,7 @@ describe('authRepository.findOrCreateHashed', () => {
       expect.objectContaining({
         userId: SUCCESS_USER.id,
         password: HASHED_PASSWORD,
-      }),
+      })
     );
   });
 

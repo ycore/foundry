@@ -10,11 +10,17 @@
         "src"
     ],
     "exclude": [
+        "@config",
         "lib",
+        "node_modules",
         "scripts",
         "templates",
         "test",
         "__tests"
     ],
-    "references": []
+    "references": [
+        {
+            "path": "../componentry/tsconfig.workspace.json"
+        }
+    ]
 }

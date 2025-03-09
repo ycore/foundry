@@ -2,28 +2,9 @@
  * Source: https://github.com/epicweb-dev/epic-stack
  * Source code adapted for this template.
  */
-// import sgMail from '@sendgrid/mail';
-// import { z } from 'zod';
 
 import type { AppLoadContext } from 'react-router';
 import { contextEnv } from '../../common/services/env.js';
-
-// const ResendErrorSchema = z.union([
-//   z.object({
-//     name: z.string(),
-//     message: z.string(),
-//     statusCode: z.number(),
-//   }),
-//   z.object({
-//     name: z.literal('UnknownError'),
-//     message: z.literal('Unknown Error'),
-//     statusCode: z.literal(500),
-//     cause: z.any(),
-//   }),
-// ]);
-// const ResendSuccessSchema = z.object({
-//   id: z.string(),
-// });
 
 export interface EmailOptions {
   from: string;
@@ -71,7 +52,35 @@ export const sendMail = {
 
     return { status: 'success', data } as const;
   },
+  resend: async ({ message, options }: { message: EmailMessage; options: Omit<EmailOptions, 'to' & { to: string }> }) => {
+    const API_URL = 'https://api.resend.com/emails';
 
+    const emailBody: EmailBody = {
+      from: options.from,
+      to: options.to,
+      subject: message.subject,
+      html: message.html || '',
+      text: message.text || '',
+    };
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${options.apikey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(emailBody),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Error Data:', data);
+      throw new Error('Unable to send email.');
+    }
+
+    return { status: 'success', data } as const;
+  },
   // https://github.com/sendgrid/sendgrid-nodejs
   // sendgrid: async ({ message, options }: { message: EmailMessage; options: EmailOptions }) => {
   //   sgMail.setApiKey(options.apikey);
@@ -121,59 +130,6 @@ export const sendMail = {
     }
     return { status: 'success', data } as const;
   },
-
-  // resend: async ({ message, options }: { message: EmailMessage; options: EmailOptions }) => {
-  //   const API_URL = 'https://api.resend.com/emails';
-  //   const emailBody: EmailBody = {
-  //     from: options.from,
-  //     to: options.to,
-  //     subject: message.subject,
-  //     text: message.text,
-  //     html: message.html,
-  //   };
-  //   const response = await fetch(API_URL, {
-  //     method: 'POST',
-  //     headers: {
-  //       Authorization: `Bearer ${options.apikey}`,
-  //       'Content-Type': 'application/json',
-  //     },
-  //     body: JSON.stringify(emailBody),
-  //   });
-
-  //   const data = await response.json();
-  //   if (!response.ok) {
-  //     console.error(data);
-  //     throw new Error('Unable to send email.');
-  //   }
-  //   const parsedData = ResendSuccessSchema.safeParse(data);
-
-  //   if (!parsedData.success) {
-  //     const parseError = ResendErrorSchema.safeParse(data);
-  //     if (parseError.success) {
-  //       console.error(parseError.data);
-  //       throw new Error('Unable to send email.');
-  //     }
-  //     throw new Error('Unable to send email.');
-  //   }
-
-  //   return { status: 'success', data: parsedData } as const;
-  // },
-  //
-  // const data = await response.json();
-  // const parsedData = ResendSuccessSchema.safeParse(data);
-
-  //   if (response.ok && parsedData.success) {
-  //     return { status: 'success', data: parsedData } as const;
-  //   } else {
-  //     const parseResult = ResendErrorSchema.safeParse(data);
-  //     if (parseResult.success) {
-  //       console.error(parseResult.data);
-  //       throw new Error('Unable to send email.');
-  //   }
-
-  //   console.error(data);
-  //   throw new Error('Unable to send email.');
-  // },
 };
 
 export const emailOptions = async (to: string, context: AppLoadContext): Promise<EmailOptions> => {

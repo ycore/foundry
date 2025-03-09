@@ -1,0 +1,1 @@
+{"version":3,"file":"multi-action.jsx","sourceRoot":"","sources":["../../../src/form/components/multi-action.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,MAAM,OAAO,CAAC;AAO1B,MAAM,UAAU,gBAAgB,CAAC,EAAE,IAAI,GAAG,QAAQ,EAAE,KAAK,GAAG,SAAS,EAAyB;IAC5F,OAAO,CAAC,KAAK,CAAC,IAAI,CAAC,QAAQ,CAAC,KAAK,CAAC,CAAC,KAAK,CAAC,CAAC,IAAI,CAAC,CAAC,IAAI,CAAC,EAAG,CAAC;AAC3D,CAAC"}

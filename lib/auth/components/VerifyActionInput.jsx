@@ -1,3 +1,3 @@
 import { MultiActionInput } from '../../form/components/multi-action.js';
 export const VerifyActionInput = MultiActionInput;
-//# sourceMappingURL=VerifyActionInput.js.map
+//# sourceMappingURL=VerifyActionInput.jsx.map

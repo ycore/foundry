@@ -1,10 +1,11 @@
+export type Senders = 'sendgridapi' | 'resend' | 'mailersend';
 const authConfig = {
   cookie: {
     maxAge: 60 * 60 * 24 * 7, // 7 days
   },
   email: {
     send: false,
-    active: 'mailersend', // sendgridapi / resend
+    active: <Senders>'resend',
   },
   totp: {
     digits: 6,
