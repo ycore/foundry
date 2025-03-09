@@ -10,8 +10,11 @@
         "src"
     ],
     "exclude": [
+        "lib",
+        "scripts",
+        "templates",
         "test",
-        "lib"
+        "__tests"
     ],
     "references": []
 }

@@ -3,7 +3,7 @@ import { Form } from 'react-router';
 
 import { AuthenticityTokenInput, HoneypotInputs } from '../../form/vendor.js';
 import { VerifyActionInput } from '../components/VerifyActionInput.js';
-import type { AuthConfig } from '../config/auth-config.js';
+import type { AuthConfig } from '../config/config.auth.js';
 import type { ProtectedUser } from '../config/db/schema.js';
 import { createVerifyUrl } from '../utils/auth-utils.js';
 
