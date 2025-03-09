@@ -1,4 +1,5 @@
-import { decode, sign, verify } from '@tsndr/cloudflare-worker-jwt';
+import type { KVNamespace, KVNamespaceListOptions } from '@cloudflare/workers-types';
+import { type JwtPayload, decode, sign, verify } from '@tsndr/cloudflare-worker-jwt';
 
 interface KvStore {
   // eslint-disable-next-line no-unused-vars
@@ -8,7 +9,7 @@ interface KvStore {
   // eslint-disable-next-line no-unused-vars
   list: (store: KVNamespace, options?: KVNamespaceListOptions) => Promise<unknown>;
   // eslint-disable-next-line no-unused-vars
-  put: (store: KVNamespace, key: string, payload: unknown, secret?: string) => Promise<string>;
+  put: (store: KVNamespace, key: string, payload: JwtPayload<KVNamespace> | string, secret?: string) => Promise<string | null>;
 }
 
 const jwt = { decode, sign, verify };
@@ -29,12 +30,17 @@ export const kvStore: KvStore = {
       return null;
     }
     if (secret) {
-      const encodedPayload = await jwt.sign(payload, secret);
+      // biome-ignore lint/suspicious/noExplicitAny:
+      const encodedPayload = await jwt.sign(payload as any, secret);
       await store.put(key, encodedPayload);
       return encodedPayload;
     }
-    await store.put(key, payload);
-    return payload;
+
+    // Check the type and handle accordingly
+    const valueToStore = typeof payload === 'string' ? payload : JSON.stringify(payload);
+
+    await store.put(key, valueToStore);
+    return typeof payload === 'string' ? payload : valueToStore;
   },
   get: async (store, key, secret) => {
     if (!isValidKVStore(store)) {
