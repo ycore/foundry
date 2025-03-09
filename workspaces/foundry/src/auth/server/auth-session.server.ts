@@ -3,6 +3,7 @@ import type { AppLoadContext, SessionStorage } from 'react-router';
 
 import { contextEnv, isDev, isProduction } from '../../common/services/env.js';
 import { type EmailMessage, emailOptions, sendMail } from '../../email/services/email.server.js';
+import type { Senders } from '../config/config.auth.js';
 import type { ProtectedUser } from '../config/db/schema.js';
 import { authRepository } from '../server/auth-repository.server.js';
 import type { AuthError } from '../utils/error-auth.js';
@@ -92,7 +93,9 @@ export const AuthSession = {
     if (authConfig.email.send) {
       const message = await authMailTemplate(context, code, verifyLink);
       const options = await emailOptions(authConfig.DEV?.email_to ?? userEmail, context);
-      await sendMail.mailersend({ message, options });
+      const emailService: Senders = authConfig.email?.active as Senders;
+
+      await sendMail[emailService]({ message, options });
     }
   },
   setSessionUser: async (context: AppLoadContext, request: Request, strategy: string): Promise<ProtectedUserResponse> => {
@@ -196,7 +199,7 @@ const authMailTemplate = async (context: AppLoadContext, code: string, verifyLin
           verifyLink &&
           ` <p style="color: #303030; margin-bottom: 1rem">Alternatively, please follow the verification link below.</p>
             <p style="color: #505050; font-size: 1.25rem; margin-bottom: 1rem">
-              <a href="${verifyLink}">${verifyLink}</a>
+              <a target="_blank" href="${verifyLink}">Follow link to verify ${code}</a>
             </p>`
         }
       </body>

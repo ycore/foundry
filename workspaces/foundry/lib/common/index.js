@@ -1,3 +1,4 @@
+export * from './services/database.js';
 export * from './services/env.js';
 export * from './services/keystore.js';
 export * from './utils/crypto.js';

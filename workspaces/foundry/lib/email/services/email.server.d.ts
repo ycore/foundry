@@ -21,6 +21,15 @@ export declare const sendMail: {
         readonly status: "success";
         readonly data: any;
     }>;
+    resend: ({ message, options }: {
+        message: EmailMessage;
+        options: Omit<EmailOptions, "to" & {
+            to: string;
+        }>;
+    }) => Promise<{
+        readonly status: "success";
+        readonly data: any;
+    }>;
     sendgridapi: ({ message, options }: {
         message: EmailMessage;
         options: EmailOptions;
