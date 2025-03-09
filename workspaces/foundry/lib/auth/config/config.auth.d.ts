@@ -27,9 +27,9 @@ declare const authConfig: {
         };
     };
     DEV: {
-        email_to: undefined;
-        username: undefined;
-        password: undefined;
+        email_to: string;
+        username: string;
+        password: string;
     };
 };
 export default authConfig;
