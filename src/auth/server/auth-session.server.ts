@@ -94,8 +94,12 @@ export const AuthSession = {
       const message = await authMailTemplate(context, code, verifyLink);
       const options = await emailOptions(authConfig.DEV?.email_to ?? userEmail, context);
       const emailService: Senders = authConfig.email?.active as Senders;
-
-      await sendMail[emailService]({ message, options });
+      try {
+        await sendMail[emailService]({ message, options });
+      } catch (error) {
+        console.error(error.message);
+        throw new Error(error);
+      }
     }
   },
   setSessionUser: async (context: AppLoadContext, request: Request, strategy: string): Promise<ProtectedUserResponse> => {
