@@ -38,8 +38,8 @@
         "require": "./src/auth/config/db/schema.js"
       },
       "types": "./lib/auth/config/db/schema.d.ts",
-      "import": "./src/auth/config/db/schema.js",
-      "require": "./src/auth/config/db/schema.js"
+      "import": "./lib/auth/config/db/schema.js",
+      "require": "./lib/auth/config/db/schema.js"
     },
     "./auth/server": {
       "development": {
