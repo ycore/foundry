@@ -69,7 +69,13 @@ export const AuthSession = {
             const message = await authMailTemplate(context, code, verifyLink);
             const options = await emailOptions(authConfig.DEV?.email_to ?? userEmail, context);
             const emailService = authConfig.email?.active;
-            await sendMail[emailService]({ message, options });
+            try {
+                await sendMail[emailService]({ message, options });
+            }
+            catch (error) {
+                console.error(error.message);
+                throw new Error(error);
+            }
         }
     },
     setSessionUser: async (context, request, strategy) => {
