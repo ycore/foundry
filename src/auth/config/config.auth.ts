@@ -27,9 +27,9 @@ const authConfig = {
     },
   },
   DEV: {
-    email_to: '',
-    username: '',
-    password: '',
+    email_to: undefined,
+    username: undefined,
+    password: undefined,
   },
 };
 

@@ -5,7 +5,7 @@ import { base64Decode } from '../../common/utils/crypto.js';
 import { checkCsrfToken } from '../../form/server/csrf.server.js';
 import { checkHoneypot } from '../../form/server/honeypot.server.js';
 import { getMultiAction } from '../../form/server/multi-action.server.js';
-import { safeParse } from '../../form/validate.js';
+import { safeParseForm } from '../../form/validate.js';
 import { toast } from '../../vendor/toast.js';
 import type { VerifyActionInputProps, VerifyActions } from '../components/VerifyActionInput.js';
 import type { AuthConfig } from '../config/config.auth.js';
@@ -44,7 +44,7 @@ export const Auth: AuthHandlers = {
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
 
-    const validated = safeParse(clonedFormData, CredentialSchema, ['email', 'password']);
+    const validated = safeParseForm(CredentialSchema, clonedFormData, ['email', 'password']);
     if (!validated.success) {
       return toast.dataWithError({ errors: validated.errors }, JSON.stringify(validated.errors), { headers: args.request.headers });
     }
@@ -87,7 +87,7 @@ export const Auth: AuthHandlers = {
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
 
-    const validated = safeParse(clonedFormData, CredentialSchema, ['email', 'password']);
+    const validated = safeParseForm(CredentialSchema, clonedFormData, ['email', 'password']);
     if (!validated.success) {
       return toast.dataWithError({ errors: validated.errors }, JSON.stringify(validated.errors), { headers: args.request.headers });
     }
@@ -121,7 +121,7 @@ export const Auth: AuthHandlers = {
     await checkCsrfToken(args.context, clonedFormData, args.request.headers);
     await checkHoneypot(args.context, clonedFormData);
 
-    const validated = safeParse(clonedFormData, CredentialSchema, ['email', 'password']);
+    const validated = safeParseForm(CredentialSchema, clonedFormData, ['email', 'password']);
     if (!validated.success) {
       return toast.dataWithError({ errors: validated.errors }, JSON.stringify(validated.errors), { headers: args.request.headers });
     }
@@ -201,7 +201,7 @@ const verifyMultiAction: Record<VerifyActions, (authConfig: AuthConfig, args: Ac
     return toast.redirectWithInfo(verifyUrl, 'Please verify the authenticated user', { headers: args.request.headers });
   },
   validate: async (authConfig, args) => {
-    const validated = safeParse(await args.request.formData(), VerificationSchema, ['email', 'code']);
+    const validated = safeParseForm(VerificationSchema, await args.request.formData(), ['email', 'code']);
     if (!validated.success) {
       return toast.dataWithError({ errors: validated.errors }, JSON.stringify(validated.errors), { headers: args.request.headers });
     }

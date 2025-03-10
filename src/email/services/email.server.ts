@@ -4,19 +4,26 @@
  */
 
 import type { AppLoadContext } from 'react-router';
+import { type InferOutput, array, object, optional, string, union } from 'valibot';
+import { parse } from 'valibot';
+
 import { contextEnv } from '../../common/services/env.js';
+import { safeParse } from '../../form/validate.js';
 
-export interface EmailOptions {
-  from: string;
-  to: string | string[];
-  apikey: string;
-}
+const EmailMessageSchema = object({
+  subject: string(),
+  html: string(),
+  text: optional(string()),
+});
 
-export interface EmailMessage {
-  subject: string;
-  html: string;
-  text?: string;
-}
+const EmailOptionsSchema = object({
+  from: string(),
+  to: union([string(), array(string())]),
+  apikey: string(),
+});
+
+type EmailMessage = InferOutput<typeof EmailMessageSchema>;
+type EmailOptions = InferOutput<typeof EmailOptionsSchema>;
 
 type EmailBody = Omit<EmailOptions, 'apikey'> & EmailMessage;
 
@@ -55,18 +62,35 @@ export const sendMail = {
   resend: async ({ message, options }: { message: EmailMessage; options: Omit<EmailOptions, 'to' & { to: string }> }) => {
     const API_URL = 'https://api.resend.com/emails';
 
+    const ResendOptionsSchema = object({
+      ...EmailOptionsSchema.entries,
+      to: string(),
+    });
+
+    const validatedMessage = safeParse(EmailMessageSchema, message);
+    const validatedOptions = safeParse(ResendOptionsSchema, options);
+
+    if (!validatedMessage.success) {
+      console.error(validatedMessage.errors);
+      return;
+    }
+    if (!validatedOptions.success) {
+      console.error(validatedOptions.errors);
+      return;
+    }
+
     const emailBody: EmailBody = {
-      from: options.from,
-      to: options.to,
-      subject: message.subject,
-      html: message.html || '',
-      text: message.text || '',
+      from: validatedOptions.data.from,
+      to: validatedOptions.data.to,
+      subject: validatedMessage.data.subject,
+      html: validatedMessage.data.html || '',
+      text: validatedMessage.data.text || '',
     };
 
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${options.apikey}`,
+        Authorization: `Bearer ${validatedOptions.data.apikey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(emailBody),
@@ -140,10 +164,12 @@ export const emailOptions = async (to: string, context: AppLoadContext): Promise
   }
 
   const [from, apiKey] = emailApiKey.split('||');
+  const validatedOptions = safeParse(EmailOptionsSchema, { from, to, apikey: apiKey });
 
-  return {
-    from: from,
-    to: to,
-    apikey: apiKey,
-  };
+  if (!validatedOptions.success) {
+    console.error(validatedOptions.errors);
+    throw new Error('Invalid Email Options format');
+  }
+
+  return validatedOptions.data;
 };

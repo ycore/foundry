@@ -2,7 +2,7 @@ import type { AppLoadContext } from 'react-router';
 import { Authenticator } from 'remix-auth';
 import { FormStrategy } from 'remix-auth-form';
 
-import { safeParse } from '../../form/validate.js';
+import { safeParseForm } from '../../form/validate.js';
 import type { ProtectedUser } from '../config/db/schema.js';
 import { authRepository } from '../server/auth-repository.server.js';
 import { AuthError } from '../utils/error-auth.js';
@@ -20,7 +20,7 @@ function authenticatorFactory(context: AppLoadContext) {
 
   authenticator.use(
     new FormStrategy(async ({ form }: { form: FormData }) => {
-      const parsed = safeParse(form, CredentialSchema, ['email', 'password']);
+      const parsed = safeParseForm(CredentialSchema, form, ['email', 'password']);
       if (parsed.errors || !parsed.data) {
         return [new AuthError('SIGNIN VALIDATION', JSON.stringify(parsed.errors)), undefined];
       }
@@ -37,7 +37,7 @@ function authenticatorFactory(context: AppLoadContext) {
 
   authenticator.use(
     new FormStrategy(async ({ form }: { form: FormData }) => {
-      const parsed = safeParse(form, CredentialSchema, ['email', 'password']);
+      const parsed = safeParseForm(CredentialSchema, form, ['email', 'password']);
       if (parsed.errors || !parsed.data) {
         return [new AuthError('SIGNIN VALIDATION', JSON.stringify(parsed.errors)), undefined];
       }

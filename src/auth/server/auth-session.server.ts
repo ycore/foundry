@@ -92,7 +92,8 @@ export const AuthSession = {
     const verifyLink = await authTOTP.link(authConfig.routes.auth.confirm, linkRef, context, request);
     if (authConfig.email.send) {
       const message = await authMailTemplate(context, code, verifyLink);
-      const options = await emailOptions(authConfig.DEV?.email_to ?? userEmail, context);
+      const sendTo = isDev(context) && authConfig.DEV?.email_to ? authConfig.DEV?.email_to : userEmail;
+      const options = await emailOptions(sendTo, context);
       const emailService: Senders = authConfig.email?.active as Senders;
       try {
         await sendMail[emailService]({ message, options });
