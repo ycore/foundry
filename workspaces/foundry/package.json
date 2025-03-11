@@ -105,7 +105,7 @@
   },
   "peerDependencies": {
     "@react-router/cloudflare": ">=7.0.0",
-    "@ycore/componentry": "../componentry",
+    "@ycore/componentry": ">=1.0.0",
     "drizzle-orm": ">=0.36.0",
     "react-router": ">=7.0.0"
   },
