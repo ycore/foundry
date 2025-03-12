@@ -18,9 +18,5 @@
         "test",
         "__tests"
     ],
-    "references": [
-        {
-            "path": "../componentry/tsconfig.workspace.json"
-        }
-    ]
+    "references": []
 }
