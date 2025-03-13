@@ -3,7 +3,8 @@ import type { AppLoadContext } from 'react-router';
 
 import { contextEnv } from '../common/services/env.js';
 import { notify, toast } from '../vendor/toast.js';
-export { notify, toast } from '../vendor/toast.js';
+
+export type ToastMessage = toast.ToastMessage;
 
 export async function createToaster(context: AppLoadContext, request: Request) {
   const toastSecret = contextEnv(context).TOAST_COOKIE_SECRET_KEY;
