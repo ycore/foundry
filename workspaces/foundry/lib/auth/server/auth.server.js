@@ -5,7 +5,7 @@ import { checkCsrfToken } from '../../form/server/csrf.server.js';
 import { checkHoneypot } from '../../form/server/honeypot.server.js';
 import { getMultiAction } from '../../form/server/multi-action.server.js';
 import { safeParseForm } from '../../form/validate.js';
-import { toast } from '../../vendor/toast.js';
+import { toast } from '../../form/vendor.js';
 import { AuthSession } from '../server/auth-session.server.js';
 import { createVerifyUrl } from '../utils/auth-utils.js';
 import { CredentialSchema, VerificationSchema } from '../utils/valid-auth.js';
