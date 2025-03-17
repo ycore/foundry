@@ -6,7 +6,7 @@ import { checkCsrfToken } from '../../form/server/csrf.server.js';
 import { checkHoneypot } from '../../form/server/honeypot.server.js';
 import { getMultiAction } from '../../form/server/multi-action.server.js';
 import { safeParseForm } from '../../form/validate.js';
-import { toast } from '../../vendor/toast.js';
+import { toast } from '../../form/vendor.js';
 import type { VerifyActionInputProps, VerifyActions } from '../components/VerifyActionInput.js';
 import type { AuthConfig } from '../config/config.auth.js';
 import { AuthSession, type ProtectedUserEmail } from '../server/auth-session.server.js';
