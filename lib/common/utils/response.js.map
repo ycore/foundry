@@ -1,0 +1,1 @@
+{"version":3,"file":"response.js","sourceRoot":"","sources":["../../../../../../workspaces/foundry/src/common/utils/response.ts"],"names":[],"mappings":"AAAA,MAAM,UAAU,IAAI,CAAI,IAAO,EAAE,OAAsB;IACrD,OAAO,IAAI,QAAQ,CAAC,IAAI,CAAC,SAAS,CAAC,IAAI,CAAC,EAAE;QACxC,GAAG,OAAO;QACV,OAAO,EAAE;YACP,cAAc,EAAE,kBAAkB;YAClC,GAAG,OAAO,EAAE,OAAO;SACpB;KACF,CAAC,CAAC;AACL,CAAC"}
