@@ -1,6 +1,6 @@
 {
   "name": "@ycore/foundry",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "type": "module",
   "repository": {
@@ -26,7 +26,8 @@
     },
     "./auth/schema": {
       "types": "./lib/auth/config/db/schema.d.ts",
-      "import": "./lib/auth/config/db/schema.js"
+      "import": "./lib/auth/config/db/schema.js",
+      "require": "./lib/auth/config/db/schema.js"
     },
     "./auth/server": {
       "types": "./lib/auth/server/index.d.ts",
