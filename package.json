@@ -1,0 +1,82 @@
+{
+  "name": "@ycore/foundry",
+  "version": "1.0.6",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/ycore/foundry.git"
+  },
+  "exports": {
+    "./auth/components": {
+      "types": "./lib/auth/components/index.d.ts",
+      "import": "./lib/auth/components/index.js"
+    },
+    "./auth/config": {
+      "types": "./lib/auth/config/index.d.ts",
+      "import": "./lib/auth/config/index.js"
+    },
+    "./auth/pages": {
+      "types": "./lib/auth/pages/index.d.ts",
+      "import": "./lib/auth/pages/index.js"
+    },
+    "./auth/routes": {
+      "types": "./lib/auth/routes.d.ts",
+      "import": "./lib/auth/routes.js"
+    },
+    "./auth/schema": {
+      "types": "./lib/auth/config/db/schema.d.ts",
+      "import": "./lib/auth/config/db/schema.js"
+    },
+    "./auth/server": {
+      "types": "./lib/auth/server/index.d.ts",
+      "import": "./lib/auth/server/index.js"
+    },
+    "./common": {
+      "types": "./lib/common/index.d.ts",
+      "import": "./lib/common/index.js"
+    },
+    "./email": {
+      "types": "./lib/email/index.d.ts",
+      "import": "./lib/email/index.js"
+    },
+    "./form": {
+      "types": "./lib/form/index.d.ts",
+      "import": "./lib/form/index.js"
+    },
+    "./form/server": {
+      "types": "./lib/form/server/index.d.ts",
+      "import": "./lib/form/server/index.js"
+    }
+  },
+  "dependencies": {
+    "@oslojs/crypto": "^1.0.1",
+    "@oslojs/encoding": "^1.1.0",
+    "@oslojs/otp": "^1.1.0",
+    "@tsndr/cloudflare-worker-jwt": "^3.1.3",
+    "confbox": "^0.1.8",
+    "jose": "^5.8.0",
+    "remix-auth": "^4.1.0",
+    "remix-auth-form": "^3.0.0",
+    "remix-toast": "^2.0.0",
+    "remix-utils": "^8.0.0",
+    "sonner": "^1.7.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "table": "^6.9.0",
+    "tsx": "^4.19.2",
+    "wrangler": "^3.95.0"
+  },
+  "peerDependencies": {
+    "@react-router/cloudflare": ">=7.0.0",
+    "drizzle-orm": ">=0.36.0",
+    "react-router": ">=7.0.0"
+  },
+  "scripts": {
+    "build": "tsc --build ./tsconfig.workspace.tson"
+  },
+  "bin": {
+    "init-routes": "scripts/init-routes"
+  }
+}
