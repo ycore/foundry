@@ -7,4 +7,3 @@ export type FlexiblePartial<T> = {
     [key: string]: unknown;
 };
 export declare function deepMerge<T extends object>(defaults: T, overrides?: DeepPartial<T>): T;
-//# sourceMappingURL=object.d.ts.map

@@ -4,4 +4,3 @@ export interface VerifyActionInputProps extends Omit<MultiActionInputProps, 'val
     value: VerifyActions;
 }
 export declare const VerifyActionInput: React.FC<VerifyActionInputProps>;
-//# sourceMappingURL=VerifyActionInput.d.ts.map

@@ -43,4 +43,3 @@ export declare const sendMail: {
 };
 export declare const emailOptions: (to: string, context: AppLoadContext) => Promise<EmailOptions>;
 export {};
-//# sourceMappingURL=email.server.d.ts.map

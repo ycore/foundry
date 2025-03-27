@@ -1,1 +1,0 @@
-{"version":3,"file":"index.js","sourceRoot":"","sources":["../../../../src/auth/config/index.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,IAAI,UAAU,EAAmB,MAAM,kBAAkB,CAAC","sourcesContent":["export { default as authConfig, type AuthConfig } from './config.auth.js';\n"]}

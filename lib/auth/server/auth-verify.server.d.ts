@@ -21,4 +21,3 @@ export declare const authTOTP: {
     verify: (email: string, code: string, context: AppLoadContext, options?: TOTPConfigReq) => Promise<[AuthError, undefined] | [null, boolean]>;
     link: (linkPath: string, linkRef: VerifyLinkOptions, context: AppLoadContext, request: Request) => Promise<string>;
 };
-//# sourceMappingURL=auth-verify.server.d.ts.map

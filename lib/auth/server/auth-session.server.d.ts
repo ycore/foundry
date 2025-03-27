@@ -22,4 +22,3 @@ export declare const AuthSession: {
     verifySessionUser: (context: AppLoadContext, request: Request, verify: Verification) => Promise<[AuthError, Headers] | [null, Headers]>;
     updateUserPassword: (context: AppLoadContext, request: Request, credentials: Credentials) => Promise<ProtectedUserResponse>;
 };
-//# sourceMappingURL=auth-session.server.d.ts.map

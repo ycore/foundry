@@ -34,4 +34,3 @@ declare const authConfig: {
 };
 export default authConfig;
 export type AuthConfig = typeof authConfig;
-//# sourceMappingURL=config.auth.d.ts.map

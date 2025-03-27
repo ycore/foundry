@@ -10,4 +10,3 @@ export declare class BaseError<T extends string> extends Error {
     constructor(props: BaseErrorProps<T>);
 }
 export {};
-//# sourceMappingURL=error-base.d.ts.map

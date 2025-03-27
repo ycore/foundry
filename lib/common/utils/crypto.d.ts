@@ -51,4 +51,3 @@ export declare const base64Encode: (data: Uint8Array | string) => string;
  * @returns {string} The decoded string.
  */
 export declare const base64Decode: (data: Uint8Array | string) => string;
-//# sourceMappingURL=crypto.d.ts.map

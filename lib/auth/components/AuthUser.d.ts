@@ -6,4 +6,3 @@ interface AuthUserProps {
 }
 export declare function AuthUser({ user, authConfig }: AuthUserProps): import("react/jsx-runtime").JSX.Element;
 export {};
-//# sourceMappingURL=AuthUser.d.ts.map

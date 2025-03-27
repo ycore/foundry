@@ -1,6 +1,6 @@
 {
   "name": "@ycore/foundry",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "type": "module",
   "repository": {
@@ -12,9 +12,9 @@
       "types": "./lib/auth/components/index.d.ts",
       "import": "./lib/auth/components/index.js"
     },
-    "./auth/config": {
-      "types": "./lib/auth/config/index.d.ts",
-      "import": "./lib/auth/config/index.js"
+    "./auth/config/config.auth": {
+      "types": "./lib/auth/config/config.auth.d.ts",
+      "import": "./lib/auth/config/config.auth.js"
     },
     "./auth/pages": {
       "types": "./lib/auth/pages/index.d.ts",
@@ -33,9 +33,17 @@
       "types": "./lib/auth/server/index.d.ts",
       "import": "./lib/auth/server/index.js"
     },
-    "./common": {
-      "types": "./lib/common/index.d.ts",
-      "import": "./lib/common/index.js"
+    "./common/services/database": {
+      "types": "./lib/common/services/database.d.ts",
+      "import": "./lib/common/services/database.js"
+    },
+    "./common/services/*": {
+      "types": "./lib/common/services/*.d.ts",
+      "import": "./lib/common/services/*.js"
+    },
+    "./common/utils/*": {
+      "types": "./lib/common/utils/*.d.ts",
+      "import": "./lib/common/utils/*.js"
     },
     "./email": {
       "types": "./lib/email/index.d.ts",

@@ -8,4 +8,3 @@ interface KvStore {
 }
 export declare const kvStore: KvStore;
 export {};
-//# sourceMappingURL=keystore.d.ts.map

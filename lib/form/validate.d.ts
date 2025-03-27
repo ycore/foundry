@@ -17,4 +17,3 @@ export declare function safeParse<TSchema extends v.BaseSchema<any, any, any>>(s
     data: v.InferOutput<TSchema>;
     errors: null;
 };
-//# sourceMappingURL=validate.d.ts.map

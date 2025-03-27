@@ -9,4 +9,3 @@ export declare const VerificationSchema: v.ObjectSchema<{
     readonly code: v.SchemaWithPipe<[v.StringSchema<undefined>, v.RegexAction<string, "OTP code format is invalid">]>;
 }, undefined>;
 export type Verification = v.InferOutput<typeof VerificationSchema>;
-//# sourceMappingURL=valid-auth.d.ts.map

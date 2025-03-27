@@ -11,4 +11,3 @@ export declare class AuthError extends BaseError<ErrorKind> {
 }
 export type AuthErrorType = typeof AuthError;
 export {};
-//# sourceMappingURL=error-auth.d.ts.map

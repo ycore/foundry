@@ -1,1 +1,0 @@
-{"version":3,"file":"valid-auth.d.ts","sourceRoot":"","sources":["../../../../src/auth/utils/valid-auth.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,CAAC,MAAM,SAAS,CAAC;AAa7B,eAAO,MAAM,gBAAgB;;;aAG3B,CAAC;AACH,MAAM,MAAM,WAAW,GAAG,CAAC,CAAC,WAAW,CAAC,OAAO,gBAAgB,CAAC,CAAC;AAEjE,eAAO,MAAM,kBAAkB;;;aAG7B,CAAC;AACH,MAAM,MAAM,YAAY,GAAG,CAAC,CAAC,WAAW,CAAC,OAAO,kBAAkB,CAAC,CAAC"}

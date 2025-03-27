@@ -174,4 +174,3 @@ export declare const passwords: import("drizzle-orm/sqlite-core").SQLiteTableWit
 export type User = typeof users.$inferSelect;
 export type UserPassword = typeof passwords.$inferSelect;
 export type ProtectedUser = Pick<User, 'id' | 'email' | 'emailVerified'>;
-//# sourceMappingURL=schema.d.ts.map
