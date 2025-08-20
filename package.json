@@ -1,0 +1,39 @@
+{
+  "name": "@ycore/foundry",
+  "version": "2.0.1",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/ycore/foundry.git"
+  },
+  "exports": {
+    "./auth/schema": {
+      "import": "./dist/auth/schema/index.js",
+      "types": "./dist/auth/schema/index.d.ts",
+      "default": "./src/auth/schema/index.ts"
+    },
+    "./database": {
+      "import": "./dist/database/index.js",
+      "types": "./dist/database/index.d.ts",
+      "default": "./src/database/index.ts"
+    },
+    "./secure": {
+      "import": "./dist/secure/index.js",
+      "types": "./dist/secure/index.d.ts",
+      "default": "./src/secure/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@paralleldrive/cuid2": "catalog:dep"
+  },
+  "devDependencies": {
+    "@total-typescript/tsconfig": "catalog:dev",
+    "@types/react": "catalog:dev",
+    "vite": "catalog:dev"
+  },
+  "scripts": {
+    "ws:types": "wrangler types --include-env=false './src/@types/worker-runtime.d.ts' && wrangler types --include-runtime=false './src/@types/worker-configuration.d.ts'"
+  }
+}
