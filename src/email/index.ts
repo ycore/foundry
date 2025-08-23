@@ -1,0 +1,11 @@
+export type { EmailConfig, EmailProvider, EmailProviderConfig, EmailProviders, EmailTemplate, SendEmailOptions, TotpEmailData } from './@types/email.types';
+export { sendAuthTotpEmail, sendEmail } from './email';
+export { defaultEmailConfig } from './email.config';
+export { createEmailProvider, getSupportedProviders, isValidProvider } from './email-provider';
+export { EmailSchema, type ValidEmail, validateEmail } from './email-validator';
+export { MailChannelsEmailProvider } from './providers/mailchannels';
+export { MockEmailProvider } from './providers/mock';
+export { ResendEmailProvider } from './providers/resend';
+export { createTotpTemplate } from './templates/auth-totp';
+export { createMinimalTemplate } from './templates/minimal-template';
+export { createMockTemplate } from './templates/mock-template';
