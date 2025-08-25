@@ -1,6 +1,5 @@
-import { parseIssues, returnFailure, returnSuccess } from '@ycore/forge/error';
-import type { ValidationResult } from '@ycore/forge/utils';
-import { logger } from '@ycore/forge/utils';
+import type { ValidationResult } from '@ycore/forge/error';
+import { logger, parseIssues, returnFailure, returnSuccess } from '@ycore/forge/error';
 import * as v from 'valibot';
 
 export const EmailSchema = v.pipe(v.string(), v.trim(), v.toLowerCase(), v.email(), v.maxLength(254));
