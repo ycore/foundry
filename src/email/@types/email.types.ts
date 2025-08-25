@@ -1,3 +1,5 @@
+import type { ErrorCollection, TypedResult } from '@ycore/forge/error';
+
 export interface EmailTemplate {
   subject: string;
   html: string;
@@ -12,7 +14,7 @@ export interface SendEmailOptions {
 }
 
 export interface EmailProvider {
-  sendEmail(options: SendEmailOptions): Promise<void>;
+  sendEmail(options: SendEmailOptions): Promise<TypedResult<void, ErrorCollection>>;
 }
 
 export interface TotpEmailData {

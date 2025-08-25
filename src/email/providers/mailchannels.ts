@@ -1,4 +1,6 @@
-import { getErrorMessage, logger } from '@ycore/forge/utils';
+import { logger } from '@ycore/forge/utils';
+import { transformError, getErrorSummary, returnSuccess, returnFailure } from '@ycore/forge/error';
+import type { TypedResult, ErrorCollection } from '@ycore/forge/error';
 import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
 
 /**
@@ -11,11 +13,11 @@ import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
 export class MailChannelsEmailProvider implements EmailProvider {
   private readonly apiUrl = 'https://api.mailchannels.net/tx/v1/send';
 
-  async sendEmail(options: SendEmailOptions): Promise<void> {
+  async sendEmail(options: SendEmailOptions): Promise<TypedResult<void, ErrorCollection>> {
     const { apiKey, to, from, template } = options;
 
     if (!from) {
-      throw new Error('From address is required');
+      return returnFailure([{ messages: ['From address is required'] }]);
     }
 
     try {
@@ -54,15 +56,17 @@ export class MailChannelsEmailProvider implements EmailProvider {
         to,
         subject: template.subject,
       });
+
+      return returnSuccess(undefined);
     } catch (error) {
-      const message = getErrorMessage(error);
+      const errorResult = transformError(error);
       logger.error({
         event: 'email_send_error',
         provider: 'mailchannels',
         to,
-        message,
+        message: getErrorSummary([errorResult]),
       });
-      throw new Error(`Failed to send email via MailChannels: ${message}`);
+      return returnFailure([{ messages: [`Failed to send email via MailChannels: ${getErrorSummary([errorResult])}`] }]);
     }
   }
 }

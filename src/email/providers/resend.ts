@@ -1,4 +1,6 @@
-import { getErrorMessage, logger } from '@ycore/forge/utils';
+import { logger } from '@ycore/forge/utils';
+import { transformError, getErrorSummary, returnSuccess, returnFailure } from '@ycore/forge/error';
+import type { TypedResult, ErrorCollection } from '@ycore/forge/error';
 import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
 
 /**
@@ -6,11 +8,11 @@ import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
  * Implementation for Resend email service
  */
 export class ResendEmailProvider implements EmailProvider {
-  async sendEmail(options: SendEmailOptions): Promise<void> {
+  async sendEmail(options: SendEmailOptions): Promise<TypedResult<void, ErrorCollection>> {
     const { apiKey, to, from, template } = options;
 
     if (!from) {
-      throw new Error('From address is required');
+      return returnFailure([{ messages: ['From address is required'] }]);
     }
 
     try {
@@ -39,15 +41,17 @@ export class ResendEmailProvider implements EmailProvider {
         provider: 'resend',
         to,
       });
+
+      return returnSuccess(undefined);
     } catch (error) {
-      const message = getErrorMessage(error);
+      const errorResult = transformError(error);
       logger.error({
         event: 'email_send_error',
         provider: 'resend',
         to,
-        message,
+        message: getErrorSummary([errorResult]),
       });
-      throw new Error(`Failed to send email: ${message}`);
+      return returnFailure([{ messages: [`Failed to send email: ${getErrorSummary([errorResult])}`] }]);
     }
   }
 }

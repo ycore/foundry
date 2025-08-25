@@ -1,4 +1,6 @@
 import { logger } from '@ycore/forge/utils';
+import { returnFailure, returnSuccess } from '@ycore/forge/error';
+import type { TypedResult, ErrorCollection } from '@ycore/forge/error';
 import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
 
 /**
@@ -6,35 +8,41 @@ import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
  * Development provider that logs emails instead of sending them
  */
 export class MockEmailProvider implements EmailProvider {
-  async sendEmail(options: SendEmailOptions): Promise<void> {
+  async sendEmail(options: SendEmailOptions): Promise<TypedResult<void, ErrorCollection>> {
     const { to, from, template } = options;
 
     if (!from) {
-      throw new Error('From address is required');
+      return returnFailure([{ messages: ['From address is required'] }]);
     }
 
-    // Simulate a slight delay like a real email service
-    await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      // Simulate a slight delay like a real email service
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-    logger.debug({
-      event: 'mock_email_sent',
-      provider: 'mock',
-      from,
-      to,
-      subject: template.subject,
-      htmlLength: template.html.length,
-      textLength: template.text.length,
-    });
+      logger.debug({
+        event: 'mock_email_sent',
+        provider: 'mock',
+        from,
+        to,
+        subject: template.subject,
+        htmlLength: template.html.length,
+        textLength: template.text.length,
+      });
 
-    // In development, you could also log the full content
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📧 Mock Email Sent:');
-      console.log(`From: ${from}`);
-      console.log(`To: ${to}`);
-      console.log(`Subject: ${template.subject}`);
-      console.log(`Text: ${template.text}`);
-      console.log(`HTML: ${template.html}`);
-      console.log('---');
+      // In development, you could also log the full content
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📧 Mock Email Sent:');
+        console.log(`From: ${from}`);
+        console.log(`To: ${to}`);
+        console.log(`Subject: ${template.subject}`);
+        console.log(`Text: ${template.text}`);
+        console.log(`HTML: ${template.html}`);
+        console.log('---');
+      }
+
+      return returnSuccess(undefined);
+    } catch (error) {
+      return returnFailure([{ messages: [`Failed to send mock email: ${error instanceof Error ? error.message : 'Unknown error'}`] }]);
     }
   }
 }
