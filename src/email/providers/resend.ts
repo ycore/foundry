@@ -1,5 +1,6 @@
 import type { ErrorCollection, TypedResult } from '@ycore/forge/error';
-import { getErrorSummary, logger, returnFailure, returnSuccess, transformError } from '@ycore/forge/error';
+import { flattenErrors, returnFailure, returnSuccess, transformError } from '@ycore/forge/error';
+import { logger } from '@ycore/forge/logger';
 import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
 
 /**
@@ -48,9 +49,9 @@ export class ResendEmailProvider implements EmailProvider {
         event: 'email_send_error',
         provider: 'resend',
         to,
-        message: getErrorSummary([errorResult]),
+        message: flattenErrors([errorResult]),
       });
-      return returnFailure([{ messages: [`Failed to send email: ${getErrorSummary([errorResult])}`] }]);
+      return returnFailure([{ messages: [`Failed to send email: ${flattenErrors([errorResult])}`] }]);
     }
   }
 }

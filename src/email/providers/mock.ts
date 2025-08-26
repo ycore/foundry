@@ -1,5 +1,6 @@
 import type { ErrorCollection, TypedResult } from '@ycore/forge/error';
-import { logger, returnFailure, returnSuccess } from '@ycore/forge/error';
+import { returnFailure, returnSuccess } from '@ycore/forge/error';
+import { logger } from '@ycore/forge/logger';
 import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
 
 /**

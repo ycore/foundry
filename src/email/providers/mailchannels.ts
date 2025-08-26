@@ -1,5 +1,6 @@
 import type { ErrorCollection, TypedResult } from '@ycore/forge/error';
-import { getErrorSummary, logger, returnFailure, returnSuccess, transformError } from '@ycore/forge/error';
+import { flattenErrors, returnFailure, returnSuccess, transformError } from '@ycore/forge/error';
+import { logger } from '@ycore/forge/logger';
 import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
 
 /**
@@ -63,9 +64,9 @@ export class MailChannelsEmailProvider implements EmailProvider {
         event: 'email_send_error',
         provider: 'mailchannels',
         to,
-        message: getErrorSummary([errorResult]),
+        message: flattenErrors([errorResult]),
       });
-      return returnFailure([{ messages: [`Failed to send email via MailChannels: ${getErrorSummary([errorResult])}`] }]);
+      return returnFailure([{ messages: [`Failed to send email via MailChannels: ${flattenErrors([errorResult])}`] }]);
     }
   }
 }
