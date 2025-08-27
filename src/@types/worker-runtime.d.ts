@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Runtime types generated with workerd@1.20250803.0 2025-04-07 
+// Runtime types generated with workerd@1.20250816.0 2025-04-07 
 // Begin runtime types
 /*! *****************************************************************************
 Copyright (c) Cloudflare. All rights reserved.
@@ -407,6 +407,7 @@ interface DurableObjectNamespace<T extends Rpc.DurableObjectBranded | undefined 
     idFromName(name: string): DurableObjectId;
     idFromString(id: string): DurableObjectId;
     get(id: DurableObjectId, options?: DurableObjectNamespaceGetDurableObjectOptions): DurableObjectStub<T>;
+    getByName(name: string, options?: DurableObjectNamespaceGetDurableObjectOptions): DurableObjectStub<T>;
     jurisdiction(jurisdiction: DurableObjectJurisdiction): DurableObjectNamespace<T>;
 }
 type DurableObjectJurisdiction = "eu" | "fedramp" | "fedramp-high";
@@ -5345,6 +5346,12 @@ type GatewayOptions = {
     requestTimeoutMs?: number;
     retries?: GatewayRetries;
 };
+type UniversalGatewayOptions = Exclude<GatewayOptions, 'id'> & {
+    /**
+     ** @deprecated
+     */
+    id?: string;
+};
 type AiGatewayPatchLog = {
     score?: number | null;
     feedback?: -1 | 1 | null;
@@ -5413,7 +5420,7 @@ declare abstract class AiGateway {
     patchLog(logId: string, data: AiGatewayPatchLog): Promise<void>;
     getLog(logId: string): Promise<AiGatewayLog>;
     run(data: AIGatewayUniversalRequest | AIGatewayUniversalRequest[], options?: {
-        gateway?: GatewayOptions;
+        gateway?: UniversalGatewayOptions;
         extraHeaders?: object;
     }): Promise<Response>;
     getUrl(provider?: AIGatewayProviders | string): Promise<string>; // eslint-disable-line
@@ -5447,6 +5454,7 @@ type AutoRagSearchRequest = {
 };
 type AutoRagAiSearchRequest = AutoRagSearchRequest & {
     stream?: boolean;
+    system_prompt?: string;
 };
 type AutoRagAiSearchRequestStreaming = Omit<AutoRagAiSearchRequest, 'stream'> & {
     stream: true;
