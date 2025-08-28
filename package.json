@@ -1,6 +1,6 @@
 {
   "name": "@ycore/foundry",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "private": true,
   "type": "module",
   "repository": {
@@ -36,14 +36,14 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@paralleldrive/cuid2": "catalog:dep",
-    "@oslojs/crypto": "catalog:dep",
-    "@oslojs/encoding": "catalog:dep"
+    "@paralleldrive/cuid2": "^2.2.2",
+    "@oslojs/crypto": "^1.0.1",
+    "@oslojs/encoding": "^1.0.1"
   },
   "devDependencies": {
-    "@total-typescript/tsconfig": "catalog:dev",
-    "@types/react": "catalog:dev",
-    "vite": "catalog:dev"
+    "@total-typescript/tsconfig": "^1.0.4",
+    "@types/react": "^19.1.8",
+    "vite": "^7.0.2"
   },
   "scripts": {
     "clean": "rm -rf dist node_modules",
