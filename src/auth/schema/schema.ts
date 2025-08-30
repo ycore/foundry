@@ -1,18 +1,20 @@
+import { createdAt, cuid, timestamp, updatedAt } from '@ycore/forge/utils';
 import { relations } from 'drizzle-orm';
 import { index, integer, sqliteTable, text, unique, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { createdAt, cuid, timestamp, updatedAt } from '../../database/drizzle-helpers';
 // users
 export const users = sqliteTable(
   'users',
   {
     id: integer().primaryKey(),
-    cuid: cuid('id'),
+    cuid: cuid(),
     username: text('username').notNull(),
     displayName: text('display_name'),
     email: text('email').notNull(),
     avatarUrl: text('avatar_url'),
     bio: text('bio'),
-    status: text('status', { enum: ['active', 'deleted', 'blocked'], }).default('active').notNull(),
+    status: text('status', { enum: ['active', 'deleted', 'blocked'] })
+      .default('active')
+      .notNull(),
     createdAt,
     updatedAt,
   },
@@ -31,10 +33,12 @@ export const accounts = sqliteTable(
   'accounts',
   {
     id: integer().primaryKey(),
-    cuid: cuid('id'),
-    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    cuid: cuid(),
+    userId: text('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
     providerAccountId: text('provider_account_id').notNull(),
-    provider: text('provider', { enum: ['github', 'google', 'totp'], }).notNull(),
+    provider: text('provider', { enum: ['github', 'google', 'totp'] }).notNull(),
     scopes: text('scopes'),
     idToken: text('id_token'),
     accessToken: text('access_token'),

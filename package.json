@@ -35,11 +35,6 @@
     },
     "./package.json": "./package.json"
   },
-  "dependencies": {
-    "@paralleldrive/cuid2": "^2.2.2",
-    "@oslojs/crypto": "^1.0.1",
-    "@oslojs/encoding": "^1.0.1"
-  },
   "devDependencies": {
     "@total-typescript/tsconfig": "^1.0.4",
     "@types/react": "^19.1.8",
