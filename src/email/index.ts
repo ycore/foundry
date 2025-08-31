@@ -1,5 +1,5 @@
 export type { EmailConfig, EmailProvider, EmailProviderConfig, EmailProviders, EmailTemplate, SendEmailOptions, TotpEmailData } from './@types/email.types';
-export { sendAuthTotpEmail, sendEmail } from './email';
+export { sendEmail } from './email';
 export { defaultEmailConfig } from './email.config';
 export { createEmailProvider, getEmailProviderNames, getProviderConfig, getSupportedProviders, isValidProvider } from './email-provider';
 export { EmailSchema } from './email-validator';

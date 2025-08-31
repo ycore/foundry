@@ -13,11 +13,6 @@
       "types": "./dist/auth/schema/index.d.ts",
       "default": "./src/auth/schema/index.ts"
     },
-    "./database": {
-      "import": "./dist/database/index.js",
-      "types": "./dist/database/index.d.ts",
-      "default": "./src/database/index.ts"
-    },
     "./email": {
       "import": "./dist/email/index.js",
       "types": "./dist/email/index.d.ts",
@@ -35,6 +30,10 @@
     },
     "./package.json": "./package.json"
   },
+  "dependencies": {
+    "@oslojs/crypto": "^1.0.1",
+    "@oslojs/encoding": "^1.0.1"
+  },
   "devDependencies": {
     "@total-typescript/tsconfig": "^1.0.4",
     "@types/react": "^19.1.8",
@@ -42,6 +41,6 @@
   },
   "scripts": {
     "clean": "rm -rf dist node_modules",
-    "ws:types": "bun ../../scripts/build-package.ts . --types-only && wrangler types --include-env=false './src/@types/worker-runtime.d.ts' && wrangler types --include-runtime=false './src/@types/worker-configuration.d.ts'"
+    "ws:types": "bun ../../scripts/build-package.ts . --types-only && wrangler types --include-env=false './src/@types/worker-runtime.d.ts' && tsc --noEmit"
   }
 }
