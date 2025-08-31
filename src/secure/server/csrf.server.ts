@@ -71,11 +71,10 @@ export async function validateCSRF(formData: FormData, headers: Headers): Promis
     const errorMessage = error instanceof Error ? error.message : 'CSRF validation failed';
     return {
       data: null,
-      errors: [{ messages: [errorMessage] }]
+      errors: [{ messages: [errorMessage] }],
     };
   }
 }
-
 
 function createCSRF(config: Required<CSRFOptions>) {
   const { secret, cookieName, formDataKey, secure } = config;

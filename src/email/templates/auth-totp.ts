@@ -1,4 +1,4 @@
-import type { EmailTemplate, TotpEmailData } from "../@types/email.types";
+import type { EmailTemplate, TotpEmailData } from '../@types/email.types';
 
 /**
  * Authentication TOTP Email Template
@@ -7,7 +7,7 @@ import type { EmailTemplate, TotpEmailData } from "../@types/email.types";
 export function createTotpTemplate(data: TotpEmailData): EmailTemplate {
   const { code } = data;
 
-  const subject = "Your verification code";
+  const subject = 'Your verification code';
 
   const html = `
     <!DOCTYPE html>

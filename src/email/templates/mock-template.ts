@@ -1,4 +1,4 @@
-import type { EmailTemplate } from "../@types/email.types";
+import type { EmailTemplate } from '../@types/email.types';
 
 export interface MockEmailData {
   subject: string;
@@ -11,7 +11,7 @@ export interface MockEmailData {
  * Generic template for demonstration and testing purposes
  */
 export function createMockTemplate(data: MockEmailData): EmailTemplate {
-  const { subject, message, recipientName = "there" } = data;
+  const { subject, message, recipientName = 'there' } = data;
 
   const html = `
     <!DOCTYPE html>
