@@ -8,25 +8,29 @@
     "url": "git+ssh://git@github.com/ycore/foundry.git"
   },
   "exports": {
+    "./auth": {
+      "import": "./src/auth/index.ts",
+      "types": "./src/auth/index.ts"
+    },
+    "./auth/server": {
+      "import": "./src/auth/server/index.ts",
+      "types": "./src/auth/server/index.ts"
+    },
     "./auth/schema": {
-      "import": "./dist/auth/schema/index.js",
-      "types": "./dist/auth/schema/index.d.ts",
-      "default": "./src/auth/schema/index.ts"
+      "import": "./src/auth/schema/index.ts",
+      "types": "./src/auth/schema/index.ts"
     },
     "./email": {
-      "import": "./dist/email/index.js",
-      "types": "./dist/email/index.d.ts",
-      "default": "./src/email/index.ts"
+      "import": "./src/email/index.ts",
+      "types": "./src/email/index.ts"
     },
     "./secure": {
-      "import": "./dist/secure/index.js",
-      "types": "./dist/secure/index.d.ts",
-      "default": "./src/secure/index.ts"
+      "import": "./src/secure/index.ts",
+      "types": "./src/secure/index.ts"
     },
-    "./secure/server": {
-      "import": "./dist/secure/server/index.js",
-      "types": "./dist/secure/server/index.d.ts",
-      "default": "./src/secure/server/index.ts"
+    "./secure/services": {
+      "import": "./src/secure/services/index.ts",
+      "types": "./src/secure/services/index.ts"
     },
     "./package.json": "./package.json"
   },
@@ -41,6 +45,6 @@
   },
   "scripts": {
     "clean": "rm -rf dist node_modules",
-    "ws:types": "bun ../../scripts/build-package.ts . --types-only && wrangler types --include-env=false './src/@types/worker-runtime.d.ts' && tsc --noEmit"
+    "ws:types": "wrangler types --include-env=false './src/@types/worker-runtime.d.ts' && tsc --noEmit"
   }
 }
