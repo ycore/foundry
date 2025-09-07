@@ -1,4 +1,5 @@
-import type { ErrorCollection, TypedResult } from '@ycore/forge/error';
+import type { ErrorCollection } from '@ycore/forge/error';
+import type { TypedResult } from '@ycore/forge/http';
 import type { SendEmailOptions } from './@types/email.types';
 import { ResendEmailProvider } from './providers/resend';
 

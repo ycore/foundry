@@ -1,5 +1,6 @@
-import type { ErrorCollection, TypedResult } from '@ycore/forge/error';
-import { returnFailure, returnSuccess } from '@ycore/forge/error';
+import type { ErrorCollection } from '@ycore/forge/error';
+import type { TypedResult } from '@ycore/forge/http';
+import { returnFailure, returnSuccess } from '@ycore/forge/http';
 import { logger } from '@ycore/forge/logger';
 import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
 
@@ -20,7 +21,7 @@ export class MockEmailProvider implements EmailProvider {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       logger.debug({
-        event: 'mock_email_sent',
+        event: 'email_mock_sent',
         provider: 'mock',
         from,
         to,

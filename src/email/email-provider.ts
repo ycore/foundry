@@ -1,5 +1,6 @@
-import type { ErrorCollection, TypedResult } from '@ycore/forge/error';
-import { returnFailure, returnSuccess } from '@ycore/forge/error';
+import type { ErrorCollection } from '@ycore/forge/error';
+import type { TypedResult } from '@ycore/forge/http';
+import { returnFailure, returnSuccess } from '@ycore/forge/http';
 import type { EmailConfig, EmailProvider, EmailProviderConfig, EmailProviders } from './@types/email.types';
 import { MailChannelsEmailProvider } from './providers/mailchannels';
 import { MockEmailProvider } from './providers/mock';
