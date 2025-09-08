@@ -1,6 +1,6 @@
 import { middlewarePassthrough } from '@ycore/forge/http';
 import { getBindings } from '@ycore/forge/services';
-import { unstable_createContext } from 'react-router';
+import { unstable_createContext, type unstable_MiddlewareFunction } from 'react-router';
 import type { CSRFData } from '../@types/csrf.types';
 import { resolveCSRF } from './csrf';
 
@@ -9,16 +9,10 @@ import { resolveCSRF } from './csrf';
 export const csrfContext = unstable_createContext<CSRFData | null>(null);
 
 /**
- * Middleware for public forms to implement CSRF protection.
- * Use: export const unstable_middleware = secureFormMiddleware;
- */
-export const secureFormMiddleware = [commitCSRFMiddleware, validateCSRFMiddleware];
-
-/**
  * Middleware to generate CSRF token for forms
  * Sets csrfContext with token and CSRF cookie header
  */
-export async function commitCSRFMiddleware({ context }: any, next: () => Promise<Response>) {
+export const commitCSRFMiddleware: unstable_MiddlewareFunction<Response> = async ({ context }, next) => {
   const { CSRF_COOKIE_SECRET_KEY, ENVIRONMENT } = getBindings(context);
   const csrf = resolveCSRF({ secret: CSRF_COOKIE_SECRET_KEY, secure: ENVIRONMENT !== 'development' });
   const [token, cookieHeader] = await csrf.commitToken();
@@ -34,7 +28,7 @@ export async function commitCSRFMiddleware({ context }: any, next: () => Promise
   }
 
   return response;
-}
+};
 
 /**
  * Middleware that automatically validates CSRF tokens on mutation requests.
@@ -43,7 +37,7 @@ export async function commitCSRFMiddleware({ context }: any, next: () => Promise
  * For GET requests: passes through without validation
  * For POST/PUT/DELETE: validates CSRF token and throws error for React Router to handle
  */
-export async function validateCSRFMiddleware({ request, context }: any, next: () => Promise<Response>) {
+export const validateCSRFMiddleware: unstable_MiddlewareFunction<Response> = async ({ request, context }, next) => {
   // Only process POST/PUT/DELETE requests
   if (!['POST', 'PUT', 'DELETE'].includes(request.method)) {
     return next();
@@ -65,3 +59,9 @@ export async function validateCSRFMiddleware({ request, context }: any, next: ()
 
   return next();
 }
+
+/**
+ * Middleware for public forms to implement CSRF protection.
+ * Use: export const unstable_middleware = secureFormMiddleware;
+ */
+export const secureFormMiddleware = [commitCSRFMiddleware, validateCSRFMiddleware];
