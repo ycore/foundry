@@ -1,4 +1,4 @@
-import { Form } from 'react-router';
+import { Form } from '@ycore/componentry/shadcn-ui';
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react';
 
 import type { SecureFormProps } from './@types/SecureForm.types';

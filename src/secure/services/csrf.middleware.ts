@@ -1,4 +1,4 @@
-import { middlewarePassthrough } from '@ycore/forge/http';
+import { middlewarePassthrough } from '@ycore/forge/result';
 import { getBindings } from '@ycore/forge/services';
 import { unstable_createContext, type unstable_MiddlewareFunction } from 'react-router';
 import type { CSRFData } from '../@types/csrf.types';

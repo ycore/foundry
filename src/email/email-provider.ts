@@ -1,6 +1,5 @@
-import type { ErrorCollection } from '@ycore/forge/error';
-import type { TypedResult } from '@ycore/forge/http';
-import { returnFailure, returnSuccess } from '@ycore/forge/http';
+import type { AppError, AppResult } from '@ycore/forge/result';
+import { createAppError, returnFailure, returnSuccess } from '@ycore/forge/result';
 import type { EmailConfig, EmailProvider, EmailProviderConfig, EmailProviders } from './@types/email.types';
 import { MailChannelsEmailProvider } from './providers/mailchannels';
 import { MockEmailProvider } from './providers/mock';
@@ -12,16 +11,16 @@ const providerRegistry: Record<EmailProviders, () => EmailProvider> = {
   mailchannels: () => new MailChannelsEmailProvider(),
 };
 
-export function createEmailProvider(providerName: string): TypedResult<EmailProvider, ErrorCollection> {
+export function createEmailProvider(providerName: string): AppResult<EmailProvider, AppError> {
   if (!isValidProvider(providerName)) {
-    return returnFailure([{ messages: [`Unsupported email provider: ${providerName}`] }]);
+    return returnFailure(createAppError(`Unsupported email provider: ${providerName}`));
   }
 
   try {
     const factory = providerRegistry[providerName];
     return returnSuccess(factory());
   } catch (error) {
-    return returnFailure([{ messages: [`Failed to create email provider: ${error instanceof Error ? error.message : 'Unknown error'}`] }]);
+    return returnFailure(createAppError(`Failed to create email provider: ${error instanceof Error ? error.message : 'Unknown error'}`, undefined, error instanceof Error ? error : undefined));
   }
 }
 

@@ -66,12 +66,15 @@ export async function validateCSRF(formData: FormData, headers: Headers): Promis
     const csrf = resolveCSRF();
     await csrf.validate(formData, headers);
 
-    return { data: true, errors: null };
+    return { success: true, data: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'CSRF validation failed';
     return {
-      data: null,
-      errors: [{ messages: [errorMessage] }],
+      success: false,
+      error: {
+        message: errorMessage,
+        cause: error instanceof Error ? error : undefined,
+      },
     };
   }
 }

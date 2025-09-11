@@ -1,7 +1,6 @@
-import type { ErrorCollection } from '@ycore/forge/error';
-import type { TypedResult } from '@ycore/forge/http';
-import { returnFailure, returnSuccess } from '@ycore/forge/http';
 import { logger } from '@ycore/forge/logger';
+import type { AppError, AppResult } from '@ycore/forge/result';
+import { createAppError, returnFailure, returnSuccess } from '@ycore/forge/result';
 import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
 
 /**
@@ -9,11 +8,11 @@ import type { EmailProvider, SendEmailOptions } from '../@types/email.types';
  * Development provider that logs emails instead of sending them
  */
 export class MockEmailProvider implements EmailProvider {
-  async sendEmail(options: SendEmailOptions): Promise<TypedResult<void, ErrorCollection>> {
+  async sendEmail(options: SendEmailOptions): Promise<AppResult<void, AppError>> {
     const { to, from, template } = options;
 
     if (!from) {
-      return returnFailure([{ messages: ['From address is required'] }]);
+      return returnFailure(createAppError('From address is required'));
     }
 
     try {
@@ -43,7 +42,7 @@ export class MockEmailProvider implements EmailProvider {
 
       return returnSuccess(undefined);
     } catch (error) {
-      return returnFailure([{ messages: [`Failed to send mock email: ${error instanceof Error ? error.message : 'Unknown error'}`] }]);
+      return returnFailure(createAppError(`Failed to send mock email: ${error instanceof Error ? error.message : 'Unknown error'}`, undefined, error instanceof Error ? error : undefined));
     }
   }
 }

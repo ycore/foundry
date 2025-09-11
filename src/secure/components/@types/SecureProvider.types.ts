@@ -1,8 +1,8 @@
-import type { ErrorCollection } from '@ycore/forge/error';
+import type { AppError } from '@ycore/forge/result';
 
 export interface SecureProviderData {
   csrfToken: string | null | undefined;
-  errors?: ErrorCollection;
+  errors?: AppError;
 }
 
 export interface SecureProviderProps {

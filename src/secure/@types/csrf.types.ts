@@ -1,4 +1,4 @@
-import type { TypedResult } from '@ycore/forge/http';
+import type { AppError, AppResult } from '@ycore/forge/result';
 
 export interface CSRFOptions {
   secret?: string;
@@ -13,4 +13,4 @@ export interface CSRFData {
   needsValidation?: boolean;
 }
 
-export type CSRFValidationResult = TypedResult<boolean>;
+export type CSRFValidationResult = AppResult<boolean, AppError>;

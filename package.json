@@ -20,6 +20,14 @@
       "import": "./src/auth/schema/index.ts",
       "types": "./src/auth/schema/index.ts"
     },
+    "./auth/pages": {
+      "import": "./src/auth/pages/index.ts",
+      "types": "./src/auth/pages/index.ts"
+    },
+    "./auth/utils": {
+      "import": "./src/auth/utils/index.ts",
+      "types": "./src/auth/utils/index.ts"
+    },
     "./email": {
       "import": "./src/email/index.ts",
       "types": "./src/email/index.ts"
@@ -36,7 +44,8 @@
   },
   "dependencies": {
     "@oslojs/crypto": "^1.0.1",
-    "@oslojs/encoding": "^1.0.1"
+    "@oslojs/encoding": "^1.0.1",
+    "jose": "^6.1.0"
   },
   "devDependencies": {
     "@total-typescript/tsconfig": "^1.0.4",
