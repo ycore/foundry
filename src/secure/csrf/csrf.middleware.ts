@@ -1,9 +1,9 @@
+import { logger } from '@ycore/forge/logger';
 import { middlewarePassthrough } from '@ycore/forge/result';
 import { getBindings, isDevelopment } from '@ycore/forge/services';
 import { createContext, type MiddlewareFunction } from 'react-router';
 import type { CSRFData } from './@types/csrf.types';
 import { resolveCSRF } from './csrf';
-
 
 /*** CSRF token context for form protection */
 export const csrfContext = createContext<CSRFData | null>(null);
@@ -58,7 +58,7 @@ export const validateCSRFMiddleware: MiddlewareFunction<Response> = async ({ req
   }
 
   return next();
-}
+};
 
 /**
  * Middleware for public forms to implement CSRF protection.

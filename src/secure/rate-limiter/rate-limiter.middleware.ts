@@ -43,7 +43,7 @@ export function rateLimiterMiddleware(config: RateLimiterConfig): MiddlewareFunc
 
       const rateLimitResult = await checkRateLimit(requestConfig, rateLimitRequest, context);
 
-      if (rateLimitResult.errors) {
+      if (rateLimitResult.errors || !rateLimitResult.data) {
         logger.error('Rate limit check failed', { errors: rateLimitResult.errors });
         // On error, allow the request through (fail open)
         return next();
@@ -82,11 +82,7 @@ export function rateLimiterMiddleware(config: RateLimiterConfig): MiddlewareFunc
         );
       }
 
-      logger.debug('Rate limit check passed', {
-        path: rateLimitRequest.path,
-        remaining,
-        resetAt
-      });
+      logger.debug('Rate limit check passed', { path: rateLimitRequest.path, remaining, resetAt });
 
       // Add rate limit headers to the response
       const response = await next();

@@ -1,11 +1,11 @@
 import { Button, Input, Label } from '@ycore/componentry/shadcn-ui';
-import { Form } from 'react-router';
+import { SecureForm } from '@ycore/foundry/secure';
 import type { WebAuthnOptionsResponse } from '../@types/auth.types';
 import { handleFormSubmit } from './auth-form-handler';
 
 interface AuthFormProps {
   options: WebAuthnOptionsResponse;
-  errors?: any;
+  errors?: Record<string, string> | null;
   mode?: 'signup' | 'signin' | 'combined';
 }
 
@@ -14,11 +14,10 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
   const showAuthentication = mode === 'signin' || mode === 'combined';
 
   return (
-    <Form method="post" onSubmit={handleFormSubmit(options)} className="flex flex-col gap-4">
+    <SecureForm method="post" onSubmit={handleFormSubmit(options)} className="flex flex-col gap-4" errors={errors}>
       {showRegistration && (
         <>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="username">Username *</Label>
+          <SecureForm.Field className="flex flex-col gap-2" label="Username *" name="username">
             <Input 
               id="username" 
               name="username" 
@@ -27,11 +26,9 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
               autoComplete="username webauthn"
               required
             />
-            {errors?.username && <span className="text-sm text-red-500">{errors.username}</span>}
-          </div>
+          </SecureForm.Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="displayName">Display Name *</Label>
+          <SecureForm.Field className="flex flex-col gap-2" label="Display Name *" name="displayName">
             <Input 
               id="displayName" 
               name="displayName" 
@@ -40,10 +37,9 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
               autoComplete="name"
               required
             />
-            {errors?.displayName && <span className="text-sm text-red-500">{errors.displayName}</span>}
-          </div>
+          </SecureForm.Field>
 
-          <Button type="submit" formMethod="GET" variant="outline" className="w-full">
+          <Button type="submit" name="intent" value="check-username" variant="outline" className="w-full">
             Check Username Availability
           </Button>
 
@@ -67,8 +63,7 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
       {showAuthentication && (
         <>
           {mode === 'signin' && (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="username">Username *</Label>
+            <SecureForm.Field className="flex flex-col gap-2" label="Username *" name="username">
               <Input 
                 id="username" 
                 name="username" 
@@ -77,8 +72,7 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
                 autoComplete="username webauthn"
                 required
               />
-              {errors?.username && <span className="text-sm text-red-500">{errors.username}</span>}
-            </div>
+            </SecureForm.Field>
           )}
           
           <Button type="submit" name="intent" value="authentication" variant={showRegistration ? 'secondary' : 'default'} className="w-full">
@@ -86,22 +80,18 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
           </Button>
         </>
       )}
-
-      {errors?.general && <span className="text-sm text-red-500">{errors.general}</span>}
-    </Form>
+    </SecureForm>
   );
 }
 
 export function SimpleAuthForm({ options, errors }: AuthFormProps) {
   return (
-    <Form method="post" onSubmit={handleFormSubmit(options)} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="username">Username</Label>
+    <SecureForm method="post" onSubmit={handleFormSubmit(options)} className="flex flex-col gap-4" errors={errors}>
+      <SecureForm.Field className="flex flex-col gap-2" label="Username" name="username">
         <Input id="username" name="username" type="text" placeholder="Enter your username" autoComplete="username webauthn" />
-        {errors?.username && <span className="text-sm text-red-500">{errors.username}</span>}
-      </div>
+      </SecureForm.Field>
 
-      <Button type="submit" formMethod="GET" variant="outline" className="w-full">
+      <Button type="submit" name="intent" value="check-username" variant="outline" className="w-full">
         Check Username
       </Button>
 
@@ -112,8 +102,6 @@ export function SimpleAuthForm({ options, errors }: AuthFormProps) {
       <Button type="submit" name="intent" value="authentication" variant="secondary" className="w-full">
         Authenticate
       </Button>
-
-      {errors?.general && <span className="text-sm text-red-500">{errors.general}</span>}
-    </Form>
+    </SecureForm>
   );
 }

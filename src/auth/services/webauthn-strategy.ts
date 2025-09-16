@@ -40,8 +40,6 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
       origin: typeof this.origin === 'function' ? await this.origin(request) : this.origin,
     };
 
-    logger.debug('WebAuthn RP Config:', rp);
-
     return rp;
   }
 
@@ -90,21 +88,12 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
     if (request.method !== 'POST') throw new Error('The WebAuthn strategy only supports POST requests.');
 
     const expectedChallenge = session.get(this.challengeSessionKey);
-    logger.debug('Challenge from session:', expectedChallenge ? 'found' : 'not found');
 
     if (!expectedChallenge) {
       throw new Error(`Expected challenge not found. It needs to set to the \`${this.challengeSessionKey}\` property on the auth session storage.`);
     }
 
-    logger.debug('WebAuthn authenticate - expectedChallenge:', expectedChallenge);
-
     const formData = await request.formData();
-
-    // Log all form data for debugging
-    logger.debug('WebAuthn form data:');
-    for (const [key, value] of formData.entries()) {
-      logger.debug(`  ${key}:`, typeof value === 'string' ? value.substring(0, 100) : value);
-    }
 
     let data: unknown;
     try {
@@ -119,8 +108,6 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
     const type = formData.get('type');
     let username = formData.get('username');
     const displayName = formData.get('displayName')?.toString();
-
-    logger.debug('WebAuthn type:', type, 'username:', username, 'displayName:', displayName);
 
     if (typeof username !== 'string') username = null;
     if (type === 'registration') {
