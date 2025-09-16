@@ -1,8 +1,7 @@
 import type { AppResult } from '@ycore/forge/result';
-import { returnFailure, returnSuccess } from '@ycore/forge/result';
+import { createAppError, returnFailure, returnSuccess, toAppError } from '@ycore/forge/result';
 import { eq } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import { nanoid } from 'nanoid';
 import type { Authenticator, NewAuthenticator, NewUser, User } from '../schema';
 import { authenticators, users } from '../schema';
 
@@ -14,7 +13,7 @@ export class AuthRepository {
       const result = await this.db.select().from(users).where(eq(users.id, id)).get();
       return returnSuccess(result || null);
     } catch (error) {
-      return returnFailure({ message: 'Failed to get user by ID' });
+      return returnFailure(createAppError('Failed to get user by ID', { id, error: toAppError(error) }));
     }
   }
 
@@ -23,31 +22,23 @@ export class AuthRepository {
       const result = await this.db.select().from(users).where(eq(users.username, username)).get();
       return returnSuccess(result || null);
     } catch (error) {
-      return returnFailure({ message: 'Failed to get user by username' });
+      return returnFailure(createAppError('Failed to get user by username', { username, error: toAppError(error) }));
     }
   }
 
   async createUser(username: string, displayName: string): Promise<AppResult<User>> {
     try {
-      const userId = nanoid(); // Generate nanoid as string
-      const newUser: NewUser = {
-        id: userId,
-        username,
-        displayName,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const newUser: NewUser = { username, displayName };
 
-      await this.db.insert(users).values(newUser);
-      const result = await this.db.select().from(users).where(eq(users.id, newUser.id)).get();
+      const [result] = await this.db.insert(users).values(newUser).returning();
 
       if (!result) {
-        return returnFailure({ message: 'Failed to create user' });
+        return returnFailure(createAppError('Failed to create user', { username }));
       }
 
       return returnSuccess(result);
     } catch (error) {
-      return returnFailure({ message: 'Failed to create user' });
+      return returnFailure(createAppError('Failed to create user', { username, error: toAppError(error) }));
     }
   }
 
@@ -56,7 +47,7 @@ export class AuthRepository {
       const result = await this.db.select().from(authenticators).where(eq(authenticators.id, id)).get();
       return returnSuccess(result || null);
     } catch (error) {
-      return returnFailure({ message: 'Failed to get authenticator' });
+      return returnFailure(createAppError('Failed to get authenticator', { id, error: toAppError(error) }));
     }
   }
 
@@ -65,37 +56,30 @@ export class AuthRepository {
       const result = await this.db.select().from(authenticators).where(eq(authenticators.userId, userId)).all();
       return returnSuccess(result);
     } catch (error) {
-      return returnFailure({ message: 'Failed to get authenticators' });
+      return returnFailure(createAppError('Failed to get authenticators', { userId, error: toAppError(error) }));
     }
   }
 
   async createAuthenticator(authenticator: Omit<NewAuthenticator, 'createdAt' | 'updatedAt'>): Promise<AppResult<Authenticator>> {
     try {
-      const newAuthenticator: NewAuthenticator = {
-        ...authenticator,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      await this.db.insert(authenticators).values(newAuthenticator);
-      const result = await this.db.select().from(authenticators).where(eq(authenticators.id, newAuthenticator.id)).get();
+      const [result] = await this.db.insert(authenticators).values(authenticator).returning();
 
       if (!result) {
-        return returnFailure({ message: 'Failed to create authenticator' });
+        return returnFailure(createAppError('Failed to create authenticator', { id: authenticator.id }));
       }
 
       return returnSuccess(result);
     } catch (error) {
-      return returnFailure({ message: 'Failed to create authenticator' });
+      return returnFailure(createAppError('Failed to create authenticator', { id: authenticator.id, error: toAppError(error) }));
     }
   }
 
   async updateAuthenticatorCounter(id: string, counter: number): Promise<AppResult<boolean>> {
     try {
-      await this.db.update(authenticators).set({ counter, updatedAt: new Date() }).where(eq(authenticators.id, id));
+      await this.db.update(authenticators).set({ counter }).where(eq(authenticators.id, id));
       return returnSuccess(true);
     } catch (error) {
-      return returnFailure({ message: 'Failed to update authenticator counter' });
+      return returnFailure(createAppError('Failed to update authenticator counter', { id, counter, error: toAppError(error) }));
     }
   }
 }

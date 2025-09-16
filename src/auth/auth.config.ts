@@ -1,25 +1,44 @@
-import type { AuthConfig } from './@types/auth.config.types';
+import { UNCONFIGURED } from '@ycore/forge/services';
+import type { AuthConfig, AuthRoutes } from './@types/auth.config.types';
+
+export const defaultAuthRoutes: AuthRoutes = {
+  signup: '/auth/signup',
+  signin: '/auth/signin',
+  signout: '/auth/signout',
+  signedin: '/',
+  signedout: '/',
+};
 
 export const defaultAuthConfig: AuthConfig = {
-  routes: {
-    signup: '/auth/signup',
-    signin: '/auth/signin',
-    signout: '/auth/signout',
-    signedin: '/',
-    signedout: '/',
+  routes: defaultAuthRoutes,
+  session: {
+    kvBinding: UNCONFIGURED, // Must be configured in app config
+    secretKey: UNCONFIGURED, // Must be configured in app config
+    cookie: {
+      name: '__auth_session',
+      httpOnly: true,
+      maxAge: 60 * 60 * 24 * 30,
+      path: '/',
+      sameSite: 'lax',
+      secure: 'auto', // Will be determined by environment
+    },
   },
-  // webauthn: {
-  //   rpName: 'My App',
-  //   rpID: 'localhost',
-  //   origin: 'http://localhost:5173',
-  //   sessionCookie: {
-  //     name: '__Host-session', // Use __Host- prefix for additional security
-  //     sameSite: 'strict', // Changed from 'lax' to 'strict' for better security
-  //     secure: typeof globalThis !== 'undefined' && globalThis.location?.protocol === 'https:',
-  //     httpOnly: true,
-  //     path: '/',
-  //     maxAge: 60 * 60 * 24 * 1, // Reduced from 7 days to 1 day
-  //     domain: undefined, // Don't set domain to restrict to exact host
-  //   },
-  // },
+  webauthn: {
+    rpName: 'React Router Cloudflare App',
+    rpID: (request: Request) => {
+      const hostname = new URL(request.url).hostname;
+      // Handle localhost specially for development
+      return hostname === 'localhost' || hostname === '127.0.0.1' ? 'localhost' : hostname;
+    },
+    origin: (request: Request) => {
+      const url = new URL(request.url);
+      // For development, return array of possible origins
+      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+        return ['http://localhost:5173', 'https://localhost:5173', `${url.protocol}//${url.host}`];
+      }
+      return url.origin;
+    },
+    challengeSessionKey: 'challenge',
+    requireUserVerification: false,
+  },
 };

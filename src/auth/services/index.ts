@@ -1,13 +1,5 @@
-export { createAuthenticator } from './auth';
+export { createAuthenticator } from './auth-factory';
 export { AuthRepository } from './repository';
-export { 
-  createAuthSessionStorage, 
-  getAuthSession, 
-  createAuthSession, 
-  destroyAuthSession,
-  getChallengeSession,
-  createChallengeSession,
-  createChallengeOnlySession,
-  cleanupChallengeSession
-} from './session';
+export { cleanupChallengeSession, createAuthSession, createAuthSessionStorage, createChallengeOnlySession, createChallengeSession, destroyAuthSession, getAuthSession, getChallengeSession } from './session';
+export { createWebAuthnStrategy } from './webauthn-factory';
 export { WebAuthnStrategy } from './webauthn-strategy';

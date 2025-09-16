@@ -34,6 +34,7 @@ export interface WebAuthnOptions<TUser> {
   rpID: string | ((request: Request) => Promise<string> | string);
   origin: string | string[] | ((request: Request) => Promise<string | string[]> | string | string[]);
   challengeSessionKey?: string;
+  requireUserVerification?: boolean;
   getUserAuthenticators: (user: TUser | null | undefined) => Promise<WebAuthnAuthenticator[]>;
   getUserDetails: (user: TUser | null | undefined) => Promise<UserDetails | null>;
   getUserByUsername: (username: string) => Promise<TUser | null>;
@@ -50,6 +51,7 @@ export type WebAuthnVerifyParams = {
 export type SessionData = {
   user: User;
   challenge?: string;
+  username?: string;
 };
 
 export type SessionFlashData = {

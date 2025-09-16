@@ -4,12 +4,12 @@ import type { AuthenticationResponseJSON, AuthenticatorTransportFuture, Registra
 import { logger } from '@ycore/forge/logger';
 import { Strategy } from 'remix-auth/strategy';
 import type { UserDetails, WebAuthnAuthenticator, WebAuthnOptions, WebAuthnOptionsResponse, WebAuthnVerifyParams } from '../@types/auth.types';
-import type { Authenticator } from '../schema';
 
 export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParams> {
   name = 'webauthn';
   sessionStorage: WebAuthnOptions<TUser>['sessionStorage'];
   challengeSessionKey = 'challenge';
+  requireUserVerification = false;
 
   rpName: WebAuthnOptions<TUser>['rpName'];
   rpID: WebAuthnOptions<TUser>['rpID'];
@@ -30,6 +30,7 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
     this.getUserByUsername = options.getUserByUsername;
     this.getAuthenticatorById = options.getAuthenticatorById;
     this.challengeSessionKey = options.challengeSessionKey || 'challenge';
+    this.requireUserVerification = options.requireUserVerification ?? false;
   }
 
   async getRP(request: Request) {
@@ -129,7 +130,7 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
         expectedChallenge,
         expectedOrigin: rp.origin,
         expectedRPID: rp.id,
-        requireUserVerification: false,
+        requireUserVerification: this.requireUserVerification,
       });
 
       if (verification.verified && verification.registrationInfo) {
@@ -174,7 +175,7 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
           counter: authenticator.counter,
           transports: authenticator.transports.split(',') as AuthenticatorTransportFuture[],
         },
-        requireUserVerification: false,
+        requireUserVerification: this.requireUserVerification,
       });
 
       if (!verification.verified) throw new Error('Passkey verification failed.');

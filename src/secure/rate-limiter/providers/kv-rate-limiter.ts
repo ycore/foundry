@@ -7,6 +7,8 @@ import type { KvRateLimiterOptions, RateLimiterProvider, RateLimiterProviderConf
 const DEFAULT_MAX_REQUESTS = 10;
 const DEFAULT_WINDOW_MS = 60 * 1000; // 1 minute
 
+const rateLimitKvTemplate = (path: string, identifier: string): string => `rate_limit:${path}:${identifier}`;
+
 type RateLimitData = {
   count: number;
   resetAt: number;
@@ -33,7 +35,7 @@ export const kvRateLimiter: RateLimiterProvider = {
     const maxRequests = config.maxRequests ?? DEFAULT_MAX_REQUESTS;
     const windowMs = config.windowMs ?? DEFAULT_WINDOW_MS;
 
-    const key = `rate_limit:${request.path}:${request.identifier}`;
+    const key = rateLimitKvTemplate(request.path, request.identifier);
     const now = Date.now();
 
     try {
@@ -109,7 +111,7 @@ export const kvRateLimiter: RateLimiterProvider = {
       // Delete all rate limit keys for this identifier
       // Note: This is a simplified implementation. In production, you might want to
       // use KV list operations to find and delete all relevant keys
-      const key = `rate_limit:*:${identifier}`;
+      const key = rateLimitKvTemplate('*', identifier);
       await kv.delete(key);
 
       return returnSuccess(undefined);
