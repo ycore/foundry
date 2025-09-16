@@ -1,7 +1,7 @@
 import { createCookie } from 'react-router';
 import { CSRF } from 'remix-utils/csrf/server';
 
-import type { CSRFOptions, CSRFValidationResult } from '../@types/csrf.types';
+import type { CSRFOptions } from './@types/csrf.types';
 
 const CSRF_CONFIG = {
   SECRET: 'fallback-secret',
@@ -31,11 +31,6 @@ export function resolveCSRF(options?: CSRFOptions): CSRF {
     return csrfInstance;
   }
 
-  // If no options and no cached instance, throw error
-  // if (!hasOptions && !csrfInstance) {
-  //   throw new Error('No CSRF instance configured. Call resolveCSRF with options first.');
-  // }
-
   // Normalize configuration
   const config = normalizeConfig(options);
   const configKey = JSON.stringify(config);
@@ -49,34 +44,6 @@ export function resolveCSRF(options?: CSRFOptions): CSRF {
   csrfInstance = createCSRF(config);
   configCache = configKey;
   return csrfInstance;
-}
-
-/**
- * Validates CSRF token from form data and request headers.
- *
- * Uses the configured CSRF instance to validate the token and returns a ValidationResult
- * structure compatible with the forge validation utilities.
- *
- * @param formData - The form data containing the CSRF token
- * @param headers - The request headers
- * @returns Promise resolving to CSRFValidationResult with validated/errors structure
- */
-export async function validateCSRF(formData: FormData, headers: Headers): Promise<CSRFValidationResult> {
-  try {
-    const csrf = resolveCSRF();
-    await csrf.validate(formData, headers);
-
-    return { success: true, data: true };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'CSRF validation failed';
-    return {
-      success: false,
-      error: {
-        message: errorMessage,
-        cause: error instanceof Error ? error : undefined,
-      },
-    };
-  }
 }
 
 function createCSRF(config: Required<CSRFOptions>) {

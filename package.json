@@ -9,48 +9,45 @@
   },
   "exports": {
     "./auth": {
-      "import": "./src/auth/index.ts",
-      "types": "./src/auth/index.ts"
+      "types": "./src/auth/index.ts",
+      "import": "./src/auth/index.ts"
     },
-    "./auth/server": {
-      "import": "./src/auth/server/index.ts",
-      "types": "./src/auth/server/index.ts"
+    "./auth/services": {
+      "types": "./src/auth/services/index.ts",
+      "import": "./src/auth/services/index.ts"
     },
     "./auth/schema": {
+      "types": "./src/auth/schema/index.ts",
       "import": "./src/auth/schema/index.ts",
-      "types": "./src/auth/schema/index.ts"
-    },
-    "./auth/pages": {
-      "import": "./src/auth/pages/index.ts",
-      "types": "./src/auth/pages/index.ts"
-    },
-    "./auth/utils": {
-      "import": "./src/auth/utils/index.ts",
-      "types": "./src/auth/utils/index.ts"
+      "require": "./src/auth/schema/index.ts"
     },
     "./email": {
-      "import": "./src/email/index.ts",
-      "types": "./src/email/index.ts"
+      "types": "./src/email/index.ts",
+      "import": "./src/email/index.ts"
     },
     "./secure": {
-      "import": "./src/secure/index.ts",
-      "types": "./src/secure/index.ts"
+      "types": "./src/secure/index.ts",
+      "import": "./src/secure/index.ts"
     },
     "./secure/services": {
-      "import": "./src/secure/services/index.ts",
-      "types": "./src/secure/services/index.ts"
+      "types": "./src/secure/services/index.ts",
+      "import": "./src/secure/services/index.ts"
     },
     "./package.json": "./package.json"
   },
   "dependencies": {
     "@oslojs/crypto": "^1.0.1",
-    "@oslojs/encoding": "^1.0.1",
-    "jose": "^6.1.0"
+    "@oslojs/encoding": "^1.1.0",
+    "@simplewebauthn/browser": "^13.1.2",
+    "@simplewebauthn/server": "^13.1.2",
+    "jose": "^6.1.0",
+    "remix-auth": "^4.2.0"
   },
   "devDependencies": {
+    "@simplewebauthn/types": "^12.0.0",
     "@total-typescript/tsconfig": "^1.0.4",
-    "@types/react": "^19.1.8",
-    "vite": "^7.0.2"
+    "@types/react": "^19.1.13",
+    "vite": "^7.1.5"
   },
   "scripts": {
     "clean": "rm -rf dist node_modules",

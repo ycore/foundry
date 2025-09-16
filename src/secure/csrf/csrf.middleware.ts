@@ -1,20 +1,20 @@
 import { middlewarePassthrough } from '@ycore/forge/result';
-import { getBindings } from '@ycore/forge/services';
-import { unstable_createContext, type unstable_MiddlewareFunction } from 'react-router';
-import type { CSRFData } from '../@types/csrf.types';
+import { getBindings, isDevelopment } from '@ycore/forge/services';
+import { createContext, type MiddlewareFunction } from 'react-router';
+import type { CSRFData } from './@types/csrf.types';
 import { resolveCSRF } from './csrf';
 
 
 /*** CSRF token context for form protection */
-export const csrfContext = unstable_createContext<CSRFData | null>(null);
+export const csrfContext = createContext<CSRFData | null>(null);
 
 /**
  * Middleware to generate CSRF token for forms
  * Sets csrfContext with token and CSRF cookie header
  */
-export const commitCSRFMiddleware: unstable_MiddlewareFunction<Response> = async ({ context }, next) => {
-  const { CSRF_COOKIE_SECRET_KEY, ENVIRONMENT } = getBindings(context);
-  const csrf = resolveCSRF({ secret: CSRF_COOKIE_SECRET_KEY, secure: ENVIRONMENT !== 'development' });
+export const commitCSRFMiddleware: MiddlewareFunction<Response> = async ({ context }, next) => {
+  const { CSRF_COOKIE_SECRET_KEY } = getBindings(context);
+  const csrf = resolveCSRF({ secret: CSRF_COOKIE_SECRET_KEY, secure: !isDevelopment(context) });
   const [token, cookieHeader] = await csrf.commitToken();
   context.set(csrfContext, { token });
 
@@ -37,14 +37,14 @@ export const commitCSRFMiddleware: unstable_MiddlewareFunction<Response> = async
  * For GET requests: passes through without validation
  * For POST/PUT/DELETE: validates CSRF token and throws error for React Router to handle
  */
-export const validateCSRFMiddleware: unstable_MiddlewareFunction<Response> = async ({ request, context }, next) => {
+export const validateCSRFMiddleware: MiddlewareFunction<Response> = async ({ request, context }, next) => {
   // Only process POST/PUT/DELETE requests
   if (!['POST', 'PUT', 'DELETE'].includes(request.method)) {
     return next();
   }
 
-  const { CSRF_COOKIE_SECRET_KEY, ENVIRONMENT } = getBindings(context);
-  const csrf = resolveCSRF({ secret: CSRF_COOKIE_SECRET_KEY, secure: ENVIRONMENT !== 'development' });
+  const { CSRF_COOKIE_SECRET_KEY } = getBindings(context);
+  const csrf = resolveCSRF({ secret: CSRF_COOKIE_SECRET_KEY, secure: !isDevelopment(context) });
 
   try {
     // Clone the request to read FormData without consuming original stream
@@ -62,6 +62,6 @@ export const validateCSRFMiddleware: unstable_MiddlewareFunction<Response> = asy
 
 /**
  * Middleware for public forms to implement CSRF protection.
- * Use: export const unstable_middleware = secureFormMiddleware;
+ * Use: export const middleware = secureFormMiddleware;
  */
 export const secureFormMiddleware = [commitCSRFMiddleware, validateCSRFMiddleware];

@@ -1,5 +1,3 @@
-import type { AppError, AppResult } from '@ycore/forge/result';
-
 export interface CSRFOptions {
   secret?: string;
   cookieName?: string;
@@ -12,5 +10,3 @@ export interface CSRFData {
   validated?: boolean;
   needsValidation?: boolean;
 }
-
-export type CSRFValidationResult = AppResult<boolean, AppError>;

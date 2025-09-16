@@ -25,20 +25,20 @@ export class MockEmailProvider implements EmailProvider {
         from,
         to,
         subject: template.subject,
-        htmlLength: template.html.length,
-        textLength: template.text.length,
+        // htmlLength: template.html.length,
+        text: template.text,
       });
 
       // In development, you could also log the full content
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📧 Mock Email Sent:');
-        console.log(`From: ${from}`);
-        console.log(`To: ${to}`);
-        console.log(`Subject: ${template.subject}`);
-        console.log(`Text: ${template.text}`);
-        console.log(`HTML: ${template.html}`);
-        console.log('---');
-      }
+      // if (process.env.NODE_ENV === 'development') {
+      //   console.log('📧 Mock Email Sent:');
+      //   console.log(`From: ${from}`);
+      //   console.log(`To: ${to}`);
+      //   console.log(`Subject: ${template.subject}`);
+      //   console.log(`Text: ${template.text}`);
+      //   console.log(`HTML: ${template.html}`);
+      //   console.log('---');
+      // }
 
       return returnSuccess(undefined);
     } catch (error) {
