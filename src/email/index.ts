@@ -1,4 +1,4 @@
-export type { EmailConfig, EmailProvider, EmailProviderConfig, EmailProviders, EmailTemplate, SendEmailOptions, TotpEmailData } from './@types/email.types';
+export type { EmailConfig, EmailProvider, EmailProviderConfig, EmailProviders, EmailSendResult, EmailTemplate, SendEmailOptions, TotpEmailData } from './@types/email.types';
 export { sendEmail } from './email';
 export { defaultEmailConfig } from './email.config';
 export { emailContext, getEmailConfig, setEmailConfig } from './email.context';

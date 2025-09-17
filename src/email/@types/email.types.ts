@@ -38,3 +38,9 @@ export interface EmailConfig {
   active: EmailProviders | null;
   providers: EmailProviderConfig[];
 }
+
+export interface EmailSendResult {
+  to: string;
+  provider: string;
+  message: string;
+}

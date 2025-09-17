@@ -21,6 +21,8 @@ export interface SecureFetcherHandle<T = unknown> extends FetcherWithComponents<
   SecureForm: React.FC<Omit<SecureFetcherFormProps, 'fetcher'>>;
   submitSecure: (data: FormData, options?: SubmitOptions) => void;
   errors: FieldErrors | null;
+  data: T | undefined;
+  state: 'idle' | 'submitting' | 'loading';
 }
 
 /**
