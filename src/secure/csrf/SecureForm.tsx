@@ -78,13 +78,13 @@ export function SecureFormField({ name, label, description, error: explicitError
   const enhancedChildren = React.Children.map(children, child => {
     if (!React.isValidElement(child)) return child;
 
-    const childProps = child.props as any;
+    const childProps = child.props as Record<string, unknown>;
 
     // Only enhance form inputs with the matching name
     if (childProps.name === name) {
       const ariaDescribedBy = [description && descriptionId, error && errorId].filter(Boolean).join(' ') || undefined;
 
-      return React.cloneElement(child as React.ReactElement<any>, {
+      return React.cloneElement(child, {
         id: childProps.id || fieldId,
         'aria-invalid': hasError || undefined,
         'aria-describedby': ariaDescribedBy,
@@ -149,7 +149,7 @@ export function useSecureForm() {
 /**
  * Helper component to extract errors from action data
  */
-export function SecureFormWithData<T = any>({ actionData, children, ...props }: SecureFormProps & { actionData?: T }) {
+export function SecureFormWithData<T = unknown>({ actionData, children, ...props }: SecureFormProps & { actionData?: T }) {
   const errors = actionData && isError(actionData) ? extractFieldErrors(actionData) : null;
 
   return (
