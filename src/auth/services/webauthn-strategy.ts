@@ -98,7 +98,7 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
     let data: unknown;
     try {
       const responseData = formData.get('response');
-      if (typeof responseData !== 'string') throw new Error('Error');
+      if (typeof responseData !== 'string') throw new Error('Response data is not a string');
       data = JSON.parse(responseData);
     } catch (error) {
       logger.error('Failed to parse response data:', error);

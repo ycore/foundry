@@ -62,25 +62,3 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
     </SecureForm>
   );
 }
-
-export function SimpleAuthForm({ options, errors }: AuthFormProps) {
-  return (
-    <SecureForm method="post" onSubmit={handleFormSubmit(options)} className="flex flex-col gap-4" errors={errors}>
-      <SecureForm.Field className="flex flex-col gap-2" label="Username" name="username">
-        <Input id="username" name="username" type="text" placeholder="Enter your username" autoComplete="username webauthn" />
-      </SecureForm.Field>
-
-      <Button type="submit" name="intent" value="check-username" variant="outline" className="w-full">
-        Check Username
-      </Button>
-
-      <Button type="submit" name="intent" value="registration" disabled={options.usernameAvailable !== true} className="w-full">
-        Register
-      </Button>
-
-      <Button type="submit" name="intent" value="authentication" variant="secondary" className="w-full">
-        Authenticate
-      </Button>
-    </SecureForm>
-  );
-}
