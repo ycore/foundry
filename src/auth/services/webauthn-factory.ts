@@ -1,3 +1,4 @@
+import { isError } from '@ycore/forge/result';
 import type { RouterContextProvider, SessionStorage } from 'react-router';
 import type { UserDetails, WebAuthnAuthenticator, WebAuthnVerifyParams } from '../@types/auth.types';
 import { getAuthConfig } from '../auth-config.context';
@@ -30,9 +31,9 @@ export function createWebAuthnStrategy(repository: AuthRepository, sessionStorag
         if (!user) return [];
 
         const result = await repository.getAuthenticatorsByUserId(user.id);
-        if (result.errors || !result.data) return [];
+        if (isError(result)) return [];
 
-        return result.data.map(auth => ({
+        return result.map(auth => ({
           id: auth.id,
           transports: auth.transports.split(','),
         }));
@@ -50,12 +51,12 @@ export function createWebAuthnStrategy(repository: AuthRepository, sessionStorag
 
       getUserByUsername: async (username): Promise<User | null> => {
         const result = await repository.getUserByUsername(username);
-        return result.data || null;
+        return isError(result) ? null : result;
       },
 
       getAuthenticatorById: async (id): Promise<AuthenticatorModel | null> => {
         const result = await repository.getAuthenticatorById(id);
-        return result.data || null;
+        return isError(result) ? null : result;
       },
     },
     createVerifyFunction(repository)
@@ -87,7 +88,7 @@ function createVerifyFunction(repository: AuthRepository) {
 async function handleRegistration(repository: AuthRepository, auth: Omit<AuthenticatorModel, 'userId' | 'createdAt' | 'updatedAt'>, username: string | null, displayName?: string): Promise<User> {
   // Check if authenticator already exists
   const savedAuthResult = await repository.getAuthenticatorById(auth.id);
-  if (savedAuthResult.data) {
+  if (!isError(savedAuthResult)) {
     throw new Error('Authenticator has already been registered');
   }
 
@@ -97,7 +98,7 @@ async function handleRegistration(repository: AuthRepository, auth: Omit<Authent
 
   // Check if user already exists
   const existingUserResult = await repository.getUserByUsername(username);
-  if (existingUserResult.data) {
+  if (!isError(existingUserResult)) {
     throw new Error('User already exists');
   }
 
@@ -105,11 +106,11 @@ async function handleRegistration(repository: AuthRepository, auth: Omit<Authent
   const finalDisplayName = displayName || username;
   const createUserResult = await repository.createUser(username, finalDisplayName);
 
-  if (createUserResult.errors || !createUserResult.data) {
-    throw new Error(createUserResult.errors?.message || 'Failed to create user');
+  if (isError(createUserResult)) {
+    throw new Error(createUserResult.message || 'Failed to create user');
   }
 
-  const user = createUserResult.data;
+  const user = createUserResult;
 
   // Create authenticator for the user
   const createAuthResult = await repository.createAuthenticator({
@@ -117,8 +118,8 @@ async function handleRegistration(repository: AuthRepository, auth: Omit<Authent
     userId: user.id,
   });
 
-  if (createAuthResult.errors) {
-    throw new Error(createAuthResult.errors?.message || 'Failed to create authenticator');
+  if (isError(createAuthResult)) {
+    throw new Error(createAuthResult.message || 'Failed to create authenticator');
   }
 
   return user;
@@ -131,20 +132,20 @@ async function handleRegistration(repository: AuthRepository, auth: Omit<Authent
 async function handleAuthentication(repository: AuthRepository, auth: Omit<AuthenticatorModel, 'userId' | 'createdAt' | 'updatedAt'>): Promise<User> {
   // Find the saved authenticator
   const savedAuthResult = await repository.getAuthenticatorById(auth.id);
-  if (!savedAuthResult.data) {
+  if (isError(savedAuthResult)) {
     throw new Error('Authenticator not found');
   }
 
   // Find the user
-  const userResult = await repository.getUserById(savedAuthResult.data.userId);
-  if (!userResult.data) {
+  const userResult = await repository.getUserById(savedAuthResult.userId);
+  if (isError(userResult)) {
     throw new Error('User not found');
   }
 
   // Update counter if needed
-  if (auth.counter !== savedAuthResult.data.counter) {
+  if (auth.counter !== savedAuthResult.counter) {
     await repository.updateAuthenticatorCounter(auth.id, auth.counter);
   }
 
-  return userResult.data;
+  return userResult;
 }

@@ -1,4 +1,4 @@
-import type { AppResult } from '@ycore/forge/result';
+import type { Result } from '@ycore/forge/result';
 import type { KVBindingNames } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
@@ -50,6 +50,6 @@ export type RateLimitResponse = {
 
 export type RateLimiterProvider = {
   name: string;
-  checkLimit: (request: RateLimitRequest, config: RateLimiterProviderConfig, context: RouterContextProvider) => Promise<AppResult<RateLimitResponse>>;
-  resetLimit?: (identifier: string, config: RateLimiterProviderConfig, context: RouterContextProvider) => Promise<AppResult<void>>;
+  checkLimit: (request: RateLimitRequest, config: RateLimiterProviderConfig, context: RouterContextProvider) => Promise<Result<RateLimitResponse>>;
+  resetLimit?: (identifier: string, config: RateLimiterProviderConfig, context: RouterContextProvider) => Promise<Result<void>>;
 };

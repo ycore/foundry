@@ -1,4 +1,4 @@
-import { Button, Input, Label } from '@ycore/componentry/shadcn-ui';
+import { Button, Input } from '@ycore/componentry/shadcn-ui';
 import { SecureForm } from '@ycore/foundry/secure';
 import type { WebAuthnOptionsResponse } from '../@types/auth.types';
 import { handleFormSubmit } from './auth-form-handler';
@@ -18,25 +18,11 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
       {showRegistration && (
         <>
           <SecureForm.Field className="flex flex-col gap-2" label="Username *" name="username">
-            <Input 
-              id="username" 
-              name="username" 
-              type="text" 
-              placeholder="Enter your username" 
-              autoComplete="username webauthn"
-              required
-            />
+            <Input id="username" name="username" type="text" placeholder="Enter your username" autoComplete="username webauthn" required />
           </SecureForm.Field>
 
           <SecureForm.Field className="flex flex-col gap-2" label="Display Name *" name="displayName">
-            <Input 
-              id="displayName" 
-              name="displayName" 
-              type="text" 
-              placeholder="Enter your display name" 
-              autoComplete="name"
-              required
-            />
+            <Input id="displayName" name="displayName" type="text" placeholder="Enter your display name" autoComplete="name" required />
           </SecureForm.Field>
 
           <Button type="submit" name="intent" value="check-username" variant="outline" className="w-full">
@@ -64,17 +50,10 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
         <>
           {mode === 'signin' && (
             <SecureForm.Field className="flex flex-col gap-2" label="Username *" name="username">
-              <Input 
-                id="username" 
-                name="username" 
-                type="text" 
-                placeholder="Enter your username" 
-                autoComplete="username webauthn"
-                required
-              />
+              <Input id="username" name="username" type="text" placeholder="Enter your username" autoComplete="username webauthn" required />
             </SecureForm.Field>
           )}
-          
+
           <Button type="submit" name="intent" value="authentication" variant={showRegistration ? 'secondary' : 'default'} className="w-full">
             Sign In with Passkey
           </Button>

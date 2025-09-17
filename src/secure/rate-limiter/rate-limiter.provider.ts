@@ -1,5 +1,5 @@
-import type { AppResult } from '@ycore/forge/result';
-import { createAppError, returnFailure, returnSuccess } from '@ycore/forge/result';
+import type { Result } from '@ycore/forge/result';
+import { err, isError } from '@ycore/forge/result';
 import type { RouterContextProvider } from 'react-router';
 import type { RateLimiterConfig, RateLimiterProvider, RateLimiterProviderConfig, RateLimitRequest, RateLimitResponse } from './@types/rate-limiter.types';
 import { cloudflareRateLimiter } from './providers/cloudflare-rate-limiter';
@@ -27,39 +27,39 @@ export function getProviderConfig(config: RateLimiterConfig, providerName: strin
 /**
  * Create a rate limiter provider instance
  */
-export function createRateLimiterProvider(providerName: string): AppResult<RateLimiterProvider> {
+export function createRateLimiterProvider(providerName: string): Result<RateLimiterProvider> {
   const provider = rateLimiterProviders[providerName];
 
   if (!provider) {
     const availableProviders = Object.keys(rateLimiterProviders).join(', ');
-    return returnFailure(createAppError(`Unknown rate limiter provider: ${providerName}. Available: ${availableProviders}`));
+    return err(`Unknown rate limiter provider: ${providerName}. Available: ${availableProviders}`);
   }
 
-  return returnSuccess(provider);
+  return provider;
 }
 
 /**
  * Check rate limit using the active provider
  */
-export async function checkRateLimit(config: RateLimiterConfig, request: RateLimitRequest, context: RouterContextProvider): Promise<AppResult<RateLimitResponse>> {
+export async function checkRateLimit(config: RateLimiterConfig, request: RateLimitRequest, context: RouterContextProvider): Promise<Result<RateLimitResponse>> {
   if (config.active === 'none') {
     // No rate limiting enabled
-    return returnSuccess({
+    return {
       allowed: true,
       remaining: 999,
       resetAt: Date.now() + 60000,
-    });
+    };
   }
 
   const providerConfig = getProviderConfig(config, config.active);
   if (!providerConfig) {
-    return returnFailure(createAppError(`Provider configuration not found for: ${config.active}`));
+    return err(`Provider configuration not found for: ${config.active}`);
   }
 
   const providerResult = createRateLimiterProvider(config.active);
-  if (providerResult.errors) {
-    return returnFailure(providerResult.errors);
+  if (isError(providerResult)) {
+    return providerResult;
   }
 
-  return await providerResult.data.checkLimit(request, providerConfig, context);
+  return await providerResult.checkLimit(request, providerConfig, context);
 }

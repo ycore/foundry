@@ -1,5 +1,5 @@
+import { isError, middlewarePassthrough } from '@ycore/forge/result';
 import { createContext, type MiddlewareFunction, type RouterContextProvider, redirect } from 'react-router';
-import { middlewarePassthrough } from '@ycore/forge/result';
 import type { AuthConfig } from './@types/auth.config.types';
 import { defaultAuthRoutes } from './auth.config';
 import { setAuthConfig } from './auth-config.context';
@@ -41,32 +41,32 @@ export function authSessionMiddleware(authConfig: AuthConfig): MiddlewareFunctio
 
     // Load user from session
     const sessionResult = await getAuthSession(request, context);
-    if (sessionResult.data?.user) {
-      context.set(authUserContext, sessionResult.data.user);
+    if (!isError(sessionResult) && sessionResult?.user) {
+      context.set(authUserContext, sessionResult.user);
       return next();
     }
 
     // Check if there's an orphaned session cookie that needs cleanup
     const cookieHeader = request.headers.get('Cookie');
-    if (cookieHeader && cookieHeader.includes(authConfig.session.cookie.name)) {
+    if (cookieHeader?.includes(authConfig.session.cookie.name)) {
       // Get the session to check if it has any valid data (user, challenge, etc.)
       const { createAuthSessionStorage } = await import('./services/session');
       const sessionStorage = createAuthSessionStorage(context);
       const session = await sessionStorage.getSession(cookieHeader);
-      
+
       // Only destroy if session is truly empty (no user, challenge, or username)
       const hasUser = session.get('user');
       const hasChallenge = session.get('challenge');
       const hasUsername = session.get('username');
-      
+
       if (!hasUser && !hasChallenge && !hasUsername) {
         // Truly orphaned session - clean it up
         const destroyResult = await destroyAuthSession(request, context);
-        
-        if (destroyResult.success) {
+
+        if (!isError(destroyResult)) {
           const response = await next();
           return middlewarePassthrough(response, {
-            set: { 'Set-Cookie': destroyResult.data }
+            set: { 'Set-Cookie': destroyResult },
           });
         }
       }

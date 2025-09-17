@@ -1,5 +1,4 @@
-import type { AppResult } from '@ycore/forge/result';
-import { returnSuccess } from '@ycore/forge/result';
+import type { Result } from '@ycore/forge/result';
 import type { RouterContextProvider } from 'react-router';
 import type { RateLimiterProvider, RateLimiterProviderConfig, RateLimitRequest, RateLimitResponse } from '../@types/rate-limiter.types';
 
@@ -8,20 +7,20 @@ import type { RateLimiterProvider, RateLimiterProviderConfig, RateLimitRequest, 
 export const cloudflareRateLimiter: RateLimiterProvider = {
   name: 'cloudflare',
 
-  async checkLimit(request: RateLimitRequest, config: RateLimiterProviderConfig, context: RouterContextProvider): Promise<AppResult<RateLimitResponse>> {
+  async checkLimit(request: RateLimitRequest, config: RateLimiterProviderConfig, context: RouterContextProvider): Promise<Result<RateLimitResponse>> {
     // TODO: Implement Cloudflare native rate limiting integration
     // When implemented, will use config.options.limiterBinding to access Cloudflare rate limiter
     // const cfOptions = config.options as CloudflareRateLimiterOptions | undefined;
     // For now, return a permissive response
-    return returnSuccess({
+    return {
       allowed: true,
       remaining: 999,
       resetAt: Date.now() + 60000,
-    });
+    };
   },
 
-  async resetLimit(identifier: string, config: RateLimiterProviderConfig, context: RouterContextProvider): Promise<AppResult<void>> {
+  async resetLimit(identifier: string, config: RateLimiterProviderConfig, context: RouterContextProvider): Promise<Result<void>> {
     // TODO: Implement Cloudflare native rate limit reset
-    return returnSuccess(undefined);
+    return; // Success - void return
   },
 };

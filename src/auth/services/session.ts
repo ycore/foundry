@@ -1,6 +1,6 @@
 import { createWorkersKVSessionStorage } from '@react-router/cloudflare';
-import type { AppResult } from '@ycore/forge/result';
-import { createAppError, returnFailure, returnSuccess, toAppError } from '@ycore/forge/result';
+import type { Result } from '@ycore/forge/result';
+import { err, ok } from '@ycore/forge/result';
 import { getBindings, isProduction, UNCONFIGURED } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 import type { SessionData, SessionFlashData } from '../@types/auth.types';
@@ -49,7 +49,7 @@ export function createAuthSessionStorage(context: Readonly<RouterContextProvider
 }
 
 // Get session from request
-export async function getAuthSession(request: Request, context: Readonly<RouterContextProvider>): Promise<AppResult<SessionData | null>> {
+export async function getAuthSession(request: Request, context: Readonly<RouterContextProvider>): Promise<Result<SessionData | null>> {
   try {
     const sessionStorage = createAuthSessionStorage(context);
     const session = await sessionStorage.getSession(request.headers.get('Cookie'));
@@ -58,17 +58,17 @@ export async function getAuthSession(request: Request, context: Readonly<RouterC
     const challenge = session.get('challenge');
 
     if (!user) {
-      return returnSuccess(null);
+      return ok(null);
     }
 
-    return returnSuccess({ user, challenge });
+    return ok({ user, challenge });
   } catch (error) {
-    return returnFailure(createAppError('Failed to get session', { error: toAppError(error) }));
+    return err('Failed to get session', { error });
   }
 }
 
 // Get challenge session by username
-export async function getChallengeSession(username: string, context: Readonly<RouterContextProvider>): Promise<AppResult<string | null>> {
+export async function getChallengeSession(username: string, context: Readonly<RouterContextProvider>): Promise<Result<string | null>> {
   try {
     const authConfig = getAuthConfig(context);
     if (!authConfig) {
@@ -83,14 +83,14 @@ export async function getChallengeSession(username: string, context: Readonly<Ro
 
     const challengeKey = challengeKvTemplate(username);
     const challengeData = await kv.get(challengeKey);
-    return returnSuccess(challengeData);
+    return ok(challengeData);
   } catch (error) {
-    return returnFailure(createAppError('Failed to get challenge session', { username, error: toAppError(error) }));
+    return err('Failed to get challenge session', { username, error });
   }
 }
 
 // Create challenge session with username-based key
-export async function createChallengeSession(username: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<AppResult<void>> {
+export async function createChallengeSession(username: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
   try {
     const authConfig = getAuthConfig(context);
     if (!authConfig) {
@@ -107,14 +107,14 @@ export async function createChallengeSession(username: string, challenge: string
     // Set TTL to 5 minutes (300 seconds) for challenge sessions
     await kv.put(challengeKey, challenge, { expirationTtl: 300 });
 
-    return returnSuccess(undefined);
+    return ok(undefined);
   } catch (error) {
-    return returnFailure(createAppError('Failed to create challenge session', { username, error: toAppError(error) }));
+    return err('Failed to create challenge session', { username, error });
   }
 }
 
 // Clean up challenge session
-export async function cleanupChallengeSession(username: string, context: Readonly<RouterContextProvider>): Promise<AppResult<void>> {
+export async function cleanupChallengeSession(username: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
   try {
     const authConfig = getAuthConfig(context);
     if (!authConfig) {
@@ -130,14 +130,14 @@ export async function cleanupChallengeSession(username: string, context: Readonl
     const challengeKey = challengeKvTemplate(username);
     await kv.delete(challengeKey);
 
-    return returnSuccess(undefined);
+    return ok(undefined);
   } catch (error) {
-    return returnFailure(createAppError('Failed to cleanup challenge session', { username, error: toAppError(error) }));
+    return err('Failed to cleanup challenge session', { username, error });
   }
 }
 
 // Create new session (for authenticated users only)
-export async function createAuthSession(context: Readonly<RouterContextProvider>, sessionData: SessionData): Promise<AppResult<string>> {
+export async function createAuthSession(context: Readonly<RouterContextProvider>, sessionData: SessionData): Promise<Result<string>> {
   try {
     const sessionStorage = createAuthSessionStorage(context);
     const session = await sessionStorage.getSession();
@@ -148,14 +148,14 @@ export async function createAuthSession(context: Readonly<RouterContextProvider>
     }
 
     const cookie = await sessionStorage.commitSession(session);
-    return returnSuccess(cookie);
+    return ok(cookie);
   } catch (error) {
-    return returnFailure(createAppError('Failed to create session', { error: toAppError(error) }));
+    return err('Failed to create session', { error });
   }
 }
 
 // Create challenge-only session with proper cleanup
-export async function createChallengeOnlySession(username: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<AppResult<string>> {
+export async function createChallengeOnlySession(username: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<string>> {
   try {
     // First, cleanup any existing challenge session for this username
     await cleanupChallengeSession(username, context);
@@ -171,14 +171,14 @@ export async function createChallengeOnlySession(username: string, challenge: st
     session.set('username', username);
 
     const cookie = await sessionStorage.commitSession(session);
-    return returnSuccess(cookie);
+    return ok(cookie);
   } catch (error) {
-    return returnFailure(createAppError('Failed to create challenge session', { username, error: toAppError(error) }));
+    return err('Failed to create challenge session', { username, error });
   }
 }
 
 // Destroy session with proper cookie clearing
-export async function destroyAuthSession(request: Request, context: Readonly<RouterContextProvider>): Promise<AppResult<string>> {
+export async function destroyAuthSession(request: Request, context: Readonly<RouterContextProvider>): Promise<Result<string>> {
   try {
     const sessionStorage = createAuthSessionStorage(context);
     const session = await sessionStorage.getSession(request.headers.get('Cookie'));
@@ -191,8 +191,8 @@ export async function destroyAuthSession(request: Request, context: Readonly<Rou
 
     // Destroy the session and get the clearing cookie
     const cookie = await sessionStorage.destroySession(session);
-    return returnSuccess(cookie);
+    return ok(cookie);
   } catch (error) {
-    return returnFailure(createAppError('Failed to destroy session', { error: toAppError(error) }));
+    return err('Failed to destroy session', { error });
   }
 }

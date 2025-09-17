@@ -12,9 +12,15 @@ export const csrfContext = createContext<CSRFData | null>(null);
  * Middleware to generate CSRF token for forms
  * Sets csrfContext with token and CSRF cookie header
  */
-export const commitCSRFMiddleware: MiddlewareFunction<Response> = async ({ context }, next) => {
-  const { CSRF_COOKIE_SECRET_KEY } = getBindings(context);
-  const csrf = resolveCSRF({ secret: CSRF_COOKIE_SECRET_KEY, secure: !isDevelopment(context) });
+export const commitCSRFMiddleware: MiddlewareFunction<Response> = async ({ request, context }, next) => {
+  // Only commit CSRF tokens for GET requests to avoid conflicts with validation
+  if (request.method !== 'GET') {
+    return next();
+  }
+  const bindings = getBindings(context);
+  // In development, fall back to environment variables if bindings are not available
+  const secret = bindings.CSRF_COOKIE_SECRET_KEY || process.env.CSRF_COOKIE_SECRET_KEY || 'fallback-csrf-secret';
+  const csrf = resolveCSRF({ secret, secure: !isDevelopment(context) });
   const [token, cookieHeader] = await csrf.commitToken();
   context.set(csrfContext, { token });
 
@@ -26,7 +32,6 @@ export const commitCSRFMiddleware: MiddlewareFunction<Response> = async ({ conte
       append: { 'Set-Cookie': cookieHeader },
     });
   }
-
   return response;
 };
 
@@ -43,16 +48,23 @@ export const validateCSRFMiddleware: MiddlewareFunction<Response> = async ({ req
     return next();
   }
 
-  const { CSRF_COOKIE_SECRET_KEY } = getBindings(context);
-  const csrf = resolveCSRF({ secret: CSRF_COOKIE_SECRET_KEY, secure: !isDevelopment(context) });
+  const bindings = getBindings(context);
+  // In development, fall back to environment variables if bindings are not available
+  const secret = bindings.CSRF_COOKIE_SECRET_KEY || process.env.CSRF_COOKIE_SECRET_KEY || 'fallback-csrf-secret';
+  const csrf = resolveCSRF({ secret, secure: !isDevelopment(context) });
 
   try {
     // Clone the request to read FormData without consuming original stream
     const clonedRequest = request.clone();
     const formData = await clonedRequest.formData();
+    
     await csrf.validate(formData, request.headers);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Token mismatch';
+    logger.error('CSRF validation failed', { 
+      error: errorMessage,
+      formDataKeys: Array.from((await request.clone().formData()).keys())
+    });
 
     throw new Response('Token mismatch', { status: 403, statusText: errorMessage });
   }

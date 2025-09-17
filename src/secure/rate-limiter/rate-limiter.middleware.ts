@@ -1,4 +1,5 @@
 import { logger } from '@ycore/forge/logger';
+import { isError } from '@ycore/forge/result';
 import type { MiddlewareFunction } from 'react-router';
 import type { RateLimiterConfig } from './@types/rate-limiter.types';
 import { checkRateLimit } from './rate-limiter.provider';
@@ -43,13 +44,13 @@ export function rateLimiterMiddleware(config: RateLimiterConfig): MiddlewareFunc
 
       const rateLimitResult = await checkRateLimit(requestConfig, rateLimitRequest, context);
 
-      if (rateLimitResult.errors || !rateLimitResult.data) {
-        logger.error('Rate limit check failed', { errors: rateLimitResult.errors });
+      if (isError(rateLimitResult)) {
+        logger.error('Rate limit check failed', { error: rateLimitResult.message });
         // On error, allow the request through (fail open)
         return next();
       }
 
-      const { allowed, remaining, resetAt, retryAfter } = rateLimitResult.data;
+      const { allowed, remaining, resetAt, retryAfter } = rateLimitResult;
 
       if (!allowed) {
         logger.warning('Rate limit exceeded', {
