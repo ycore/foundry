@@ -169,6 +169,7 @@ export async function createChallengeOnlySession(username: string, challenge: st
 
     session.set('challenge', challenge);
     session.set('username', username);
+    session.set('challengeCreatedAt', Date.now());
 
     const cookie = await sessionStorage.commitSession(session);
     return ok(cookie);

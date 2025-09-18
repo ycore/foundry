@@ -1,5 +1,5 @@
 import type { Result } from '@ycore/forge/result';
-import { err, notFoundError, serverError, tryCatch } from '@ycore/forge/result';
+import { err, isError, notFoundError, serverError, tryCatch } from '@ycore/forge/result';
 import { eq } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { Authenticator, NewAuthenticator, NewUser, User } from '../schema';
@@ -10,18 +10,18 @@ export class AuthRepository {
 
   /**
    * Get user by ID
-   * Returns User, null if not found, or AppError if database error
+   * Returns User or AppError (including not found error)
    */
-  async getUserById(id: string): Promise<Result<User | null>> {
+  async getUserById(id: string): Promise<Result<User>> {
     return tryCatch(
       async () => {
-        const result = await this.db
-          .select()
-          .from(users)
-          .where(eq(users.id, id))
-          .get();
+        const result = await this.db.select().from(users).where(eq(users.id, id)).get();
 
-        return result || null;
+        if (!result) {
+          return notFoundError('User', id);
+        }
+        
+        return result;
       },
       `Failed to get user by ID: ${id}`
     );
@@ -29,21 +29,19 @@ export class AuthRepository {
 
   /**
    * Get user by username
-   * Returns User, null if not found, or AppError if database error
+   * Returns User or AppError (including not found error)
    */
-  async getUserByUsername(username: string): Promise<Result<User | null>> {
+  async getUserByUsername(username: string): Promise<Result<User>> {
     return tryCatch(
       async () => {
-        const result = await this.db
-          .select()
-          .from(users)
-          .where(eq(users.username, username))
-          .get();
-
-        return result || null;
-      },
-      `Failed to get user by username: ${username}`
-    );
+        const result = await this.db.select().from(users).where(eq(users.username, username)).get();
+        
+        if (!result) {
+          return notFoundError('User', username);
+        }
+        
+        return result;
+      }, `Failed to get user by username: ${username}`);
   }
 
   /**
@@ -53,11 +51,7 @@ export class AuthRepository {
   async createUser(username: string, displayName: string): Promise<Result<User>> {
     try {
       const newUser: NewUser = { username, displayName };
-
-      const [result] = await this.db
-        .insert(users)
-        .values(newUser)
-        .returning();
+      const [result] = await this.db.insert(users).values(newUser).returning();
 
       if (!result) {
         return err('Failed to create user', { username, displayName });
@@ -79,18 +73,18 @@ export class AuthRepository {
 
   /**
    * Get authenticator by ID
-   * Returns Authenticator, null if not found, or AppError if database error
+   * Returns Authenticator or AppError (including not found error)
    */
-  async getAuthenticatorById(id: string): Promise<Result<Authenticator | null>> {
+  async getAuthenticatorById(id: string): Promise<Result<Authenticator>> {
     return tryCatch(
       async () => {
-        const result = await this.db
-          .select()
-          .from(authenticators)
-          .where(eq(authenticators.id, id))
-          .get();
+        const result = await this.db.select().from(authenticators).where(eq(authenticators.id, id)).get();
 
-        return result || null;
+        if (!result) {
+          return notFoundError('Authenticator', id);
+        }
+        
+        return result;
       },
       `Failed to get authenticator by ID: ${id}`
     );
@@ -103,11 +97,7 @@ export class AuthRepository {
   async getAuthenticatorsByUserId(userId: string): Promise<Result<Authenticator[]>> {
     return tryCatch(
       async () => {
-        const result = await this.db
-          .select()
-          .from(authenticators)
-          .where(eq(authenticators.userId, userId))
-          .all();
+        const result = await this.db.select().from(authenticators).where(eq(authenticators.userId, userId)).all();
 
         return result;
       },
@@ -123,10 +113,7 @@ export class AuthRepository {
     authenticator: Omit<NewAuthenticator, 'createdAt' | 'updatedAt'>
   ): Promise<Result<Authenticator>> {
     try {
-      const [result] = await this.db
-        .insert(authenticators)
-        .values(authenticator)
-        .returning();
+      const [result] = await this.db.insert(authenticators).values(authenticator).returning();
 
       if (!result) {
         return err('Failed to create authenticator', { id: authenticator.id });
@@ -144,11 +131,7 @@ export class AuthRepository {
    */
   async updateAuthenticatorCounter(id: string, counter: number): Promise<Result<boolean>> {
     try {
-      const result = await this.db
-        .update(authenticators)
-        .set({ counter })
-        .where(eq(authenticators.id, id))
-        .returning();
+      const result = await this.db.update(authenticators).set({ counter }).where(eq(authenticators.id, id)).returning();
 
       if (result.length === 0) {
         return notFoundError('Authenticator', id);
@@ -167,14 +150,9 @@ export class AuthRepository {
   async deleteUser(id: string): Promise<Result<boolean>> {
     try {
       // Use a transaction to ensure consistency
-      const deleteAuthenticatorsResult = await this.db
-        .delete(authenticators)
-        .where(eq(authenticators.userId, id));
+      const deleteAuthenticatorsResult = await this.db.delete(authenticators).where(eq(authenticators.userId, id));
 
-      const deleteUserResult = await this.db
-        .delete(users)
-        .where(eq(users.id, id))
-        .returning();
+      const deleteUserResult = await this.db.delete(users).where(eq(users.id, id)).returning();
 
       if (deleteUserResult.length === 0) {
         return notFoundError('User', id);
@@ -200,13 +178,15 @@ export class AuthService {
     // Check if username already exists
     const existingUser = await this.repo.getUserByUsername(username);
 
-    // Handle database error
-    if (existingUser && 'message' in existingUser) {
-      return existingUser; // Pass through the error
-    }
-
-    // Check if user exists
-    if (existingUser) {
+    // If it's an error and NOT a not-found error, return it
+    if (isError(existingUser)) {
+      // If it's a not-found error, that's good - we can create the user
+      if (existingUser.code !== 'NOT_FOUND') {
+        return existingUser; // Pass through other errors
+      }
+      // Not found is what we want - continue to create user
+    } else {
+      // User exists - can't create duplicate
       return err('Username already taken', {
         username,
         code: 'USERNAME_EXISTS'
@@ -226,20 +206,15 @@ export class AuthService {
   }>> {
     const userResult = await this.repo.getUserById(userId);
 
-    // Check for error
-    if (userResult && 'message' in userResult) {
+    // Check for error (including not found)
+    if (isError(userResult)) {
       return userResult;
-    }
-
-    // Check if user exists
-    if (!userResult) {
-      return notFoundError('User', userId);
     }
 
     const authenticatorsResult = await this.repo.getAuthenticatorsByUserId(userId);
 
     // Check for error
-    if (authenticatorsResult && 'message' in authenticatorsResult) {
+    if (isError(authenticatorsResult)) {
       return authenticatorsResult;
     }
 

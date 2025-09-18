@@ -30,22 +30,13 @@ export interface SecureFormErrorProps {
 }
 
 // Context for passing errors down
-const SecureFormContext = React.createContext<{
-  errors: FieldErrors | null;
-}>({
-  errors: null,
-});
+const SecureFormContext = React.createContext<{ errors: FieldErrors | null; }>({ errors: null });
 
 /**
  * SecureForm component with CSRF protection and error handling
  */
 export function SecureForm({ children, csrf_name = 'csrf_token', errors, ...props }: SecureFormProps) {
-  const contextValue = React.useMemo(
-    () => ({
-      errors: errors || null,
-    }),
-    [errors]
-  );
+  const contextValue = React.useMemo(() => ({ errors: errors || null }), [errors]);
 
   return (
     <SecureFormContext.Provider value={contextValue}>
@@ -84,8 +75,9 @@ export function SecureFormField({ name, label, description, error: explicitError
     if (childProps.name === name) {
       const ariaDescribedBy = [description && descriptionId, error && errorId].filter(Boolean).join(' ') || undefined;
 
-      return React.cloneElement(child, {
-        id: childProps.id || fieldId,
+      // biome-ignore lint/suspicious/noExplicitAny: acceptable
+      return React.cloneElement(child as React.ReactElement<any>, {
+        id: (typeof childProps.id === 'string' ? childProps.id : undefined) || fieldId,
         'aria-invalid': hasError || undefined,
         'aria-describedby': ariaDescribedBy,
         'aria-required': required || undefined,
@@ -162,23 +154,12 @@ export function SecureFormWithData<T = unknown>({ actionData, children, ...props
 /**
  * Utility to create field props from errors
  */
-export function createFieldProps(
-  name: string,
-  errors?: FieldErrors | null
-): {
-  error?: string;
-  'aria-invalid'?: boolean;
-  'aria-describedby'?: string;
-} {
+export function createFieldProps(name: string, errors?: FieldErrors | null): { error?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string; } {
   const error = errors?.[name];
 
   if (!error) {
     return {};
   }
 
-  return {
-    error,
-    'aria-invalid': true,
-    'aria-describedby': `${name}-error`,
-  };
+  return { error, 'aria-invalid': true, 'aria-describedby': `${name}-error`, };
 }

@@ -52,6 +52,7 @@ export type SessionData = {
   user: User;
   challenge?: string;
   username?: string;
+  challengeCreatedAt?: number;
 };
 
 export type SessionFlashData = {

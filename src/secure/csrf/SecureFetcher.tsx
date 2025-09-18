@@ -6,23 +6,33 @@ import { type FetcherWithComponents, type SubmitOptions, useFetcher } from 'reac
 import { AuthenticityTokenInput, useAuthenticityToken } from 'remix-utils/csrf/react';
 
 // Types
-export interface SecureFetcherFormProps extends React.ComponentProps<'form'> {
+export interface SecureFetcherFormProps extends Omit<React.ComponentProps<'form'>, 'method' | 'action' | 'encType'> {
   csrf_name?: string;
   errors?: FieldErrors | null;
   fetcher: FetcherWithComponents<unknown>;
   children?: React.ReactNode;
+  method?: 'get' | 'post' | 'put' | 'patch' | 'delete';
+  action?: string;
+  encType?: 'application/x-www-form-urlencoded' | 'multipart/form-data' | 'text/plain';
 }
 
 export interface UseSecureFetcherOptions {
   key?: string;
 }
 
-export interface SecureFetcherHandle<T = unknown> extends FetcherWithComponents<T> {
+export interface SecureFetcherHandle<T = unknown> {
   SecureForm: React.FC<Omit<SecureFetcherFormProps, 'fetcher'>>;
   submitSecure: (data: FormData, options?: SubmitOptions) => void;
   errors: FieldErrors | null;
   data: T | undefined;
   state: 'idle' | 'submitting' | 'loading';
+  Form: FetcherWithComponents<T>['Form'];
+  submit: FetcherWithComponents<T>['submit'];
+  load: FetcherWithComponents<T>['load'];
+  formData: FormData | undefined;
+  formMethod: 'get' | 'post' | 'put' | 'patch' | 'delete' | undefined;
+  formAction: string | undefined;
+  formEncType: 'application/x-www-form-urlencoded' | 'multipart/form-data' | 'application/json' | 'text/plain' | undefined;
 }
 
 /**
@@ -74,10 +84,18 @@ export function useSecureFetcher<T = unknown>({ key }: UseSecureFetcherOptions =
   SecureForm.displayName = 'SecureForm';
 
   return {
-    ...fetcher,
     SecureForm,
     submitSecure,
     errors,
+    data: fetcher.data as T | undefined,
+    state: fetcher.state,
+    Form: fetcher.Form,
+    submit: fetcher.submit,
+    load: fetcher.load,
+    formData: fetcher.formData,
+    formMethod: fetcher.formMethod?.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete' | undefined,
+    formAction: fetcher.formAction,
+    formEncType: fetcher.formEncType,
   };
 }
 
@@ -122,23 +140,12 @@ export { SecureFormField as SecureFetcherField } from './SecureForm';
 /**
  * Helper to create fetcher field props
  */
-export function createFetcherFieldProps(
-  name: string,
-  errors?: FieldErrors | null
-): {
-  error?: string;
-  'aria-invalid'?: boolean;
-  'aria-describedby'?: string;
-} {
+export function createFetcherFieldProps(name: string, errors?: FieldErrors | null): { error?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string; } {
   const error = errors?.[name];
 
   if (!error) {
     return {};
   }
 
-  return {
-    error,
-    'aria-invalid': true,
-    'aria-describedby': `${name}-error`,
-  };
+  return { error, 'aria-invalid': true, 'aria-describedby': `${name}-error` };
 }
