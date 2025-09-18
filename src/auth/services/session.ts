@@ -140,12 +140,11 @@ export async function cleanupChallengeSession(username: string, context: Readonl
 export async function createAuthSession(context: Readonly<RouterContextProvider>, sessionData: SessionData): Promise<Result<string>> {
   try {
     const sessionStorage = createAuthSessionStorage(context);
+
+    // SECURITY: Always create a new session to prevent session fixation attacks
     const session = await sessionStorage.getSession();
 
     session.set('user', sessionData.user);
-    if (sessionData.challenge) {
-      session.set('challenge', sessionData.challenge);
-    }
 
     const cookie = await sessionStorage.commitSession(session);
     return ok(cookie);
@@ -154,7 +153,7 @@ export async function createAuthSession(context: Readonly<RouterContextProvider>
   }
 }
 
-// Create challenge-only session with proper cleanup
+// Create challenge-only session with proper cleanup and isolation
 export async function createChallengeOnlySession(username: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<string>> {
   try {
     // First, cleanup any existing challenge session for this username
@@ -163,10 +162,11 @@ export async function createChallengeOnlySession(username: string, challenge: st
     // Create new challenge session in KV with TTL
     await createChallengeSession(username, challenge, context);
 
-    // Create minimal session cookie (just for CSRF protection)
+    // SECURITY: Always create a new session for challenges to prevent session fixation
     const sessionStorage = createAuthSessionStorage(context);
     const session = await sessionStorage.getSession();
 
+    // Set minimal challenge data in the fresh session
     session.set('challenge', challenge);
     session.set('username', username);
     session.set('challengeCreatedAt', Date.now());

@@ -16,6 +16,6 @@ export function getAuthConfig(context: Readonly<RouterContextProvider>): AuthCon
 /**
  * Set auth configuration in context
  */
-export function setAuthConfig(context: RouterContextProvider, config: AuthConfig): void {
+export function setAuthConfig(context: Readonly<RouterContextProvider>, config: AuthConfig): void {
   context.set(authConfigContext, config);
 }

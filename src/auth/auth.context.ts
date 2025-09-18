@@ -4,7 +4,7 @@ import type { AuthConfig } from './@types/auth.config.types';
 import { defaultAuthRoutes } from './auth.config';
 import { setAuthConfig } from './auth-config.context';
 import type { User } from './schema';
-import { destroyAuthSession, getAuthSession } from './services/session';
+import { createAuthSessionStorage, destroyAuthSession, getAuthSession } from './services/session';
 
 // Auth Session Context - stores authenticated user
 export const authUserContext = createContext<User | null>(null);
@@ -50,7 +50,6 @@ export function authSessionMiddleware(authConfig: AuthConfig): MiddlewareFunctio
     const cookieHeader = request.headers.get('Cookie');
     if (cookieHeader?.includes(authConfig.session.cookie.name)) {
       // Get the session to check if it has any valid data (user, challenge, etc.)
-      const { createAuthSessionStorage } = await import('./services/session');
       const sessionStorage = createAuthSessionStorage(context);
       const session = await sessionStorage.getSession(cookieHeader);
 
