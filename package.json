@@ -38,8 +38,8 @@
   "dependencies": {
     "@oslojs/crypto": "^1.0.1",
     "@oslojs/encoding": "^1.1.0",
-    "@simplewebauthn/browser": "^13.1.2",
-    "@simplewebauthn/server": "^13.1.2",
+    "@simplewebauthn/browser": "^13.2.0",
+    "@simplewebauthn/server": "^13.2.1",
     "jose": "^6.1.0",
     "remix-auth": "^4.2.0"
   },
@@ -47,7 +47,7 @@
     "@simplewebauthn/types": "^12.0.0",
     "@total-typescript/tsconfig": "^1.0.4",
     "@types/react": "^19.1.13",
-    "vite": "^7.1.5"
+    "vite": "^7.1.6"
   },
   "scripts": {
     "clean": "rm -rf dist node_modules",
