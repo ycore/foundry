@@ -40,7 +40,7 @@ export function SecureForm({ children, csrf_name = 'csrf_token', errors, ...prop
 
   return (
     <SecureFormContext.Provider value={contextValue}>
-      <Form {...props}>
+      <Form role="form" {...props}>
         <AuthenticityTokenInput name={csrf_name} />
         {errors?.csrf && <SecureFormError error={errors.csrf} className="mb-4" />}
         {errors?.form && !errors.csrf && <SecureFormError error={errors.form} className="mb-4" />}
