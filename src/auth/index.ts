@@ -5,3 +5,7 @@ export { authConfigContext, authGuardMiddleware, authRouteMiddleware, authSessio
 export { authConfigContext as authConfigContextInternal, getAuthConfig, setAuthConfig } from './auth-config.context';
 export { AuthForm } from './components/auth-form';
 export { handleFormSubmit } from './components/auth-form-handler';
+export { ProfileCard, ProfilePage } from './components/profile-page';
+export { SignInForm, SignInPage } from './components/signin-page';
+export { SignUpForm, SignUpPage } from './components/signup-page';
+export { authFormSchema, signinFormSchema, signupFormSchema } from './validation/auth-schemas';
