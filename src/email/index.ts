@@ -7,6 +7,7 @@ export { EmailSchema } from './email-validator';
 export { MailChannelsEmailProvider } from './providers/mailchannels';
 export { MockEmailProvider } from './providers/mock';
 export { ResendEmailProvider } from './providers/resend';
+export { TestMockEmailProvider } from './providers/test-mock';
 export { createTotpTemplate } from './templates/auth-totp';
 export { createMinimalTemplate } from './templates/minimal-template';
 export { createMockTemplate } from './templates/mock-template';

@@ -4,11 +4,13 @@ import type { EmailConfig, EmailProvider, EmailProviderConfig, EmailProviders } 
 import { MailChannelsEmailProvider } from './providers/mailchannels';
 import { MockEmailProvider } from './providers/mock';
 import { ResendEmailProvider } from './providers/resend';
+import { TestMockEmailProvider } from './providers/test-mock';
 
 const providerRegistry: Record<EmailProviders, () => EmailProvider> = {
   resend: () => new ResendEmailProvider(),
   mock: () => new MockEmailProvider(),
   mailchannels: () => new MailChannelsEmailProvider(),
+  'test-mock': () => new TestMockEmailProvider(),
 };
 
 export function createEmailProvider(providerName: string): Result<EmailProvider> {

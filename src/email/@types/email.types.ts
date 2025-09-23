@@ -32,7 +32,7 @@ export interface EmailProviderConfig {
   sendFrom: string;
 }
 
-export type EmailProviders = 'resend' | 'mock' | 'mailchannels';
+export type EmailProviders = 'resend' | 'mock' | 'mailchannels' | 'test-mock';
 
 export interface EmailConfig {
   active: EmailProviders | null;
