@@ -20,7 +20,7 @@ export class AuthRepository {
         if (!result) {
           return notFoundError('User', id);
         }
-        
+
         return result;
       },
       `Failed to get user by ID: ${id}`
@@ -28,42 +28,42 @@ export class AuthRepository {
   }
 
   /**
-   * Get user by username
+   * Get user by email
    * Returns User or AppError (including not found error)
    */
-  async getUserByUsername(username: string): Promise<Result<User>> {
+  async getUserByEmail(email: string): Promise<Result<User>> {
     return tryCatch(
       async () => {
-        const result = await this.db.select().from(users).where(eq(users.username, username)).get();
-        
+        const result = await this.db.select().from(users).where(eq(users.email, email)).get();
+
         if (!result) {
-          return notFoundError('User', username);
+          return notFoundError('User', email);
         }
-        
+
         return result;
-      }, `Failed to get user by username: ${username}`);
+      }, `Failed to get user by email: ${email}`);
   }
 
   /**
    * Create a new user
    * Returns the created User or AppError if failed
    */
-  async createUser(username: string, displayName: string): Promise<Result<User>> {
+  async createUser(email: string, displayName: string): Promise<Result<User>> {
     try {
-      const newUser: NewUser = { username, displayName };
+      const newUser: NewUser = { email, displayName };
       const [result] = await this.db.insert(users).values(newUser).returning();
 
       if (!result) {
-        return err('Failed to create user', { username, displayName });
+        return err('Failed to create user', { email, displayName });
       }
 
       return result;
     } catch (error) {
       // Check for unique constraint violation
       if (error instanceof Error && error.message.includes('UNIQUE')) {
-        return err('Username already exists', {
-          username,
-          code: 'DUPLICATE_USERNAME'
+        return err('Email already exists', {
+          email,
+          code: 'DUPLICATE_USER'
         });
       }
 
@@ -83,7 +83,7 @@ export class AuthRepository {
         if (!result) {
           return notFoundError('Authenticator', id);
         }
-        
+
         return result;
       },
       `Failed to get authenticator by ID: ${id}`
@@ -174,9 +174,9 @@ export class AuthService {
   /**
    * Register a new user - demonstrates error handling
    */
-  async registerUser(username: string, displayName: string): Promise<Result<User>> {
-    // Check if username already exists
-    const existingUser = await this.repo.getUserByUsername(username);
+  async registerUser(email: string, displayName: string): Promise<Result<User>> {
+    // Check if email already exists
+    const existingUser = await this.repo.getUserByEmail(email);
 
     // If it's an error and NOT a not-found error, return it
     if (isError(existingUser)) {
@@ -187,14 +187,14 @@ export class AuthService {
       // Not found is what we want - continue to create user
     } else {
       // User exists - can't create duplicate
-      return err('Username already taken', {
-        username,
-        code: 'USERNAME_EXISTS'
+      return err('Email already taken', {
+        email,
+        code: 'USER_EXISTS'
       });
     }
 
     // Create the user
-    return this.repo.createUser(username, displayName);
+    return this.repo.createUser(email, displayName);
   }
 
   /**

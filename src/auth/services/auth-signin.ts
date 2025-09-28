@@ -29,26 +29,26 @@ export async function signinAction({ request, context }: SignInActionArgs) {
   const formData = await clonedRequest.formData();
 
   try {
-    const username = formData.get('username')?.toString();
+    const email = formData.get('email')?.toString();
     const intent = formData.get('intent')?.toString();
 
-    // Handle username check with validation
-    if (intent === 'check-username' && username) {
-      // Validate username input
+    // Handle email check with validation
+    if (intent === 'check-email' && email) {
+      // Validate email input
       const validationResult = await validateFormData(signinFormSchema, formData);
       if (isError(validationResult)) {
         return respondError(validationResult);
       }
 
       // Check if user exists in database
-      const userResult = await repository.getUserByUsername(username);
+      const userResult = await repository.getUserByEmail(email);
       if (isError(userResult)) {
         const supportId = logger.support();
         return respondError(
           {
             message: 'Please check credentials or sign up for a new account.',
             details: {
-              username: 'Please check credentials or sign up for a new account.',
+              email: 'Please check credentials or sign up for a new account.',
               support: supportId,
             },
           },
@@ -65,12 +65,12 @@ export async function signinAction({ request, context }: SignInActionArgs) {
       const session = await sessionStorage.getSession();
 
       session.set('challenge', options.challenge);
-      session.set('username', username);
+      session.set('email', email);
       session.set('challengeCreatedAt', Date.now());
 
       const cookie = await sessionStorage.commitSession(session);
 
-      return respondOk({ options, username, userExists: true, ready: true }, { headers: { 'Set-Cookie': cookie } });
+      return respondOk({ options, email, userExists: true, ready: true }, { headers: { 'Set-Cookie': cookie } });
     }
 
     // Handle authentication using original request

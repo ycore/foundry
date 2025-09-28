@@ -29,42 +29,42 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
   const formData = await clonedRequest.formData();
 
   try {
-    const username = formData.get('username')?.toString();
+    const email = formData.get('email')?.toString();
     const intent = formData.get('intent')?.toString();
 
-    // Handle username check with validation
-    if (intent === 'check-username' && username) {
-      // Validate username input
+    // Handle email check with validation
+    if (intent === 'check-email' && email) {
+      // Validate email input
       const validationResult = await validateFormData(signupFormSchema, formData);
       if (isError(validationResult)) {
         return respondError(validationResult);
       }
 
       // Check if user already exists in database
-      const userResult = await repository.getUserByUsername(username);
+      const userResult = await repository.getUserByEmail(email);
       if (!isError(userResult)) {
-        return respondError(err('Please check credentials or sign in instead.', { username: 'Please check credentials or sign in instead.' }));
+        return respondError(err('Please check credentials or sign in instead.', { email: 'Please check credentials or sign in instead.' }));
       }
 
-      // Username is available, generate options and create session with challenge
+      // Email is available, generate options and create session with challenge
       const options = await webAuthnStrategy.generateOptions(request, null);
 
       // Create challenge session with deterministic key
-      const challengeResult = await createChallengeOnlySession(username, options.challenge, context);
+      const challengeResult = await createChallengeOnlySession(email, options.challenge, context);
 
       if (isError(challengeResult)) {
         return respondError(err('Failed to prepare registration. Please try again.', { field: 'general' }), undefined, () => logger.error('Failed to create challenge session:', challengeResult.message));
       }
 
-      return respondOk({ options, username, userExists: false, ready: true }, { headers: { 'Set-Cookie': challengeResult } });
+      return respondOk({ options, email, userExists: false, ready: true }, { headers: { 'Set-Cookie': challengeResult } });
     }
 
     // Handle registration using original request
     const user = await authenticator.authenticate('webauthn', request);
 
     // Clean up challenge session after successful auth
-    if (username) {
-      await cleanupChallengeSession(username, context);
+    if (email) {
+      await cleanupChallengeSession(email, context);
     }
 
     // Create new session with user
@@ -85,9 +85,9 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
 
     // Clean up challenge session on registration failure to prevent session leakage
     try {
-      const username = formData.get('username')?.toString();
-      if (username) {
-        await cleanupChallengeSession(username, context);
+      const email = formData.get('email')?.toString();
+      if (email) {
+        await cleanupChallengeSession(email, context);
       }
     } catch (cleanupError) {
       logger.warning('Failed to cleanup challenge session after registration error', {

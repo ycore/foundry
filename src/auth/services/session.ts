@@ -6,7 +6,7 @@ import type { RouterContextProvider } from 'react-router';
 import type { SessionData, SessionFlashData } from '../@types/auth.types';
 import { getAuthConfig } from '../auth-config.context';
 
-const challengeKvTemplate = (username: string): string => `challenge:${username}`;
+const challengeKvTemplate = (email: string): string => `challenge:${email}`;
 
 export function createAuthSessionStorage(context: Readonly<RouterContextProvider>) {
   const authConfig = getAuthConfig(context);
@@ -67,8 +67,8 @@ export async function getAuthSession(request: Request, context: Readonly<RouterC
   }
 }
 
-// Get challenge session by username
-export async function getChallengeSession(username: string, context: Readonly<RouterContextProvider>): Promise<Result<string | null>> {
+// Get challenge session by email
+export async function getChallengeSession(email: string, context: Readonly<RouterContextProvider>): Promise<Result<string | null>> {
   try {
     const authConfig = getAuthConfig(context);
     if (!authConfig) {
@@ -81,16 +81,16 @@ export async function getChallengeSession(username: string, context: Readonly<Ro
       throw new Error(`KV binding '${authConfig.session.kvBinding}' not found in environment`);
     }
 
-    const challengeKey = challengeKvTemplate(username);
+    const challengeKey = challengeKvTemplate(email);
     const challengeData = await kv.get(challengeKey);
     return ok(challengeData);
   } catch (error) {
-    return err('Failed to get challenge session', { username, error });
+    return err('Failed to get challenge session', { email, error });
   }
 }
 
-// Create challenge session with username-based key
-export async function createChallengeSession(username: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
+// Create challenge session with email-based key
+export async function createChallengeSession(email: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
   try {
     const authConfig = getAuthConfig(context);
     if (!authConfig) {
@@ -103,18 +103,18 @@ export async function createChallengeSession(username: string, challenge: string
       throw new Error(`KV binding '${authConfig.session.kvBinding}' not found in environment`);
     }
 
-    const challengeKey = challengeKvTemplate(username);
+    const challengeKey = challengeKvTemplate(email);
     // Set TTL to 5 minutes (300 seconds) for challenge sessions
     await kv.put(challengeKey, challenge, { expirationTtl: 300 });
 
     return ok(undefined);
   } catch (error) {
-    return err('Failed to create challenge session', { username, error });
+    return err('Failed to create challenge session', { email, error });
   }
 }
 
 // Clean up challenge session
-export async function cleanupChallengeSession(username: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
+export async function cleanupChallengeSession(email: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
   try {
     const authConfig = getAuthConfig(context);
     if (!authConfig) {
@@ -127,12 +127,12 @@ export async function cleanupChallengeSession(username: string, context: Readonl
       throw new Error(`KV binding '${authConfig.session.kvBinding}' not found in environment`);
     }
 
-    const challengeKey = challengeKvTemplate(username);
+    const challengeKey = challengeKvTemplate(email);
     await kv.delete(challengeKey);
 
     return ok(undefined);
   } catch (error) {
-    return err('Failed to cleanup challenge session', { username, error });
+    return err('Failed to cleanup challenge session', { email, error });
   }
 }
 
@@ -154,13 +154,13 @@ export async function createAuthSession(context: Readonly<RouterContextProvider>
 }
 
 // Create challenge-only session with proper cleanup and isolation
-export async function createChallengeOnlySession(username: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<string>> {
+export async function createChallengeOnlySession(email: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<string>> {
   try {
-    // First, cleanup any existing challenge session for this username
-    await cleanupChallengeSession(username, context);
+    // First, cleanup any existing challenge session for this email
+    await cleanupChallengeSession(email, context);
 
     // Create new challenge session in KV with TTL
-    await createChallengeSession(username, challenge, context);
+    await createChallengeSession(email, challenge, context);
 
     // SECURITY: Always create a new session for challenges to prevent session fixation
     const sessionStorage = createAuthSessionStorage(context);
@@ -168,13 +168,13 @@ export async function createChallengeOnlySession(username: string, challenge: st
 
     // Set minimal challenge data in the fresh session
     session.set('challenge', challenge);
-    session.set('username', username);
+    session.set('email', email);
     session.set('challengeCreatedAt', Date.now());
 
     const cookie = await sessionStorage.commitSession(session);
     return ok(cookie);
   } catch (error) {
-    return err('Failed to create challenge session', { username, error });
+    return err('Failed to create challenge session', { email, error });
   }
 }
 
@@ -184,10 +184,10 @@ export async function destroyAuthSession(request: Request, context: Readonly<Rou
     const sessionStorage = createAuthSessionStorage(context);
     const session = await sessionStorage.getSession(request.headers.get('Cookie'));
 
-    // Get username from session for cleanup
-    const username = session.get('username');
-    if (username) {
-      await cleanupChallengeSession(username, context);
+    // Get email from session for cleanup
+    const email = session.get('email');
+    if (email) {
+      await cleanupChallengeSession(email, context);
     }
 
     // Destroy the session and get the clearing cookie

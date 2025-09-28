@@ -9,19 +9,19 @@ export interface WebAuthnAuthenticator {
 
 export interface UserDetails {
   id: string;
-  username: string;
+  email: string;
   displayName?: string;
 }
 
 export interface WebAuthnOptionsResponse {
-  usernameAvailable: boolean | null;
+  emailAvailable: boolean | null;
   rp: {
     name: string;
     id: string;
   };
   user: {
     id: string;
-    username: string;
+    email: string;
     displayName: string;
   } | null;
   challenge: string;
@@ -37,21 +37,21 @@ export interface WebAuthnOptions<TUser> {
   requireUserVerification?: boolean;
   getUserAuthenticators: (user: TUser | null | undefined) => Promise<WebAuthnAuthenticator[]>;
   getUserDetails: (user: TUser | null | undefined) => Promise<UserDetails | null>;
-  getUserByUsername: (username: string) => Promise<TUser | null>;
+  getUserByEmail: (email: string) => Promise<TUser | null>;
   getAuthenticatorById: (id: string) => Promise<Authenticator | null>;
 }
 
 export type WebAuthnVerifyParams = {
   authenticator: Omit<Authenticator, 'userId' | 'createdAt' | 'updatedAt'>;
   type: 'registration' | 'authentication';
-  username: string | null;
+  email: string | null;
   displayName?: string;
 };
 
 export type SessionData = {
   user: User;
   challenge?: string;
-  username?: string;
+  email?: string;
   challengeCreatedAt?: number;
 };
 

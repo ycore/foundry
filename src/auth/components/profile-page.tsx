@@ -16,8 +16,8 @@ export function ProfileCard({ user, signoutUrl }: ProfileCardProps) {
       </Card.Header>
       <Card.Content className="space-y-4">
         <div>
-          <p className="text-muted-foreground text-sm">Username</p>
-          <p className="font-medium">{user?.username}</p>
+          <p className="text-muted-foreground text-sm">Email</p>
+          <p className="font-medium">{user?.email}</p>
         </div>
         <div>
           <p className="text-muted-foreground text-sm">Display Name</p>
@@ -61,8 +61,8 @@ export function ProfilePage({ loaderData, children }: ProfilePageProps) {
         </Card.Header>
         <Card.Content className="space-y-4">
           <div>
-            <p className="text-muted-foreground text-sm">Username</p>
-            <p className="font-medium">{user?.username}</p>
+            <p className="text-muted-foreground text-sm">Email</p>
+            <p className="font-medium">{user?.email}</p>
           </div>
           <div>
             <p className="text-muted-foreground text-sm">Display Name</p>

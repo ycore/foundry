@@ -16,7 +16,7 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
   origin: WebAuthnOptions<TUser>['origin'];
   getUserAuthenticators: WebAuthnOptions<TUser>['getUserAuthenticators'];
   getUserDetails: WebAuthnOptions<TUser>['getUserDetails'];
-  getUserByUsername: WebAuthnOptions<TUser>['getUserByUsername'];
+  getUserByEmail: WebAuthnOptions<TUser>['getUserByEmail'];
   getAuthenticatorById: WebAuthnOptions<TUser>['getAuthenticatorById'];
 
   constructor(options: WebAuthnOptions<TUser>, verify: Strategy.VerifyFunction<TUser, WebAuthnVerifyParams>) {
@@ -27,7 +27,7 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
     this.origin = options.origin;
     this.getUserAuthenticators = options.getUserAuthenticators;
     this.getUserDetails = options.getUserDetails;
-    this.getUserByUsername = options.getUserByUsername;
+    this.getUserByEmail = options.getUserByEmail;
     this.getAuthenticatorById = options.getAuthenticatorById;
     this.challengeSessionKey = options.challengeSessionKey || 'challenge';
     this.requireUserVerification = options.requireUserVerification ?? false;
@@ -46,29 +46,29 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
   async generateOptions(request: Request, user: TUser | null | undefined) {
     let authenticators: WebAuthnAuthenticator[] = [];
     let userDetails: UserDetails | null = null;
-    let usernameAvailable: boolean | null = null;
+    let emailAvailable: boolean | null = null;
     let foundUser = user;
 
     const rp = await this.getRP(request);
 
-    const username = new URL(request.url).searchParams.get('username');
+    const email = new URL(request.url).searchParams.get('email');
     if (!foundUser) {
-      if (username) {
-        usernameAvailable = true;
-        foundUser = await this.getUserByUsername(username || '');
+      if (email) {
+        emailAvailable = true;
+        foundUser = await this.getUserByEmail(email || '');
       }
     }
 
     if (foundUser) {
       authenticators = await this.getUserAuthenticators(foundUser);
       userDetails = await this.getUserDetails(foundUser);
-      usernameAvailable = false;
+      emailAvailable = false;
     }
 
     const options: WebAuthnOptionsResponse = {
-      usernameAvailable,
+      emailAvailable,
       rp,
-      user: userDetails ? { displayName: userDetails.username, ...userDetails } : null,
+      user: userDetails ? { displayName: userDetails.displayName, ...userDetails } : null,
       challenge: isoBase64URL.fromBuffer(crypto.getRandomValues(new Uint8Array(32))),
       authenticators: authenticators.map(({ id, transports }) => ({
         id,
@@ -106,12 +106,12 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
     }
 
     const type = formData.get('type');
-    let username = formData.get('username');
+    let email = formData.get('email');
     const displayName = formData.get('displayName')?.toString();
 
-    if (typeof username !== 'string') username = null;
+    if (typeof email !== 'string') email = null;
     if (type === 'registration') {
-      if (!username) throw new Error('Username is a required form value.');
+      if (!email) throw new Error('Email is a required form value.');
       const verification = await verifyRegistrationResponse({
         response: data as RegistrationResponseJSON,
         expectedChallenge,
@@ -140,7 +140,7 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
         return this.verify({
           authenticator: newAuthenticator,
           type: 'registration',
-          username,
+          email,
           displayName,
         });
       }
@@ -178,7 +178,7 @@ export class WebAuthnStrategy<TUser> extends Strategy<TUser, WebAuthnVerifyParam
           aaguid: authenticator.aaguid,
         },
         type: 'authentication',
-        username,
+        email,
         displayName,
       });
     }

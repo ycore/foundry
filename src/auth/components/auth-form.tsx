@@ -17,19 +17,19 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
     <SecureForm method="post" onSubmit={handleFormSubmit(options)} className="flex flex-col gap-4" errors={errors}>
       {showRegistration && (
         <>
-          <SecureForm.Field className="flex flex-col gap-2" label="Username *" name="username">
-            <Input id="username" name="username" type="text" placeholder="Enter your username" autoComplete="username webauthn" required />
+          <SecureForm.Field className="flex flex-col gap-2" label="Email *" name="email">
+            <Input id="email" name="email" type="text" placeholder="Enter your email" autoComplete="email webauthn" required />
           </SecureForm.Field>
 
           <SecureForm.Field className="flex flex-col gap-2" label="Display Name *" name="displayName">
             <Input id="displayName" name="displayName" type="text" placeholder="Enter your display name" autoComplete="name" required />
           </SecureForm.Field>
 
-          <Button type="submit" name="intent" value="check-username" variant="outline" className="w-full">
-            Check Username Availability
+          <Button type="submit" name="intent" value="check-email" variant="outline" className="w-full">
+            Check Email Availability
           </Button>
 
-          <Button type="submit" name="intent" value="registration" disabled={options.usernameAvailable !== true} className="w-full">
+          <Button type="submit" name="intent" value="registration" disabled={options.emailAvailable !== true} className="w-full">
             Register with Passkey
           </Button>
         </>
@@ -49,8 +49,8 @@ export function AuthForm({ options, errors, mode = 'combined' }: AuthFormProps) 
       {showAuthentication && (
         <>
           {mode === 'signin' && (
-            <SecureForm.Field className="flex flex-col gap-2" label="Username *" name="username">
-              <Input id="username" name="username" type="text" placeholder="Enter your username" autoComplete="username webauthn" required />
+            <SecureForm.Field className="flex flex-col gap-2" label="Email *" name="email">
+              <Input id="email" name="email" type="text" placeholder="Enter your email" autoComplete="email webauthn" required />
             </SecureForm.Field>
           )}
 

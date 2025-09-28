@@ -12,17 +12,18 @@ interface SignUpFormProps {
 }
 
 export function SignUpForm({ signinUrl }: SignUpFormProps) {
-  const usernameFetcher = useSecureFetcher<{ options: WebAuthnOptionsResponse; username: string; userExists: boolean; ready: boolean }>({ key: 'username-check' });
-  const [intent, setIntent] = React.useState<'username' | 'passkey'>('username');
-  const [username, setUsername] = React.useState('');
+  const emailFetcher = useSecureFetcher<{ options: WebAuthnOptionsResponse; email: string; userExists: boolean; ready: boolean }>({ key: 'email-check' });
+  const [intent, setIntent] = React.useState<'email' | 'passkey'>('email');
+  const [email, setEmail] = React.useState('');
+  const [displayName, setDisplayName] = React.useState('');
   const [webAuthnOptions, setWebAuthnOptions] = React.useState<WebAuthnOptionsResponse | null>(null);
 
-  // Handle username check response - React Router handles transitions automatically
+  // Handle email check response - React Router handles transitions automatically
   React.useEffect(() => {
-    if (usernameFetcher.data && !isError(usernameFetcher.data)) {
-      const { options, username: validUsername, ready } = usernameFetcher.data;
+    if (emailFetcher.data && !isError(emailFetcher.data)) {
+      const { options, email: validEmail, ready } = emailFetcher.data;
       if (ready) {
-        setUsername(validUsername);
+        setEmail(validEmail);
         setWebAuthnOptions(options);
         // Trigger view transition for smooth step change
         if (document.startViewTransition) {
@@ -32,33 +33,40 @@ export function SignUpForm({ signinUrl }: SignUpFormProps) {
         }
       }
     }
-  }, [usernameFetcher.data]);
+  }, [emailFetcher.data]);
 
-  // Step 1: Verify username availability
-  if (intent === 'username') {
+  // Step 1: Verify email availability
+  if (intent === 'email') {
     return (
-      <usernameFetcher.SecureForm method="post" className="flex flex-col gap-6" style={{ viewTransitionName: 'signup-form' }}>
-        <SecureFetcher.Field label="Username" name="username" required error={usernameFetcher.errors?.username || usernameFetcher.errors?.field}>
-          <Input name="username" type="text" placeholder="Enter your username" autoComplete="username webauthn" required autoFocus />
+      <emailFetcher.SecureForm method="post" className="flex flex-col gap-6" style={{ viewTransitionName: 'signup-form' }}>
+        <SecureFetcher.Field label="Email" name="email" required error={emailFetcher.errors?.email || emailFetcher.errors?.field}>
+          <Input name="email" type="text" placeholder="Enter your email" autoComplete="email webauthn" required autoFocus />
         </SecureFetcher.Field>
 
-        <SecureFetcher.Field label="Display Name" name="displayName" required error={usernameFetcher.errors?.displayName}>
-          <Input name="displayName" type="text" placeholder="Enter your display name" autoComplete="name" required />
+        <SecureFetcher.Field label="Display Name" name="displayName" required error={emailFetcher.errors?.displayName}>
+          <Input
+            name="displayName"
+            type="text"
+            placeholder="Enter your display name"
+            autoComplete="name"
+            required
+            onChange={(e) => setDisplayName(e.target.value)}
+          />
         </SecureFetcher.Field>
 
-        <SecureFetcher.Error error={usernameFetcher.errors?.general} />
+        <SecureFetcher.Error error={emailFetcher.errors?.general} />
 
         <div className="flex justify-between gap-x-2">
-          <Button type="submit" name="intent" value="check-username" disabled={usernameFetcher.state === 'submitting'} style={{ viewTransitionName: 'signup-button' }} className="flex-1">
-            <Spinner spriteUrl={svgSpriteUrl} className={clsx('size-5', usernameFetcher.state !== 'submitting' ? 'hidden' : '')} />
-            {usernameFetcher.state === 'submitting' ? 'Validating...' : 'Validate Username'}
+          <Button type="submit" name="intent" value="check-email" disabled={emailFetcher.state === 'submitting'} style={{ viewTransitionName: 'signup-button' }} className="flex-1">
+            <Spinner spriteUrl={svgSpriteUrl} className={clsx('size-5', emailFetcher.state !== 'submitting' ? 'hidden' : '')} />
+            {emailFetcher.state === 'submitting' ? 'Validating...' : 'Validate Email'}
           </Button>
 
           <Button type="button" variant="outline" asChild>
             <Link href={signinUrl}>Sign In</Link>
           </Button>
         </div>
-      </usernameFetcher.SecureForm>
+      </emailFetcher.SecureForm>
     );
   }
 
@@ -66,8 +74,13 @@ export function SignUpForm({ signinUrl }: SignUpFormProps) {
   return (
     <SecureForm method="post" onSubmit={webAuthnOptions ? handleFormSubmit(webAuthnOptions) : undefined} className="flex flex-col gap-6" style={{ viewTransitionName: 'signup-form' }}>
       <div className="flex flex-col gap-2">
-        <label htmlFor="username">Username</label>
-        <Input name="username" type="text" value={username} readOnly className="bg-gray-50" />
+        <label htmlFor="email">Email</label>
+        <Input name="email" type="text" value={email} readOnly className="bg-gray-50" />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="displayName">Display Name</label>
+        <Input name="displayName" type="text" value={displayName} readOnly className="bg-gray-50" />
       </div>
 
       <div className="flex justify-between gap-x-2">
@@ -81,13 +94,15 @@ export function SignUpForm({ signinUrl }: SignUpFormProps) {
           onClick={() => {
             if (document.startViewTransition) {
               document.startViewTransition(() => {
-                setIntent('username');
-                setUsername('');
+                setIntent('email');
+                setEmail('');
+                setDisplayName('');
                 setWebAuthnOptions(null);
               });
             } else {
-              setIntent('username');
-              setUsername('');
+              setIntent('email');
+              setEmail('');
+              setDisplayName('');
               setWebAuthnOptions(null);
             }
           }}

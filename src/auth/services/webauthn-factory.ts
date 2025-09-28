@@ -43,14 +43,14 @@ export function createWebAuthnStrategy(repository: AuthRepository, sessionStorag
         return user
           ? {
             id: user.id,
-            username: user.username,
-            displayName: user.displayName || user.username,
+            email: user.email,
+            displayName: user.displayName || user.email,
           }
           : null;
       },
 
-      getUserByUsername: async (username): Promise<User | null> => {
-        const result = await repository.getUserByUsername(username);
+      getUserByEmail: async (email): Promise<User | null> => {
+        const result = await repository.getUserByEmail(email);
         return isError(result) ? null : result;
       },
 
@@ -68,9 +68,9 @@ export function createWebAuthnStrategy(repository: AuthRepository, sessionStorag
  * Single responsibility: Handle user verification and registration logic.
  */
 function createVerifyFunction(repository: AuthRepository) {
-  return async function verify({ authenticator: auth, type, username, displayName }: WebAuthnVerifyParams): Promise<User> {
+  return async function verify({ authenticator: auth, type, email, displayName }: WebAuthnVerifyParams): Promise<User> {
     if (type === 'registration') {
-      return handleRegistration(repository, auth, username, displayName);
+      return handleRegistration(repository, auth, email, displayName);
     }
 
     if (type === 'authentication') {
@@ -85,26 +85,26 @@ function createVerifyFunction(repository: AuthRepository) {
  * Handles new user registration with WebAuthn.
  * Single responsibility: Register new users with passkey.
  */
-async function handleRegistration(repository: AuthRepository, auth: Omit<AuthenticatorModel, 'userId' | 'createdAt' | 'updatedAt'>, username: string | null, displayName?: string): Promise<User> {
+async function handleRegistration(repository: AuthRepository, auth: Omit<AuthenticatorModel, 'userId' | 'createdAt' | 'updatedAt'>, email: string | null, displayName?: string): Promise<User> {
   // Check if authenticator already exists
   const savedAuthResult = await repository.getAuthenticatorById(auth.id);
   if (!isError(savedAuthResult)) {
     throw new Error('Authenticator has already been registered');
   }
 
-  if (!username) {
-    throw new Error('Username is required');
+  if (!email) {
+    throw new Error('Email is required');
   }
 
   // Check if user already exists
-  const existingUserResult = await repository.getUserByUsername(username);
+  const existingUserResult = await repository.getUserByEmail(email);
   if (!isError(existingUserResult)) {
     throw new Error('User already exists');
   }
 
   // Create new user
-  const finalDisplayName = displayName || username;
-  const createUserResult = await repository.createUser(username, finalDisplayName);
+  const finalDisplayName = displayName || email;
+  const createUserResult = await repository.createUser(email, finalDisplayName);
 
   if (isError(createUserResult)) {
     throw new Error(createUserResult.message || 'Failed to create user');

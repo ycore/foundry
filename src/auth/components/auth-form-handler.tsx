@@ -23,7 +23,7 @@ export function handleFormSubmit(
       return true;
     }
     const formData = new FormData(event.currentTarget);
-    const username = formData.get('username')?.toString();
+    const email = formData.get('email')?.toString();
 
     const target = event.currentTarget;
     const submitButtonValue = event.nativeEvent.submitter.value;
@@ -40,9 +40,9 @@ export function handleFormSubmit(
       );
     }
 
-    if (type === 'registration' && !username) {
+    if (type === 'registration' && !email) {
       throw new Error(
-        'You must provide a username field in your form, and set the `name` attribute to `username`.',
+        'You must provide a email field in your form, and set the `name` attribute to `email`.',
       );
     }
 
@@ -71,8 +71,8 @@ export function handleFormSubmit(
                 id: bufferToBase64URLString(
                   config?.generateUserId?.() || nanoid(),
                 ),
-                name: username!,
-                displayName: username!,
+                name: email!,
+                displayName: email!,
               },
               pubKeyCredParams: [
                 {
