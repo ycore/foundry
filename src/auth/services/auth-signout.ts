@@ -2,6 +2,9 @@ import { logger } from '@ycore/forge/logger';
 import { isError } from '@ycore/forge/result';
 import type { RouterContextProvider } from 'react-router';
 import { redirect } from 'react-router';
+
+import { defaultAuthRoutes } from '../auth.config';
+import { getAuthConfig } from '../auth-config.context';
 import { destroyAuthSession } from './session';
 
 export interface SignOutActionArgs {
@@ -16,18 +19,15 @@ export async function signoutAction({ request, context }: SignOutActionArgs) {
     logger.error('Failed to destroy session:', destroyResult.message);
   }
 
-  // Get route config from context or use default
-  const routeConfig = context.get('routeConfig' as any) || { auth: { signin: '/foundry/auth/signin' } };
+  const authConfig = getAuthConfig(context);
+  const redirectTo = authConfig?.routes.signedout || defaultAuthRoutes.signedout;
 
-  return redirect(routeConfig.auth.signin, {
-    headers: {
-      'Set-Cookie': !isError(destroyResult) ? destroyResult : '',
-    },
-  });
+  return redirect(redirectTo, { headers: { 'Set-Cookie': !isError(destroyResult) ? destroyResult : '' } });
 }
 
-export async function signoutLoader() {
-  // Get route config from context or use default
-  const routeConfig = { auth: { signedout: '/foundry/auth/signin' } };
-  return redirect(routeConfig.auth.signedout);
+export async function signoutLoader({ context }: { context: Readonly<RouterContextProvider> }) {
+  const authConfig = getAuthConfig(context);
+  const redirectTo = authConfig?.routes.signedout || defaultAuthRoutes.signedout;
+
+  return redirect(redirectTo);
 }

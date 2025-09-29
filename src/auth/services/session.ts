@@ -3,10 +3,12 @@ import type { Result } from '@ycore/forge/result';
 import { err, ok } from '@ycore/forge/result';
 import { getBindings, isProduction, UNCONFIGURED } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
+
 import type { SessionData, SessionFlashData } from '../@types/auth.types';
 import { getAuthConfig } from '../auth-config.context';
 
 const challengeKvTemplate = (email: string): string => `challenge:${email}`;
+const challengeUniqueKvTemplate = (challenge: string): string => `challenge-unique:${challenge}`;
 
 export function createAuthSessionStorage(context: Readonly<RouterContextProvider>) {
   const authConfig = getAuthConfig(context);
@@ -89,6 +91,35 @@ export async function getChallengeSession(email: string, context: Readonly<Route
   }
 }
 
+// Verify challenge uniqueness
+export async function verifyChallengeUniqueness(challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<boolean>> {
+  try {
+    const authConfig = getAuthConfig(context);
+    if (!authConfig) {
+      throw new Error('Auth configuration not found in context');
+    }
+
+    const env = getBindings(context);
+    const kv = env[authConfig.session.kvBinding as keyof typeof env] as KVNamespace;
+    if (!kv) {
+      throw new Error(`KV binding '${authConfig.session.kvBinding}' not found in environment`);
+    }
+
+    const uniqueKey = challengeUniqueKvTemplate(challenge);
+    const existing = await kv.get(uniqueKey);
+
+    if (existing) {
+      return err('Challenge already used', { challenge });
+    }
+
+    // Mark challenge as used with 5 minute TTL
+    await kv.put(uniqueKey, 'used', { expirationTtl: 300 });
+    return ok(true);
+  } catch (error) {
+    return err('Failed to verify challenge uniqueness', { challenge, error });
+  }
+}
+
 // Create challenge session with email-based key
 export async function createChallengeSession(email: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
   try {
@@ -142,11 +173,15 @@ export async function createAuthSession(context: Readonly<RouterContextProvider>
     const sessionStorage = createAuthSessionStorage(context);
 
     // SECURITY: Always create a new session to prevent session fixation attacks
-    const session = await sessionStorage.getSession();
+    // Don't reuse any existing session - create completely fresh session
+    const newSession = await sessionStorage.getSession(); // Creates new session
 
-    session.set('user', sessionData.user);
+    newSession.set('user', sessionData.user);
+    newSession.set('authenticatedAt', Date.now());
 
-    const cookie = await sessionStorage.commitSession(session);
+    const cookie = await sessionStorage.commitSession(newSession, {
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+    });
     return ok(cookie);
   } catch (error) {
     return err('Failed to create session', { error });
@@ -156,6 +191,12 @@ export async function createAuthSession(context: Readonly<RouterContextProvider>
 // Create challenge-only session with proper cleanup and isolation
 export async function createChallengeOnlySession(email: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<string>> {
   try {
+    // Verify challenge uniqueness first
+    const uniquenessResult = await verifyChallengeUniqueness(challenge, context);
+    if (!uniquenessResult.success) {
+      return uniquenessResult;
+    }
+
     // First, cleanup any existing challenge session for this email
     await cleanupChallengeSession(email, context);
 
@@ -164,14 +205,16 @@ export async function createChallengeOnlySession(email: string, challenge: strin
 
     // SECURITY: Always create a new session for challenges to prevent session fixation
     const sessionStorage = createAuthSessionStorage(context);
-    const session = await sessionStorage.getSession();
+    const session = await sessionStorage.getSession(); // New session
 
     // Set minimal challenge data in the fresh session
     session.set('challenge', challenge);
     session.set('email', email);
     session.set('challengeCreatedAt', Date.now());
 
-    const cookie = await sessionStorage.commitSession(session);
+    const cookie = await sessionStorage.commitSession(session, {
+      maxAge: 300, // 5 minutes for challenge sessions
+    });
     return ok(cookie);
   } catch (error) {
     return err('Failed to create challenge session', { email, error });

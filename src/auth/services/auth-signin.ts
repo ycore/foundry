@@ -1,23 +1,17 @@
 import { decodeBase64url } from '@oslojs/encoding';
 import { logger } from '@ycore/forge/logger';
 import { err, isError, respondError, respondOk, validateFormData } from '@ycore/forge/result';
-import type { RouterContextProvider } from 'react-router';
 import { redirect } from 'react-router';
-import { csrfContext } from '../../secure';
+
+import { csrfContext } from '../../secure/csrf/csrf.middleware';
+import type { SignInActionArgs, SignInLoaderArgs } from '../@types/auth.types';
+import { WebAuthnErrorCode } from '../@types/auth.types';
+import { defaultAuthConfig, defaultAuthRoutes } from '../auth.config';
 import { getAuthConfig } from '../auth-config.context';
-import { signinFormSchema } from '../validation/auth-schemas';
 import { getAuthRepository } from './auth-factory';
-import { createAuthSession, createAuthSessionStorage } from './session';
-import { createAuthenticationOptions, generateChallenge, verifyAuthentication } from './webauthn-oslo';
-
-export interface SignInLoaderArgs {
-  context: Readonly<RouterContextProvider>;
-}
-
-export interface SignInActionArgs {
-  request: Request;
-  context: Readonly<RouterContextProvider>;
-}
+import { signinFormSchema } from './auth-validation';
+import { createAuthSession, createAuthSessionStorage, verifyChallengeUniqueness } from './session';
+import { generateChallenge, getWebAuthnErrorMessage, verifyAuthentication } from './webauthn';
 
 export async function signinLoader({ context }: SignInLoaderArgs) {
   const csrfData = context.get(csrfContext);
@@ -69,7 +63,6 @@ export async function signinAction({ request, context }: SignInActionArgs) {
     // Check if user exists
     const userResult = await repository.getUserByEmail(email);
     if (isError(userResult)) {
-      logger.warning('signin_user_not_found', { email });
       return respondError(err('Invalid credentials', { email: 'Invalid credentials' }));
     }
 
@@ -78,7 +71,6 @@ export async function signinAction({ request, context }: SignInActionArgs) {
     // Get user's authenticators
     const authenticatorsResult = await repository.getAuthenticatorsByUserId(user.id);
     if (isError(authenticatorsResult) || authenticatorsResult.length === 0) {
-      logger.warning('signin_no_authenticators', { userId: user.id });
       return respondError(err('No authenticators found. Please sign up first.', { field: 'general' }));
     }
 
@@ -89,21 +81,34 @@ export async function signinAction({ request, context }: SignInActionArgs) {
     const challengeCreatedAt = session.get('challengeCreatedAt');
 
     if (!storedChallenge || !challengeCreatedAt) {
-      logger.warning('signin_no_challenge');
       return respondError(err('Invalid session. Please refresh and try again.', { field: 'general' }));
     }
 
     // Check challenge expiration (5 minutes)
     const challengeMaxAge = 5 * 60 * 1000;
     if (Date.now() - challengeCreatedAt > challengeMaxAge) {
-      logger.warning('signin_challenge_expired');
-      return respondError(err('Session expired. Please refresh and try again.', { field: 'general' }));
+      return respondError(
+        err('Session expired. Please refresh and try again.', {
+          field: 'general',
+          code: WebAuthnErrorCode.CHALLENGE_EXPIRED,
+        })
+      );
+    }
+
+    // Verify challenge uniqueness
+    const uniquenessResult = await verifyChallengeUniqueness(storedChallenge, context);
+    if (isError(uniquenessResult)) {
+      return respondError(
+        err('Invalid challenge. Please refresh and try again.', {
+          field: 'general',
+          code: WebAuthnErrorCode.INVALID_CHALLENGE,
+        })
+      );
     }
 
     // Get WebAuthn response from form
     const webauthnResponse = formData.get('webauthn_response')?.toString();
     if (!webauthnResponse) {
-      logger.warning('signin_no_webauthn_response');
       return respondError(err('Authentication failed. Please try again.', { field: 'general' }));
     }
 
@@ -112,44 +117,35 @@ export async function signinAction({ request, context }: SignInActionArgs) {
     // Find matching authenticator - use rawId which is base64url encoded like what we stored
     const authenticator = authenticatorsResult.find(auth => auth.id === credential.rawId);
     if (!authenticator) {
-      logger.warning('signin_authenticator_not_found', { credentialId: credential.rawId, availableIds: authenticatorsResult.map(a => a.id) });
       return respondError(err('Invalid authenticator', { field: 'general' }));
     }
 
     // Convert base64url strings back to ArrayBuffers for verification
     const authenticationData = {
       id: credential.id,
-      rawId: decodeBase64url(credential.rawId),
+      rawId: decodeBase64url(credential.rawId).buffer,
       response: {
-        authenticatorData: decodeBase64url(credential.response.authenticatorData),
-        clientDataJSON: decodeBase64url(credential.response.clientDataJSON),
-        signature: decodeBase64url(credential.response.signature),
-        userHandle: credential.response.userHandle ? decodeBase64url(credential.response.userHandle) : undefined,
+        authenticatorData: decodeBase64url(credential.response.authenticatorData).buffer,
+        clientDataJSON: decodeBase64url(credential.response.clientDataJSON).buffer,
+        signature: decodeBase64url(credential.response.signature).buffer,
+        userHandle: credential.response.userHandle ? decodeBase64url(credential.response.userHandle).buffer : undefined,
       },
       type: 'public-key' as const,
     };
 
     // Resolve WebAuthn configuration values
-    const resolvedRpID = typeof authConfig.webauthn.rpID === 'function' 
-      ? await authConfig.webauthn.rpID(request)
-      : authConfig.webauthn.rpID;
-    
-    const resolvedOrigins = typeof authConfig.webauthn.origin === 'function'
-      ? await authConfig.webauthn.origin(request)
-      : authConfig.webauthn.origin;
-    
+    const webauthnConfig = authConfig?.webauthn || defaultAuthConfig.webauthn;
+    const resolvedRpID = typeof webauthnConfig.rpID === 'function' ? await webauthnConfig.rpID(request) : webauthnConfig.rpID;
+    const resolvedOrigins = typeof webauthnConfig.origin === 'function' ? await webauthnConfig.origin(request) : webauthnConfig.origin;
+
     // Get the client origin from the clientDataJSON (this is what the browser sent)
     const clientData = JSON.parse(new TextDecoder().decode(decodeBase64url(credential.response.clientDataJSON)));
     const clientOrigin = clientData.origin;
-    
+
     // Check if the client origin is in our allowed origins
     const allowedOrigins = Array.isArray(resolvedOrigins) ? resolvedOrigins : [resolvedOrigins];
-    
+
     if (!allowedOrigins.includes(clientOrigin)) {
-      logger.warning('signin_origin_not_allowed', { 
-        clientOrigin, 
-        allowedOrigins 
-      });
       return respondError(err('Origin not allowed', { field: 'general' }));
     }
 
@@ -157,8 +153,20 @@ export async function signinAction({ request, context }: SignInActionArgs) {
     const verificationResult = await verifyAuthentication(authenticationData, storedChallenge, clientOrigin, resolvedRpID, authenticator);
 
     if (isError(verificationResult)) {
-      logger.error('signin_verification_failed', { error: verificationResult.message });
-      return respondError(err('Authentication failed', { field: 'general' }));
+      logger.error('signin_verification_failed', {
+        error: verificationResult.message,
+        code: verificationResult.code,
+        details: verificationResult.details,
+      });
+
+      // Provide user-friendly error messages based on error code
+      const errorMessage = getWebAuthnErrorMessage(verificationResult.code as WebAuthnErrorCode, 'authentication');
+      return respondError(
+        err(errorMessage, {
+          field: 'general',
+          code: verificationResult.code,
+        })
+      );
     }
 
     // Update authenticator counter
@@ -176,12 +184,10 @@ export async function signinAction({ request, context }: SignInActionArgs) {
       return respondError(err('Failed to create session', { field: 'general' }));
     }
 
-    // Get redirect URL from route config
-    const routeConfig = context.get('routeConfig' as any) || { auth: { signedin: '/foundry/auth/profile' } };
-
     logger.info('signin_success', { userId: user.id, email: user.email });
 
-    throw redirect(routeConfig.auth.signedin, { headers: { 'Set-Cookie': sessionResult } });
+    const redirectTo = authConfig?.routes.signedin || defaultAuthRoutes.signedin;
+    throw redirect(redirectTo, { headers: { 'Set-Cookie': sessionResult } });
   } catch (error) {
     if (error instanceof Response) {
       throw error;

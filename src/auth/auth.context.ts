@@ -1,7 +1,8 @@
 import { isError, middlewarePassthrough } from '@ycore/forge/result';
 import { createContext, type MiddlewareFunction, type RouterContextProvider, redirect } from 'react-router';
+
 import type { AuthConfig } from './@types/auth.config.types';
-import { defaultAuthRoutes } from './auth.config';
+import { defaultAuthConfig, defaultAuthRoutes } from './auth.config';
 import { setAuthConfig } from './auth-config.context';
 import type { User } from './schema';
 import { createAuthSessionStorage, destroyAuthSession, getAuthSession } from './services/session';
@@ -37,7 +38,8 @@ export function authSessionMiddleware(authConfig: AuthConfig): MiddlewareFunctio
     setAuthConfig(context, authConfig);
 
     // Set auth config context for route helpers
-    context.set(authConfigContext, { signedOutRoute: authConfig.routes.signedout });
+    const signedOutRoute = authConfig?.routes.signedout || defaultAuthRoutes.signedout;
+    context.set(authConfigContext, { signedOutRoute });
 
     // Load user from session
     const sessionResult = await getAuthSession(request, context);
@@ -48,17 +50,17 @@ export function authSessionMiddleware(authConfig: AuthConfig): MiddlewareFunctio
 
     // Check if there's an orphaned session cookie that needs cleanup
     const cookieHeader = request.headers.get('Cookie');
-    if (cookieHeader?.includes(authConfig.session.cookie.name)) {
+    const sessionCookieName = authConfig?.session.cookie.name || defaultAuthConfig.session.cookie.name;
+    if (cookieHeader?.includes(sessionCookieName)) {
       // Get the session to check if it has any valid data (user, challenge, etc.)
       const sessionStorage = createAuthSessionStorage(context);
       const session = await sessionStorage.getSession(cookieHeader);
 
-      // Only destroy if session is truly empty (no user, challenge, or username)
+      // Only destroy if session is truly empty (no user or challenge)
       const hasUser = session.get('user');
       const hasChallenge = session.get('challenge');
-      const hasUsername = session.get('username');
 
-      if (!hasUser && !hasChallenge && !hasUsername) {
+      if (!hasUser && !hasChallenge) {
         // Truly orphaned session - clean it up
         const destroyResult = await destroyAuthSession(request, context);
 
@@ -113,7 +115,8 @@ export function publicRouteMiddleware(signedInRoute: string): MiddlewareFunction
  * 3. Redirects if already authenticated
  */
 export function authRouteMiddleware(authConfig: AuthConfig): MiddlewareFunction<Response>[] {
-  return [authSessionMiddleware(authConfig), publicRouteMiddleware(authConfig.routes.signedin)];
+  const signedInRoute = authConfig?.routes.signedin || defaultAuthRoutes.signedin;
+  return [authSessionMiddleware(authConfig), publicRouteMiddleware(signedInRoute)];
 }
 
 /**

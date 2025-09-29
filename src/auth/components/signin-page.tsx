@@ -1,16 +1,17 @@
+import { SpriteIcon } from '@ycore/componentry/images';
+import type { IconName } from '@ycore/componentry/shadcn-ui';
 import { Button, Card, Input, Link, Spinner } from '@ycore/componentry/shadcn-ui';
 import svgSpriteUrl from '@ycore/componentry/shadcn-ui/assets/lucide-sprites.svg?url';
 import { isError } from '@ycore/forge/result';
 import clsx from 'clsx';
 import * as React from 'react';
 import { useActionData, useLoaderData, useNavigation, useSubmit } from 'react-router';
-import { Form, FormError, SecureForm, SecureProvider } from '../../secure';
-import { createAuthenticationOptions } from '../services/webauthn-oslo';
-import { isWebAuthnSupported, startAuthentication } from './webauthn-client';
-
-interface SignInFormProps {
-  signupUrl: string;
-}
+import { FormError, FormField } from '../../secure/csrf/form';
+import { SecureForm } from '../../secure/csrf/SecureForm';
+import { SecureProvider } from '../../secure/csrf/SecureProvider';
+import type { SignInFormProps, SignInPageProps } from '../@types/auth.component.types';
+import { createAuthenticationOptions } from '../services/webauthn';
+import { isPlatformAuthenticatorAvailable, isWebAuthnSupported, startAuthentication } from './webauthn-client';
 
 export function SignInForm({ signupUrl }: SignInFormProps) {
   const navigation = useNavigation();
@@ -21,9 +22,32 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
   const errors = actionData?.success === false ? actionData.error?.details || {} : {};
   const [webAuthnSupported, setWebAuthnSupported] = React.useState(false);
   const [webAuthnError, setWebAuthnError] = React.useState<string | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = React.useState(false);
+  const [platformAuthAvailable, setPlatformAuthAvailable] = React.useState(false);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
 
   React.useEffect(() => {
-    setWebAuthnSupported(isWebAuthnSupported());
+    const checkWebAuthn = async () => {
+      const supported = isWebAuthnSupported();
+      setWebAuthnSupported(supported);
+
+      if (supported) {
+        // Check if platform authenticator is available
+        const isPlatformAvailable = await isPlatformAuthenticatorAvailable();
+        setPlatformAuthAvailable(isPlatformAvailable);
+      }
+    };
+
+    checkWebAuthn();
+  }, []);
+
+  React.useEffect(() => {
+    // Cleanup on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -50,6 +74,12 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
     }
 
     try {
+      setIsAuthenticating(true);
+      setWebAuthnError(null);
+
+      // Create AbortController for this operation
+      abortControllerRef.current = new AbortController();
+
       // Create authentication options
       const options = createAuthenticationOptions(
         window.location.hostname,
@@ -57,48 +87,106 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
         [] // Will be populated server-side in the future
       );
 
-      // Start WebAuthn authentication
-      const credential = await startAuthentication(options);
+      // Create timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Authentication timed out. Please try again.'));
+        }, 60000);
+
+        // Clear timeout if aborted
+        abortControllerRef.current?.signal.addEventListener('abort', () => {
+          clearTimeout(timeoutId);
+        });
+      });
+
+      // Race between WebAuthn authentication and timeout
+      const credential = await Promise.race([startAuthentication(options), timeoutPromise]);
+
+      // Check if still mounted and not aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        return;
+      }
 
       // Create new FormData with WebAuthn response
       const submitFormData = new FormData(form);
       submitFormData.append('webauthn_response', JSON.stringify(credential));
-      submitFormData.append('intent', 'signin'); // Explicitly add the intent
+      submitFormData.append('intent', 'signin');
 
       // Submit using React Router's submit function
       submit(submitFormData, { method: 'post' });
     } catch (error) {
-      setWebAuthnError(error instanceof Error ? error.message : 'Authentication failed');
+      // Check if component is still mounted and operation wasn't aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        return;
+      }
+
+      setIsAuthenticating(false);
+
+      // Provide more specific error messages
+      let errorMessage = 'Authentication failed';
+      if (error instanceof Error) {
+        if (error.message.includes('cancelled')) {
+          errorMessage = 'Authentication was cancelled. Please try again when ready.';
+        } else if (error.message.includes('timed out')) {
+          errorMessage = error.message; // Use the timeout message directly
+        } else if (error.message.includes('not found')) {
+          errorMessage = 'No authenticator found for this account. Please sign up first.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      setWebAuthnError(errorMessage);
     }
   };
 
   return (
     <SecureForm method="post" onSubmit={handleSubmit} className="flex flex-col gap-6">
-      <Form.Field label="Email" error={errors.email}>
+      <FormField label="Email" error={errors.email}>
         <Input name="email" type="email" placeholder="Enter your email" autoComplete="email webauthn" required autoFocus />
-      </Form.Field>
+      </FormField>
 
       {(errors.form || webAuthnError) && <FormError error={errors.form || webAuthnError} />}
 
+      {/* WebAuthn status indicator */}
+      {webAuthnSupported && (
+        <div className="text-muted-foreground text-sm">
+          {platformAuthAvailable ? (
+            <span className="flex items-center gap-2">
+              <SpriteIcon<IconName> url={svgSpriteUrl} iconId="CircleCheck" className="h-4 w-4 text-green-500" />
+              Platform authenticator available
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <SpriteIcon<IconName> url={svgSpriteUrl} iconId="CircleAlert" className="h-4 w-4 text-yellow-500" />
+              External security key may be required
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Authentication in progress indicator */}
+      {isAuthenticating && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-700 text-sm">
+          <div className="flex items-center gap-2">
+            <Spinner spriteUrl={svgSpriteUrl} className="size-4" />
+            <span>Please interact with your authenticator...</span>
+          </div>
+          <p className="mt-1 text-xs">Touch your security key or approve the prompt on your device.</p>
+        </div>
+      )}
+
       <div className="flex justify-between gap-x-2">
-        <Button type="submit" name="intent" value="signin" disabled={isSubmitting || !webAuthnSupported} className="flex-1">
-          <Spinner spriteUrl={svgSpriteUrl} className={clsx('size-5', !isSubmitting && 'hidden')} />
-          {isSubmitting ? 'Signing in...' : !webAuthnSupported ? 'WebAuthn not supported' : 'Sign in with Passkey'}
+        <Button type="submit" name="intent" value="signin" disabled={isSubmitting || isAuthenticating || !webAuthnSupported} className="flex-1">
+          <Spinner spriteUrl={svgSpriteUrl} className={clsx('size-5', !(isSubmitting || isAuthenticating) && 'hidden')} />
+          {isSubmitting || isAuthenticating ? 'Authenticating...' : !webAuthnSupported ? 'WebAuthn not supported' : 'Sign in with Passkey'}
         </Button>
 
-        <Button type="button" variant="outline" asChild>
+        <Button type="button" variant="outline" asChild disabled={isSubmitting || isAuthenticating}>
           <Link href={signupUrl}>Sign Up</Link>
         </Button>
       </div>
     </SecureForm>
   );
-}
-
-interface SignInPageProps {
-  loaderData: any;
-  children?: React.ReactNode;
-  title?: string;
-  description?: string;
 }
 
 export function SignInPage({ loaderData, children, title = 'Sign In', description = 'Sign in to your account with your passkey' }: SignInPageProps) {

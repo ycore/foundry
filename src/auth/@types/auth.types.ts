@@ -1,5 +1,5 @@
 import type { PublicKeyCredentialDescriptorJSON } from '@simplewebauthn/types';
-import type { SessionStorage } from 'react-router';
+import type { RouterContextProvider, SessionStorage } from 'react-router';
 import type { Authenticator, User } from '../schema';
 
 export interface WebAuthnAuthenticator {
@@ -58,3 +58,63 @@ export type SessionData = {
 export type SessionFlashData = {
   error: string;
 };
+
+export interface WebAuthnChallenge {
+  challenge: string;
+  timeout: number;
+  userVerification: 'required' | 'preferred' | 'discouraged';
+}
+
+export enum WebAuthnErrorCode {
+  INVALID_CHALLENGE = 'INVALID_CHALLENGE',
+  INVALID_ORIGIN = 'INVALID_ORIGIN',
+  INVALID_RPID = 'INVALID_RPID',
+  USER_NOT_PRESENT = 'USER_NOT_PRESENT',
+  INVALID_COUNTER = 'INVALID_COUNTER',
+  SIGNATURE_FAILED = 'SIGNATURE_FAILED',
+  UNSUPPORTED_ALGORITHM = 'UNSUPPORTED_ALGORITHM',
+  INVALID_CREDENTIAL = 'INVALID_CREDENTIAL',
+  CHALLENGE_EXPIRED = 'CHALLENGE_EXPIRED',
+  INVALID_KEY_FORMAT = 'INVALID_KEY_FORMAT',
+  DEFAULT = 'DEFAULT',
+}
+
+export interface WebAuthnRegistrationData {
+  id: string;
+  rawId: ArrayBuffer;
+  response: {
+    attestationObject: ArrayBuffer;
+    clientDataJSON: ArrayBuffer;
+  };
+  type: 'public-key';
+}
+
+export interface WebAuthnAuthenticationData {
+  id: string;
+  rawId: ArrayBuffer;
+  response: {
+    authenticatorData: ArrayBuffer;
+    clientDataJSON: ArrayBuffer;
+    signature: ArrayBuffer;
+    userHandle?: ArrayBuffer;
+  };
+  type: 'public-key';
+}
+
+export interface SignInLoaderArgs {
+  context: Readonly<RouterContextProvider>;
+}
+
+export interface SignInActionArgs {
+  request: Request;
+  context: Readonly<RouterContextProvider>;
+}
+
+export interface SignUpLoaderArgs {
+  context: Readonly<RouterContextProvider>;
+}
+
+export interface SignUpActionArgs {
+  request: Request;
+  context: Readonly<RouterContextProvider>;
+}

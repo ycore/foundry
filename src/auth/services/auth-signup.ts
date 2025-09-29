@@ -1,23 +1,17 @@
 import { decodeBase64url } from '@oslojs/encoding';
 import { logger } from '@ycore/forge/logger';
 import { err, isError, respondError, respondOk, validateFormData } from '@ycore/forge/result';
-import type { RouterContextProvider } from 'react-router';
 import { redirect } from 'react-router';
-import { csrfContext } from '../../secure';
+
+import { csrfContext } from '../../secure/csrf/csrf.middleware';
+import type { SignUpActionArgs, SignUpLoaderArgs } from '../@types/auth.types';
+import { WebAuthnErrorCode } from '../@types/auth.types';
+import { defaultAuthConfig, defaultAuthRoutes } from '../auth.config';
 import { getAuthConfig } from '../auth-config.context';
-import { signupFormSchema } from '../validation/auth-schemas';
 import { getAuthRepository } from './auth-factory';
-import { createAuthSession, createAuthSessionStorage } from './session';
-import { createRegistrationOptions, generateChallenge, verifyRegistration } from './webauthn-oslo';
-
-export interface SignUpLoaderArgs {
-  context: Readonly<RouterContextProvider>;
-}
-
-export interface SignUpActionArgs {
-  request: Request;
-  context: Readonly<RouterContextProvider>;
-}
+import { signupFormSchema } from './auth-validation';
+import { createAuthSession, createAuthSessionStorage, verifyChallengeUniqueness } from './session';
+import { generateChallenge, getWebAuthnErrorMessage, verifyRegistration } from './webauthn';
 
 export async function signupLoader({ context }: SignUpLoaderArgs) {
   const csrfData = context.get(csrfContext);
@@ -53,16 +47,7 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
   const formData = await request.formData();
   const intent = formData.get('intent')?.toString();
 
-  // Debug logging
-  logger.debug('signup_form_data', {
-    intent,
-    email: formData.get('email'),
-    displayName: formData.get('displayName'),
-    hasWebauthnResponse: !!formData.get('webauthn_response'),
-  });
-
   if (intent !== 'signup') {
-    logger.warning('signup_invalid_intent', { intent });
     return respondError(err('Invalid intent', { field: 'general' }));
   }
 
@@ -70,7 +55,6 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
     // Validate form data
     const validationResult = await validateFormData(signupFormSchema, formData);
     if (isError(validationResult)) {
-      logger.warning('signup_validation_failed', { error: validationResult });
       return respondError(validationResult);
     }
 
@@ -79,7 +63,6 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
     // Check if user already exists
     const existingUserResult = await repository.getUserByEmail(email);
     if (!isError(existingUserResult)) {
-      logger.warning('signup_user_exists', { email });
       return respondError(err('An account already exists with this email', { email: 'An account already exists with this email' }));
     }
 
@@ -90,21 +73,34 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
     const challengeCreatedAt = session.get('challengeCreatedAt');
 
     if (!storedChallenge || !challengeCreatedAt) {
-      logger.warning('signup_no_challenge');
       return respondError(err('Invalid session. Please refresh and try again.', { field: 'general' }));
     }
 
     // Check challenge expiration (5 minutes)
     const challengeMaxAge = 5 * 60 * 1000;
     if (Date.now() - challengeCreatedAt > challengeMaxAge) {
-      logger.warning('signup_challenge_expired');
-      return respondError(err('Session expired. Please refresh and try again.', { field: 'general' }));
+      return respondError(
+        err('Session expired. Please refresh and try again.', {
+          field: 'general',
+          code: WebAuthnErrorCode.CHALLENGE_EXPIRED,
+        })
+      );
+    }
+
+    // Verify challenge uniqueness
+    const uniquenessResult = await verifyChallengeUniqueness(storedChallenge, context);
+    if (isError(uniquenessResult)) {
+      return respondError(
+        err('Invalid challenge. Please refresh and try again.', {
+          field: 'general',
+          code: WebAuthnErrorCode.INVALID_CHALLENGE,
+        })
+      );
     }
 
     // Get WebAuthn response from form
     const webauthnResponse = formData.get('webauthn_response')?.toString();
     if (!webauthnResponse) {
-      logger.warning('signup_no_webauthn_response');
       return respondError(err('Registration failed. Please try again.', { field: 'general' }));
     }
 
@@ -113,35 +109,28 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
     // Convert base64url strings back to ArrayBuffers for verification
     const registrationData = {
       id: credential.id,
-      rawId: decodeBase64url(credential.rawId),
+      rawId: decodeBase64url(credential.rawId).buffer,
       response: {
-        attestationObject: decodeBase64url(credential.response.attestationObject),
-        clientDataJSON: decodeBase64url(credential.response.clientDataJSON),
+        attestationObject: decodeBase64url(credential.response.attestationObject).buffer,
+        clientDataJSON: decodeBase64url(credential.response.clientDataJSON).buffer,
       },
       type: 'public-key' as const,
     };
 
     // Resolve WebAuthn configuration values
-    const resolvedRpID = typeof authConfig.webauthn.rpID === 'function' 
-      ? await authConfig.webauthn.rpID(request)
-      : authConfig.webauthn.rpID;
-    
-    const resolvedOrigins = typeof authConfig.webauthn.origin === 'function'
-      ? await authConfig.webauthn.origin(request)
-      : authConfig.webauthn.origin;
-    
+    const webauthnConfig = authConfig?.webauthn || defaultAuthConfig.webauthn;
+    const resolvedRpID = typeof webauthnConfig.rpID === 'function' ? await webauthnConfig.rpID(request) : webauthnConfig.rpID;
+
+    const resolvedOrigins = typeof webauthnConfig.origin === 'function' ? await webauthnConfig.origin(request) : webauthnConfig.origin;
+
     // Get the client origin from the clientDataJSON (this is what the browser sent)
     const clientData = JSON.parse(new TextDecoder().decode(decodeBase64url(credential.response.clientDataJSON)));
     const clientOrigin = clientData.origin;
-    
+
     // Check if the client origin is in our allowed origins
     const allowedOrigins = Array.isArray(resolvedOrigins) ? resolvedOrigins : [resolvedOrigins];
-    
+
     if (!allowedOrigins.includes(clientOrigin)) {
-      logger.warning('signup_origin_not_allowed', { 
-        clientOrigin, 
-        allowedOrigins 
-      });
       return respondError(err('Origin not allowed', { field: 'general' }));
     }
 
@@ -149,8 +138,20 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
     const verificationResult = await verifyRegistration(registrationData, storedChallenge, clientOrigin, resolvedRpID);
 
     if (isError(verificationResult)) {
-      logger.error('signup_verification_failed', { error: verificationResult.message });
-      return respondError(err('Registration failed', { field: 'general' }));
+      logger.error('signup_verification_failed', {
+        error: verificationResult.message,
+        code: verificationResult.code,
+        details: verificationResult.details,
+      });
+
+      // Provide user-friendly error messages based on error code
+      const errorMessage = getWebAuthnErrorMessage(verificationResult.code as WebAuthnErrorCode, 'registration');
+      return respondError(
+        err(errorMessage, {
+          field: 'general',
+          code: verificationResult.code,
+        })
+      );
     }
 
     // Create new user
@@ -185,12 +186,10 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
       return respondError(err('Failed to create session', { field: 'general' }));
     }
 
-    // Get redirect URL from route config
-    const routeConfig = context.get('routeConfig' as any) || { auth: { signedin: '/foundry/auth/profile' } };
-
     logger.info('signup_success', { userId: user.id, email: user.email });
 
-    throw redirect(routeConfig.auth.signedin, { headers: { 'Set-Cookie': sessionResult } });
+    const redirectTo = authConfig?.routes.signedin || defaultAuthRoutes.signedin;
+    throw redirect(redirectTo, { headers: { 'Set-Cookie': sessionResult } });
   } catch (error) {
     if (error instanceof Response) {
       throw error;

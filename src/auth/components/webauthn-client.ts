@@ -1,9 +1,10 @@
 import { encodeBase64url } from '@oslojs/encoding';
+import type { WebAuthnCredentialResponse } from '../@types/auth.component.types';
 
 /**
  * Client-side WebAuthn registration
  */
-export async function startRegistration(options: PublicKeyCredentialCreationOptions): Promise<any> {
+export async function startRegistration(options: PublicKeyCredentialCreationOptions): Promise<WebAuthnCredentialResponse> {
   try {
     const credential = await navigator.credentials.create({
       publicKey: options
@@ -42,7 +43,7 @@ export async function startRegistration(options: PublicKeyCredentialCreationOpti
 /**
  * Client-side WebAuthn authentication
  */
-export async function startAuthentication(options: PublicKeyCredentialRequestOptions): Promise<any> {
+export async function startAuthentication(options: PublicKeyCredentialRequestOptions): Promise<WebAuthnCredentialResponse> {
   try {
     const credential = await navigator.credentials.get({
       publicKey: options
@@ -87,8 +88,9 @@ export function isWebAuthnSupported(): boolean {
   return !!(
     typeof window !== 'undefined' &&
     window.PublicKeyCredential &&
-    navigator?.credentials?.create &&
-    navigator?.credentials?.get
+    navigator?.credentials &&
+    typeof navigator.credentials.create === 'function' &&
+    typeof navigator.credentials.get === 'function'
   );
 }
 
