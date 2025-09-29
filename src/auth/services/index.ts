@@ -5,5 +5,3 @@ export { signoutAction, signoutLoader } from './auth-signout';
 export { signupAction, signupLoader } from './auth-signup';
 export { AuthRepository } from './repository';
 export { cleanupChallengeSession, createAuthSession, createAuthSessionStorage, createChallengeOnlySession, createChallengeSession, destroyAuthSession, getAuthSession, getChallengeSession } from './session';
-export { createWebAuthnStrategy } from './webauthn-factory';
-export { WebAuthnStrategy } from './webauthn-strategy';

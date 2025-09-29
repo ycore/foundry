@@ -3,7 +3,6 @@ export type { SessionData, SessionFlashData, UserDetails, WebAuthnOptionsRespons
 export { defaultAuthConfig, defaultAuthRoutes } from './auth.config';
 export { authConfigContext, authGuardMiddleware, authRouteMiddleware, authSessionMiddleware, authUserContext, getSignedOutRoute, getUser, isAuthenticated, protectedRouteMiddleware, publicRouteMiddleware } from './auth.context';
 export { authConfigContext as authConfigContextInternal, getAuthConfig, setAuthConfig } from './auth-config.context';
-export { handleFormSubmit } from './components/auth-form-handler';
 export { ProfileCard, ProfilePage } from './components/profile-page';
 export { SignInForm, SignInPage } from './components/signin-page';
 export { SignUpForm, SignUpPage } from './components/signup-page';

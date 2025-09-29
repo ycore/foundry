@@ -3,92 +3,91 @@ import svgSpriteUrl from '@ycore/componentry/shadcn-ui/assets/lucide-sprites.svg
 import { isError } from '@ycore/forge/result';
 import clsx from 'clsx';
 import * as React from 'react';
-import { SecureFetcher, SecureForm, SecureProvider, useSecureFetcher } from '../../secure';
-import type { WebAuthnOptionsResponse } from '../@types/auth.types';
-import { handleFormSubmit } from './auth-form-handler';
+import { useActionData, useLoaderData, useNavigation, useSubmit } from 'react-router';
+import { Form, FormError, SecureForm, SecureProvider } from '../../secure';
+import { createAuthenticationOptions } from '../services/webauthn-oslo';
+import { isWebAuthnSupported, startAuthentication } from './webauthn-client';
 
 interface SignInFormProps {
   signupUrl: string;
 }
 
 export function SignInForm({ signupUrl }: SignInFormProps) {
-  const emailFetcher = useSecureFetcher<{ options: WebAuthnOptionsResponse; email: string; userExists: boolean; ready: boolean }>({ key: 'email-check' });
-  const [intent, setIntent] = React.useState<'email' | 'passkey'>('email');
-  const [email, setEmail] = React.useState('');
-  const [webAuthnOptions, setWebAuthnOptions] = React.useState<WebAuthnOptionsResponse | null>(null);
+  const navigation = useNavigation();
+  const actionData = useActionData<any>();
+  const loaderData = useLoaderData<any>();
+  const submit = useSubmit();
+  const isSubmitting = navigation.state === 'submitting';
+  const errors = actionData?.success === false ? actionData.error?.details || {} : {};
+  const [webAuthnSupported, setWebAuthnSupported] = React.useState(false);
+  const [webAuthnError, setWebAuthnError] = React.useState<string | null>(null);
 
-  // Handle email check response - React Router handles transitions automatically
   React.useEffect(() => {
-    if (emailFetcher.data && !isError(emailFetcher.data)) {
-      const { options, email: validEmail, ready } = emailFetcher.data;
-      if (ready) {
-        setEmail(validEmail);
-        setWebAuthnOptions(options);
-        // Trigger view transition for smooth step change
-        if (document.startViewTransition) {
-          document.startViewTransition(() => setIntent('passkey'));
-        } else {
-          setIntent('passkey');
-        }
-      }
+    setWebAuthnSupported(isWebAuthnSupported());
+  }, []);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setWebAuthnError(null);
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const email = formData.get('email')?.toString();
+
+    if (!email) {
+      setWebAuthnError('Email is required');
+      return;
     }
-  }, [emailFetcher.data]);
 
-  // Step 1: Verify email
-  if (intent === 'email') {
-    return (
-      <emailFetcher.SecureForm method="post" className="flex flex-col gap-6" style={{ viewTransitionName: 'signin-form' }}>
-        <SecureFetcher.Field label="Email" name="email" required error={emailFetcher.errors?.email || emailFetcher.errors?.field}>
-          <Input name="email" type="text" placeholder="Enter your email" autoComplete="email webauthn" required autoFocus />
-        </SecureFetcher.Field>
+    if (!webAuthnSupported) {
+      setWebAuthnError('WebAuthn is not supported on this device');
+      return;
+    }
 
-        <SecureFetcher.Error error={emailFetcher.errors?.general} />
+    if (!loaderData?.challenge) {
+      setWebAuthnError('Session expired. Please refresh the page.');
+      return;
+    }
 
-        <div className="flex justify-between gap-x-2">
-          <Button type="submit" name="intent" value="check-email" disabled={emailFetcher.state === 'submitting'} style={{ viewTransitionName: 'signin-button' }} className="flex-1">
-            <Spinner spriteUrl={svgSpriteUrl} className={clsx('size-5', emailFetcher.state !== 'submitting' ? 'hidden' : '')} />
-            {emailFetcher.state === 'submitting' ? 'Checking...' : 'Sign in'}
-          </Button>
+    try {
+      // Create authentication options
+      const options = createAuthenticationOptions(
+        window.location.hostname,
+        loaderData.challenge,
+        [] // Will be populated server-side in the future
+      );
 
-          <Button type="button" variant="outline" asChild>
-            <Link href={signupUrl}>Sign Up</Link>
-          </Button>
-        </div>
-      </emailFetcher.SecureForm>
-    );
-  }
+      // Start WebAuthn authentication
+      const credential = await startAuthentication(options);
 
-  // Step 2: Authentication with passkey
+      // Create new FormData with WebAuthn response
+      const submitFormData = new FormData(form);
+      submitFormData.append('webauthn_response', JSON.stringify(credential));
+      submitFormData.append('intent', 'signin'); // Explicitly add the intent
+
+      // Submit using React Router's submit function
+      submit(submitFormData, { method: 'post' });
+    } catch (error) {
+      setWebAuthnError(error instanceof Error ? error.message : 'Authentication failed');
+    }
+  };
+
   return (
-    <SecureForm method="post" onSubmit={webAuthnOptions ? handleFormSubmit(webAuthnOptions) : undefined} className="flex flex-col gap-6" style={{ viewTransitionName: 'signin-form' }}>
-      <div className="flex flex-col gap-2">
-        <label htmlFor="email">Email</label>
-        <Input name="email" type="text" value={email} readOnly className="bg-gray-50" />
-      </div>
+    <SecureForm method="post" onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <Form.Field label="Email" error={errors.email}>
+        <Input name="email" type="email" placeholder="Enter your email" autoComplete="email webauthn" required autoFocus />
+      </Form.Field>
+
+      {(errors.form || webAuthnError) && <FormError error={errors.form || webAuthnError} />}
 
       <div className="flex justify-between gap-x-2">
-        <Button type="submit" name="intent" value="authentication" style={{ viewTransitionName: 'signin-button' }}>
-          Authenticate with Passkey
+        <Button type="submit" name="intent" value="signin" disabled={isSubmitting || !webAuthnSupported} className="flex-1">
+          <Spinner spriteUrl={svgSpriteUrl} className={clsx('size-5', !isSubmitting && 'hidden')} />
+          {isSubmitting ? 'Signing in...' : !webAuthnSupported ? 'WebAuthn not supported' : 'Sign in with Passkey'}
         </Button>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            if (document.startViewTransition) {
-              document.startViewTransition(() => {
-                setIntent('email');
-                setEmail('');
-                setWebAuthnOptions(null);
-              });
-            } else {
-              setIntent('email');
-              setEmail('');
-              setWebAuthnOptions(null);
-            }
-          }}
-        >
-          Use Different Email
+        <Button type="button" variant="outline" asChild>
+          <Link href={signupUrl}>Sign Up</Link>
         </Button>
       </div>
     </SecureForm>
@@ -102,7 +101,7 @@ interface SignInPageProps {
   description?: string;
 }
 
-export function SignInPage({ loaderData, children, title = "Sign In", description = "Enter your email to sign in with your passkey" }: SignInPageProps) {
+export function SignInPage({ loaderData, children, title = 'Sign In', description = 'Sign in to your account with your passkey' }: SignInPageProps) {
   const secureLoaderData = isError(loaderData) ? { csrfToken: null, errors: loaderData } : loaderData;
 
   return (
@@ -113,9 +112,7 @@ export function SignInPage({ loaderData, children, title = "Sign In", descriptio
             <Card.Title>{title}</Card.Title>
             <Card.Description>{description}</Card.Description>
           </Card.Header>
-          <Card.Content>
-            {children}
-          </Card.Content>
+          <Card.Content>{children}</Card.Content>
         </Card>
       </div>
     </SecureProvider>
