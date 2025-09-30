@@ -1,54 +1,114 @@
 import { decodePKIXECDSASignature, ECDSAPublicKey, p256, verifyECDSASignature } from '@oslojs/crypto/ecdsa';
 import { sha256 } from '@oslojs/crypto/sha2';
 import { decodeBase64url, encodeBase64url } from '@oslojs/encoding';
-import { ClientDataType, COSEKeyType, parseAttestationObject, parseAuthenticatorData, parseClientDataJSON } from '@oslojs/webauthn';
+import { ClientDataType, COSEKeyType, createAssertionSignatureMessage, parseAttestationObject, parseAuthenticatorData, parseClientDataJSON } from '@oslojs/webauthn';
 import { logger } from '@ycore/forge/logger';
 import { err, type Result } from '@ycore/forge/result';
 
-import type { WebAuthnAuthenticationData, WebAuthnRegistrationData } from '../@types/auth.types';
-import { WebAuthnErrorCode } from '../@types/auth.types';
+import type { DeviceInfo, WebAuthnAuthenticationData, WebAuthnRegistrationData } from '../@types/auth.types';
+import { ATTESTATION_FORMAT_HANDLERS, ATTESTATION_TYPES, AUTHENTICATOR_FLAGS, convertAAGUIDToUUID, DEFAULT_DEVICE_INFO, DEVICE_REGISTRY, isAAGUIDAllZeros, TRANSPORT_METHODS, WEBAUTHN_ALGORITHMS, WEBAUTHN_CONFIG, WEBAUTHN_ERROR_MESSAGES, WebAuthnErrorCode } from '../auth.constants';
 import type { Authenticator as AuthenticatorModel } from '../schema';
 
-type ErrorMessageResolver = (operation: 'registration' | 'authentication') => string;
+/**
+ * Helper function to convert Uint8Array to ArrayBuffer
+ * This ensures we get a proper ArrayBuffer instead of SharedArrayBuffer
+ */
+function toArrayBuffer(uint8Array: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(uint8Array.byteLength);
+  new Uint8Array(buffer).set(uint8Array);
+  return buffer;
+}
 
-// Command pattern using Map for WebAuthn error messages
-const webauthnErrorMessages = new Map<WebAuthnErrorCode, ErrorMessageResolver>([
-  [WebAuthnErrorCode.CHALLENGE_EXPIRED, () => 'Session expired. Please refresh the page and try again.'],
-  [WebAuthnErrorCode.INVALID_CHALLENGE, () => 'Security check failed. Please refresh the page and try again.'],
-  [WebAuthnErrorCode.INVALID_COUNTER, () => 'Security violation detected. Your authenticator may be compromised. Please contact support immediately.'],
-  [WebAuthnErrorCode.INVALID_KEY_FORMAT, () => 'Invalid security key format. Please re-register your device.'],
-  [WebAuthnErrorCode.INVALID_ORIGIN, () => 'Request origin not recognized. Please ensure you are on the correct website.'],
-  [WebAuthnErrorCode.INVALID_RPID, () => 'Security configuration error. Please contact support.'],
-  [WebAuthnErrorCode.UNSUPPORTED_ALGORITHM, () => 'Your authenticator uses an unsupported security algorithm. Please use a different device.'],
-  [WebAuthnErrorCode.USER_NOT_PRESENT, () => 'User presence verification failed. Please interact with your authenticator when prompted.'],
-  [WebAuthnErrorCode.INVALID_CREDENTIAL, (operation) =>
-    operation === 'registration'
-      ? 'Failed to create credential. Please try again.'
-      : 'Authenticator not recognized. Please use the device you registered with.'],
-  [WebAuthnErrorCode.SIGNATURE_FAILED, (operation) =>
-    operation === 'registration'
-      ? 'Failed to verify authenticator. Please try a different device.'
-      : 'Authentication failed. Please verify you are using the correct authenticator.'],
-  [WebAuthnErrorCode.DEFAULT, (operation) =>
-    operation === 'registration'
-      ? 'Registration failed. Please try again.'
-      : 'Authentication failed. Please try again.'],
-]);
+/**
+ * Extract backup state from authenticator data flags
+ */
+function extractBackupState(authenticatorData: any): { isBackupEligible: boolean; isBackedUp: boolean; } {
+  const flags = authenticatorData.flags || 0;
+
+  const isBackupEligible = (flags & AUTHENTICATOR_FLAGS.BACKUP_ELIGIBLE) !== 0;
+  const isBackedUp = (flags & AUTHENTICATOR_FLAGS.BACKUP_STATE) !== 0;
+
+  return { isBackupEligible, isBackedUp };
+}
+
+/**
+ * Extract transport methods based on device characteristics
+ */
+function extractTransportMethods(deviceInfo: DeviceInfo): string[] {
+  return [...deviceInfo.transports];
+}
+
+/**
+ * Extract attestation type from attestation object using command pattern
+ */
+function extractAttestationType(attestationObject: any): string {
+  try {
+    const fmt = attestationObject.fmt;
+    const attStmt = attestationObject.attStmt;
+
+    const handler = ATTESTATION_FORMAT_HANDLERS.get(fmt);
+    if (handler) {
+      return handler(attStmt);
+    }
+
+    logger.warning('webauthn_unknown_attestation_format', { format: fmt });
+    return ATTESTATION_TYPES.NONE;
+  } catch (error) {
+    logger.error('webauthn_attestation_extraction_error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return ATTESTATION_TYPES.NONE;
+  }
+}
+
+/**
+ * Generate a default friendly name for an authenticator
+ */
+function generateDefaultAuthenticatorName(deviceInfo: DeviceInfo): string {
+  // If we have specific vendor/model info, use it
+  if (deviceInfo.vendor !== 'Unknown' && deviceInfo.model !== 'Security Key' && deviceInfo.model !== 'Device') {
+    return `${deviceInfo.vendor} ${deviceInfo.model}`;
+  }
+
+  // Fall back to generic names with timestamp
+  const deviceType = deviceInfo.type === 'platform' ? 'Biometric Device' : 'Security Key';
+  const timestamp = new Date().toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  });
+
+  return `${deviceType} (${timestamp})`;
+}
+
+/**
+ * Get comprehensive device information by AAGUID using command pattern
+ */
+function getDeviceInfoByAAGUID(aaguid: Uint8Array): DeviceInfo {
+  // If AAGUID is all zeros, it's likely a platform authenticator
+  if (isAAGUIDAllZeros(aaguid)) {
+    return DEFAULT_DEVICE_INFO.platform;
+  }
+
+  const uuid = convertAAGUIDToUUID(aaguid);
+  const deviceInfo = DEVICE_REGISTRY.get(uuid);
+
+  return deviceInfo || DEFAULT_DEVICE_INFO['cross-platform'];
+}
 
 export function getWebAuthnErrorMessage(code: WebAuthnErrorCode | undefined, operation: 'registration' | 'authentication'): string {
   if (!code) {
-    return webauthnErrorMessages.get(WebAuthnErrorCode.DEFAULT)?.(operation) || 'Auth failure. Please try again.';
+    return WEBAUTHN_ERROR_MESSAGES.get(WebAuthnErrorCode.DEFAULT)?.(operation) || 'Auth failure. Please try again.';
   }
 
-  const messageResolver = webauthnErrorMessages.get(code);
-  return messageResolver ? messageResolver(operation) : webauthnErrorMessages.get(WebAuthnErrorCode.DEFAULT)?.(operation) || 'Auth failure. Please try again.';
+  const messageResolver = WEBAUTHN_ERROR_MESSAGES.get(code);
+  return messageResolver ? messageResolver(operation) : WEBAUTHN_ERROR_MESSAGES.get(WebAuthnErrorCode.DEFAULT)?.(operation) || 'Auth failure. Please try again.';
 }
 
 /**
  * Generate a cryptographically secure challenge
  */
 export function generateChallenge(): string {
-  const bytes = new Uint8Array(32);
+  const bytes = new Uint8Array(WEBAUTHN_CONFIG.CHALLENGE_SIZE);
   crypto.getRandomValues(bytes);
   return encodeBase64url(bytes);
 }
@@ -57,7 +117,7 @@ export function generateChallenge(): string {
  * Generate a unique user ID
  */
 export function generateUserId(): string {
-  const bytes = new Uint8Array(16);
+  const bytes = new Uint8Array(WEBAUTHN_CONFIG.USER_ID_SIZE);
   crypto.getRandomValues(bytes);
   return encodeBase64url(bytes);
 }
@@ -67,26 +127,26 @@ export function generateUserId(): string {
  */
 export function createRegistrationOptions(rpName: string, rpId: string, userName: string, userDisplayName: string, challenge: string, excludeCredentials: string[] = []): PublicKeyCredentialCreationOptions {
   return {
-    challenge: decodeBase64url(challenge),
+    challenge: toArrayBuffer(decodeBase64url(challenge)),
     rp: {
       name: rpName,
       id: rpId,
     },
     user: {
-      id: decodeBase64url(generateUserId()),
+      id: toArrayBuffer(decodeBase64url(generateUserId())),
       name: userName,
       displayName: userDisplayName,
     },
     pubKeyCredParams: [
-      { alg: -7, type: 'public-key' }, // ES256
-      { alg: -257, type: 'public-key' }, // RS256
+      { alg: WEBAUTHN_ALGORITHMS.ES256, type: 'public-key' },
+      { alg: WEBAUTHN_ALGORITHMS.RS256, type: 'public-key' },
     ],
-    timeout: 60000,
+    timeout: WEBAUTHN_CONFIG.CHALLENGE_TIMEOUT,
     attestation: 'none',
     excludeCredentials: excludeCredentials.map(id => ({
-      id: decodeBase64url(id),
+      id: toArrayBuffer(decodeBase64url(id)),
       type: 'public-key' as PublicKeyCredentialType,
-      transports: ['internal', 'hybrid'] as AuthenticatorTransport[],
+      transports: [TRANSPORT_METHODS.INTERNAL, TRANSPORT_METHODS.HYBRID] as AuthenticatorTransport[],
     })),
     authenticatorSelection: {
       residentKey: 'discouraged',
@@ -101,16 +161,16 @@ export function createRegistrationOptions(rpName: string, rpId: string, userName
  */
 export function createAuthenticationOptions(rpId: string, challenge: string, allowCredentials: string[] = []): PublicKeyCredentialRequestOptions {
   return {
-    challenge: decodeBase64url(challenge),
+    challenge: toArrayBuffer(decodeBase64url(challenge)),
     rpId,
-    timeout: 60000,
+    timeout: WEBAUTHN_CONFIG.CHALLENGE_TIMEOUT,
     userVerification: 'preferred',
     allowCredentials:
       allowCredentials.length > 0
         ? allowCredentials.map(id => ({
-          id: decodeBase64url(id),
+          id: toArrayBuffer(decodeBase64url(id)),
           type: 'public-key' as PublicKeyCredentialType,
-          transports: ['internal', 'hybrid'] as AuthenticatorTransport[],
+          transports: [TRANSPORT_METHODS.INTERNAL, TRANSPORT_METHODS.HYBRID] as AuthenticatorTransport[],
         }))
         : [],
   };
@@ -192,10 +252,9 @@ export async function verifyRegistration(
       });
     }
 
-    // Verify it's using ES256 algorithm (-7)
-    const algorithm = publicKey.algorithm();
-    const ES256_ALGORITHM_ID = -7; // ES256 (ECDSA with P-256 and SHA-256)
-    if (algorithm !== ES256_ALGORITHM_ID) {
+    // Verify it's using ES256 algorithm
+    const publicKeyAlgorithm = publicKey.algorithm();
+    if (publicKeyAlgorithm !== WEBAUTHN_ALGORITHMS.ES256) {
       return err('Only ES256 algorithm is supported', {
         field: 'algorithm',
         code: WebAuthnErrorCode.UNSUPPORTED_ALGORITHM,
@@ -206,14 +265,37 @@ export async function verifyRegistration(
     // This approach maintains the complete COSE key structure
     const credentialPublicKey = encodeBase64url(new TextEncoder().encode(JSON.stringify(attestedCredential.publicKey.decoded)));
 
+    // Get device information from AAGUID
+    const deviceInfo = getDeviceInfoByAAGUID(attestedCredential.authenticatorAAGUID);
+
+    // Extract backup state from authenticator flags
+    const backupState = extractBackupState(authenticatorData);
+
+    // Extract transport methods from device info
+    const transports = extractTransportMethods(deviceInfo);
+
+    // Get algorithm from public key
+    const keyAlgorithm = attestedCredential.publicKey.algorithm();
+
+    // Extract attestation type from attestation object
+    const attestationType = extractAttestationType(attestationObject);
+
+    // Generate a default friendly name based on device info
+    const defaultName = generateDefaultAuthenticatorName(deviceInfo);
+
     return {
       id: encodeBase64url(attestedCredential.id),
       credentialPublicKey,
       counter: authenticatorData.signatureCounter,
-      credentialDeviceType: 'platform',
-      credentialBackedUp: true, // Assume backed up for platform authenticators
-      transports: 'internal,hybrid',
+      credentialDeviceType: deviceInfo.type,
+      credentialBackedUp: backupState.isBackedUp,
+      transports,
       aaguid: encodeBase64url(attestedCredential.authenticatorAAGUID),
+      name: defaultName,
+      lastUsedAt: null,
+      attestationType,
+      rpId: expectedRPID,
+      algorithm: keyAlgorithm,
     };
   } catch (error) {
     logger.error('webauthn_registration_error', {
@@ -298,18 +380,11 @@ export async function verifyAuthentication(
       }
     }
 
-    // Create assertion message for signature verification
-    const clientDataHash = sha256(new Uint8Array(credential.response.clientDataJSON));
-    // We need the raw authenticator data bytes, so we'll recreate from the original response
-    const authenticatorDataBytes = new Uint8Array(credential.response.authenticatorData);
-
-    // Use direct concatenation instead of Oslo's createAssertionSignatureMessage
-    // WebAuthn spec: signatureMessage = authenticatorData || hash(clientDataJSON)
-    const signatureMessage = new Uint8Array(authenticatorDataBytes.length + clientDataHash.length);
-    signatureMessage.set(authenticatorDataBytes, 0);
-    signatureMessage.set(clientDataHash, authenticatorDataBytes.length);
-
-    // Message construction complete
+    // Create assertion message for signature verification using Oslo.js utility
+    const signatureMessage = createAssertionSignatureMessage(
+      new Uint8Array(credential.response.authenticatorData),
+      new Uint8Array(credential.response.clientDataJSON)
+    );
 
     // Reconstruct the COSE key from stored JSON
     let publicKeyData: any;
@@ -393,7 +468,7 @@ export async function verifyAuthentication(
       }
 
       // Validate coordinate lengths (P-256 coordinates should be 32 bytes each)
-      if (xBytes.length !== 32 || yBytes.length !== 32) {
+      if (xBytes.length !== WEBAUTHN_CONFIG.COORDINATE_LENGTH || yBytes.length !== WEBAUTHN_CONFIG.COORDINATE_LENGTH) {
         return err('Invalid coordinate length for P-256 key', {
           field: 'publicKey',
           code: WebAuthnErrorCode.INVALID_KEY_FORMAT,
@@ -416,11 +491,11 @@ export async function verifyAuthentication(
       }
 
       // Ensure coordinates are exactly 64 hex characters (32 bytes)
-      const xHexPadded = xHex.padStart(64, '0');
-      const yHexPadded = yHex.padStart(64, '0');
+      const xHexPadded = xHex.padStart(WEBAUTHN_CONFIG.HEX_COORDINATE_LENGTH, '0');
+      const yHexPadded = yHex.padStart(WEBAUTHN_CONFIG.HEX_COORDINATE_LENGTH, '0');
 
-      const xBigInt = BigInt('0x' + xHexPadded);
-      const yBigInt = BigInt('0x' + yHexPadded);
+      const xBigInt = BigInt(`0x${xHexPadded}`);
+      const yBigInt = BigInt(`0x${yHexPadded}`);
 
       // Convert coordinates for ECDSAPublicKey constructor
 
@@ -452,54 +527,7 @@ export async function verifyAuthentication(
 
       // WebAuthn signatures are DER-encoded, we need to decode them first
       const signature = decodePKIXECDSASignature(signatureBytes);
-
-      // Try verification with Oslo library
-      const isValidOslo = verifyECDSASignature(publicKey, messageHash, signature);
-
-      // Also try verification with Web Crypto API for comparison
-      let isValidWebCrypto = false;
-      try {
-        // Create a CryptoKey from the public key coordinates
-        const publicKeyJWK = {
-          kty: 'EC',
-          crv: 'P-256',
-          x: btoa(String.fromCharCode(...xBytes))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=/g, ''),
-          y: btoa(String.fromCharCode(...yBytes))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=/g, ''),
-        };
-
-        const cryptoKey = await crypto.subtle.importKey('jwk', publicKeyJWK, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
-
-        // Convert signature from r,s components to DER format for WebCrypto
-        isValidWebCrypto = await crypto.subtle.verify(
-          { name: 'ECDSA', hash: 'SHA-256' },
-          cryptoKey,
-          signatureBytes, // Use original DER-encoded signature
-          signatureMessage
-        );
-
-        // Try alternative message construction as fallback
-        if (!isValidWebCrypto) {
-          const rawAuthenticatorData = new Uint8Array(credential.response.authenticatorData);
-          const alternativeMessage = new Uint8Array(rawAuthenticatorData.length + 32);
-          alternativeMessage.set(rawAuthenticatorData, 0);
-          alternativeMessage.set(clientDataHash, rawAuthenticatorData.length);
-
-          const isValidAlternative = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, cryptoKey, signatureBytes, alternativeMessage);
-          isValidWebCrypto = isValidAlternative;
-        }
-      } catch (error) {
-        logger.error('webauthn_authentication_webcrypto_error', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-
-      const isValid = isValidOslo || isValidWebCrypto;
+      const isValid = verifyECDSASignature(publicKey, messageHash, signature);
 
       if (!isValid) {
         return err('Invalid signature', {

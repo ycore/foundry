@@ -2,6 +2,14 @@ import type { PublicKeyCredentialDescriptorJSON } from '@simplewebauthn/types';
 import type { RouterContextProvider, SessionStorage } from 'react-router';
 import type { Authenticator, User } from '../schema';
 
+export interface DeviceInfo {
+  type: 'platform' | 'cross-platform';
+  vendor: string;
+  model: string;
+  certified: boolean;
+  transports: string[];
+}
+
 export interface WebAuthnAuthenticator {
   id: string;
   transports: string[];
@@ -63,20 +71,6 @@ export interface WebAuthnChallenge {
   challenge: string;
   timeout: number;
   userVerification: 'required' | 'preferred' | 'discouraged';
-}
-
-export enum WebAuthnErrorCode {
-  INVALID_CHALLENGE = 'INVALID_CHALLENGE',
-  INVALID_ORIGIN = 'INVALID_ORIGIN',
-  INVALID_RPID = 'INVALID_RPID',
-  USER_NOT_PRESENT = 'USER_NOT_PRESENT',
-  INVALID_COUNTER = 'INVALID_COUNTER',
-  SIGNATURE_FAILED = 'SIGNATURE_FAILED',
-  UNSUPPORTED_ALGORITHM = 'UNSUPPORTED_ALGORITHM',
-  INVALID_CREDENTIAL = 'INVALID_CREDENTIAL',
-  CHALLENGE_EXPIRED = 'CHALLENGE_EXPIRED',
-  INVALID_KEY_FORMAT = 'INVALID_KEY_FORMAT',
-  DEFAULT = 'DEFAULT',
 }
 
 export interface WebAuthnRegistrationData {

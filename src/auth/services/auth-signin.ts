@@ -5,8 +5,8 @@ import { redirect } from 'react-router';
 
 import { csrfContext } from '../../secure/csrf/csrf.middleware';
 import type { SignInActionArgs, SignInLoaderArgs } from '../@types/auth.types';
-import { WebAuthnErrorCode } from '../@types/auth.types';
 import { defaultAuthConfig, defaultAuthRoutes } from '../auth.config';
+import { WebAuthnErrorCode } from '../auth.constants';
 import { getAuthConfig } from '../auth-config.context';
 import { getAuthRepository } from './auth-factory';
 import { signinFormSchema } from './auth-validation';
@@ -169,9 +169,15 @@ export async function signinAction({ request, context }: SignInActionArgs) {
       );
     }
 
-    // Update authenticator counter
-    if (verificationResult.newCounter !== authenticator.counter) {
-      await repository.updateAuthenticatorCounter(authenticator.id, verificationResult.newCounter);
+    // Update authenticator counter and last used timestamp
+    const updateResult = await repository.updateAuthenticatorUsage(authenticator.id, verificationResult.newCounter, new Date());
+
+    if (isError(updateResult)) {
+      logger.warning('signin_authenticator_update_failed', {
+        authenticatorId: authenticator.id,
+        error: updateResult.message,
+      });
+      // Continue with signin even if update fails
     }
 
     // Clear challenge from session
