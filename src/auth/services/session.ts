@@ -1,6 +1,6 @@
 import { createWorkersKVSessionStorage } from '@react-router/cloudflare';
 import type { Result } from '@ycore/forge/result';
-import { err, isError, ok } from '@ycore/forge/result';
+import { err, ok } from '@ycore/forge/result';
 import { getBindings, isProduction, UNCONFIGURED } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
@@ -135,9 +135,7 @@ export async function createAuthSession(context: Readonly<RouterContextProvider>
     newSession.set('user', sessionData.user);
     newSession.set('authenticatedAt', Date.now());
 
-    const cookie = await sessionStorage.commitSession(newSession, {
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
+    const cookie = await sessionStorage.commitSession(newSession);
     return ok(cookie);
   } catch (error) {
     return err('Failed to create session', { error });

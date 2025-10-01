@@ -1,14 +1,29 @@
 import { email, maxLength, minLength, nonEmpty, object, pipe, string } from 'valibot';
 
+// Base email validation - reused across all auth forms
+const emailField = pipe(
+  string(), 
+  nonEmpty('Please enter your email.'), 
+  email('Please enter a valid email.'), 
+  maxLength(32, 'Email is too long')
+);
+
+// Base display name validation
+const displayNameField = pipe(
+  string(), 
+  nonEmpty('Display name is required'), 
+  minLength(1, 'Display name is required')
+);
+
 export const authFormSchema = object({
-  email: pipe(string(), nonEmpty('Please enter your email.'), email('Please enter a valid email.'), maxLength(32, 'Email is too long')),
+  email: emailField,
 });
 
 export const signupFormSchema = object({
-  email: pipe(string(), nonEmpty('Please enter your email.'), email('Please enter a valid email.'), maxLength(32, 'Email is too long')),
-  displayName: pipe(string(), nonEmpty('Display name is required'), minLength(1, 'Display name is required')),
+  email: emailField,
+  displayName: displayNameField,
 });
 
 export const signinFormSchema = object({
-  email: pipe(string(), nonEmpty('Please enter your email.'), email('Please enter a valid email.'), maxLength(32, 'Email is too long')),
+  email: emailField,
 });

@@ -1,5 +1,5 @@
 import type { Result } from '@ycore/forge/result';
-import { isError } from '@ycore/forge/result';
+import { isError, ok } from '@ycore/forge/result';
 import type { RouterContextProvider } from 'react-router';
 import { authUserContext } from '../auth.context';
 import type { Authenticator, User } from '../schema';
@@ -9,11 +9,10 @@ export interface ProfileLoaderArgs {
   context: Readonly<RouterContextProvider>;
 }
 
-export async function profileLoader({ context }: ProfileLoaderArgs) {
+export async function profileLoader({ context }: ProfileLoaderArgs): Promise<Result<{ user: User | null }>> {
   // User is guaranteed to be authenticated due to middleware
   const user = context.get(authUserContext);
-
-  return { user };
+  return ok({ user });
 }
 
 /**
