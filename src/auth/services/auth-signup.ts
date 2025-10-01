@@ -7,9 +7,9 @@ import { csrfContext } from '../../secure/csrf/csrf.middleware';
 import type { SignUpActionArgs, SignUpLoaderArgs } from '../@types/auth.types';
 import { defaultAuthConfig, defaultAuthRoutes } from '../auth.config';
 import { WebAuthnErrorCode } from '../auth.constants';
-import { getAuthConfig } from '../auth-config.context';
-import { getAuthRepository } from './auth-factory';
-import { signupFormSchema } from './auth-validation';
+import { getAuthConfig } from '../auth.context';
+import { signupFormSchema } from './auth.validation';
+import { getAuthRepository } from './repository';
 import { createAuthSession, createAuthSessionStorage, verifyChallengeUniqueness } from './session';
 import { generateChallenge, getWebAuthnErrorMessage, verifyRegistration } from './webauthn';
 

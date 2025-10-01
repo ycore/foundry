@@ -1,10 +1,14 @@
 import type { ReactNode } from 'react';
-import type { UserDetails } from './auth.types';
+import type { Authenticator, User } from '../schema';
 
 // Profile Page Component Types
 export interface ProfileCardProps {
-  user: UserDetails | null | undefined;
+  user: User | null | undefined;
   signoutUrl: string;
+}
+
+export interface AuthenticatorsCardProps {
+  authenticators: Authenticator[];
 }
 
 export interface ProfilePageProps {

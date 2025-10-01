@@ -5,8 +5,8 @@ import { ClientDataType, COSEKeyType, createAssertionSignatureMessage, parseAtte
 import { logger } from '@ycore/forge/logger';
 import { err, type Result } from '@ycore/forge/result';
 
-import type { DeviceInfo, WebAuthnAuthenticationData, WebAuthnRegistrationData } from '../@types/auth.types';
-import { ATTESTATION_FORMAT_HANDLERS, ATTESTATION_TYPES, AUTHENTICATOR_FLAGS, convertAAGUIDToUUID, DEFAULT_DEVICE_INFO, DEVICE_REGISTRY, isAAGUIDAllZeros, TRANSPORT_METHODS, WEBAUTHN_ALGORITHMS, WEBAUTHN_CONFIG, WEBAUTHN_ERROR_MESSAGES, WebAuthnErrorCode } from '../auth.constants';
+import type { DeviceInfo, EnhancedDeviceInfo, WebAuthnAuthenticationData, WebAuthnRegistrationData } from '../@types/auth.types';
+import { ATTESTATION_FORMAT_HANDLERS, ATTESTATION_TYPES, AUTHENTICATOR_FLAGS, convertAAGUIDToUUID, DEFAULT_DEVICE_INFO, isAAGUIDAllZeros, TRANSPORT_METHODS, WEBAUTHN_ALGORITHMS, WEBAUTHN_CONFIG, WEBAUTHN_ERROR_MESSAGES, WebAuthnErrorCode } from '../auth.constants';
 import type { Authenticator as AuthenticatorModel } from '../schema';
 
 /**
@@ -81,18 +81,35 @@ function generateDefaultAuthenticatorName(deviceInfo: DeviceInfo): string {
 }
 
 /**
- * Get comprehensive device information by AAGUID using command pattern
+ * Get comprehensive device information by AAGUID with KV lookup and fallback
  */
-function getDeviceInfoByAAGUID(aaguid: Uint8Array): DeviceInfo {
+async function getDeviceInfoByAAGUID(aaguid: Uint8Array, metadataKV?: KVNamespace): Promise<DeviceInfo> {
   // If AAGUID is all zeros, it's likely a platform authenticator
   if (isAAGUIDAllZeros(aaguid)) {
     return DEFAULT_DEVICE_INFO.platform;
   }
 
   const uuid = convertAAGUIDToUUID(aaguid);
-  const deviceInfo = DEVICE_REGISTRY.get(uuid);
 
-  return deviceInfo || DEFAULT_DEVICE_INFO['cross-platform'];
+  // Try KV lookup first (MDS data)
+  if (metadataKV) {
+    try {
+      const mdsData = await metadataKV.get(`device:${uuid}`, 'json');
+      if (mdsData) {
+        logger.debug('device_info_mds_hit', { uuid });
+        return mdsData as EnhancedDeviceInfo;
+      }
+    } catch (error) {
+      logger.warning('device_info_kv_lookup_failed', {
+        uuid,
+        error: error instanceof Error ? error.message : 'Unknown'
+      });
+    }
+  }
+
+  // Fallback to default
+  logger.debug('device_info_fallback', { uuid });
+  return DEFAULT_DEVICE_INFO['cross-platform'];
 }
 
 export function getWebAuthnErrorMessage(code: WebAuthnErrorCode | undefined, operation: 'registration' | 'authentication'): string {
@@ -183,7 +200,8 @@ export async function verifyRegistration(
   credential: WebAuthnRegistrationData,
   expectedChallenge: string,
   expectedOrigin: string,
-  expectedRPID: string
+  expectedRPID: string,
+  metadataKV?: KVNamespace
 ): Promise<Result<Omit<AuthenticatorModel, 'userId' | 'createdAt' | 'updatedAt'>>> {
   try {
     // Parse attestation object
@@ -266,7 +284,7 @@ export async function verifyRegistration(
     const credentialPublicKey = encodeBase64url(new TextEncoder().encode(JSON.stringify(attestedCredential.publicKey.decoded)));
 
     // Get device information from AAGUID
-    const deviceInfo = getDeviceInfoByAAGUID(attestedCredential.authenticatorAAGUID);
+    const deviceInfo = await getDeviceInfoByAAGUID(attestedCredential.authenticatorAAGUID, metadataKV);
 
     // Extract backup state from authenticator flags
     const backupState = extractBackupState(authenticatorData);

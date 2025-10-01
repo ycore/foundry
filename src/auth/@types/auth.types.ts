@@ -10,6 +10,24 @@ export interface DeviceInfo {
   transports: string[];
 }
 
+export interface EnhancedDeviceInfo extends DeviceInfo {
+  certificationStatus?: 'FIDO_CERTIFIED' | 'NOT_FIDO_CERTIFIED' | 'FIDO_CERTIFIED_L1' | 'FIDO_CERTIFIED_L2';
+  effectiveDate?: string;
+  policyVersion?: string;
+  protocolFamily?: 'u2f' | 'fido2';
+  userVerificationDetails?: string[];
+  keyProtection?: string[];
+  matcherProtection?: string[];
+  cryptoStrength?: number;
+  attachmentHint?: string[];
+  tcDisplay?: string[];
+  attestationRootCertificates?: string[];
+  icon?: string;
+  supportedExtensions?: Array<{ id: string; tag?: number; data?: string; fail_if_unknown?: boolean }>;
+  authenticatorVersion?: number;
+  upv?: Array<{ major: number; minor: number }>;
+}
+
 export interface WebAuthnAuthenticator {
   id: string;
   transports: string[];
@@ -61,6 +79,7 @@ export type SessionData = {
   challenge?: string;
   email?: string;
   challengeCreatedAt?: number;
+  authenticatedAt?: number;
 };
 
 export type SessionFlashData = {
@@ -75,22 +94,22 @@ export interface WebAuthnChallenge {
 
 export interface WebAuthnRegistrationData {
   id: string;
-  rawId: ArrayBuffer;
+  rawId: ArrayBufferLike;
   response: {
-    attestationObject: ArrayBuffer;
-    clientDataJSON: ArrayBuffer;
+    attestationObject: ArrayBufferLike;
+    clientDataJSON: ArrayBufferLike;
   };
   type: 'public-key';
 }
 
 export interface WebAuthnAuthenticationData {
   id: string;
-  rawId: ArrayBuffer;
+  rawId: ArrayBufferLike;
   response: {
-    authenticatorData: ArrayBuffer;
-    clientDataJSON: ArrayBuffer;
-    signature: ArrayBuffer;
-    userHandle?: ArrayBuffer;
+    authenticatorData: ArrayBufferLike;
+    clientDataJSON: ArrayBufferLike;
+    signature: ArrayBufferLike;
+    userHandle?: ArrayBufferLike;
   };
   type: 'public-key';
 }

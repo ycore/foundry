@@ -1,11 +1,11 @@
 import { createWorkersKVSessionStorage } from '@react-router/cloudflare';
 import type { Result } from '@ycore/forge/result';
-import { err, ok } from '@ycore/forge/result';
+import { err, isError, ok } from '@ycore/forge/result';
 import { getBindings, isProduction, UNCONFIGURED } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
 import type { SessionData, SessionFlashData } from '../@types/auth.types';
-import { getAuthConfig } from '../auth-config.context';
+import { getAuthConfig } from '../auth.context';
 
 const challengeKvTemplate = (email: string): string => `challenge:${email}`;
 const challengeUniqueKvTemplate = (challenge: string): string => `challenge-unique:${challenge}`;
@@ -69,27 +69,6 @@ export async function getAuthSession(request: Request, context: Readonly<RouterC
   }
 }
 
-// Get challenge session by email
-export async function getChallengeSession(email: string, context: Readonly<RouterContextProvider>): Promise<Result<string | null>> {
-  try {
-    const authConfig = getAuthConfig(context);
-    if (!authConfig) {
-      throw new Error('Auth configuration not found in context');
-    }
-
-    const env = getBindings(context);
-    const kv = env[authConfig.session.kvBinding as keyof typeof env] as KVNamespace;
-    if (!kv) {
-      throw new Error(`KV binding '${authConfig.session.kvBinding}' not found in environment`);
-    }
-
-    const challengeKey = challengeKvTemplate(email);
-    const challengeData = await kv.get(challengeKey);
-    return ok(challengeData);
-  } catch (error) {
-    return err('Failed to get challenge session', { email, error });
-  }
-}
 
 // Verify challenge uniqueness
 export async function verifyChallengeUniqueness(challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<boolean>> {
@@ -120,29 +99,6 @@ export async function verifyChallengeUniqueness(challenge: string, context: Read
   }
 }
 
-// Create challenge session with email-based key
-export async function createChallengeSession(email: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
-  try {
-    const authConfig = getAuthConfig(context);
-    if (!authConfig) {
-      throw new Error('Auth configuration not found in context');
-    }
-
-    const env = getBindings(context);
-    const kv = env[authConfig.session.kvBinding as keyof typeof env] as KVNamespace;
-    if (!kv) {
-      throw new Error(`KV binding '${authConfig.session.kvBinding}' not found in environment`);
-    }
-
-    const challengeKey = challengeKvTemplate(email);
-    // Set TTL to 5 minutes (300 seconds) for challenge sessions
-    await kv.put(challengeKey, challenge, { expirationTtl: 300 });
-
-    return ok(undefined);
-  } catch (error) {
-    return err('Failed to create challenge session', { email, error });
-  }
-}
 
 // Clean up challenge session
 export async function cleanupChallengeSession(email: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
@@ -188,38 +144,6 @@ export async function createAuthSession(context: Readonly<RouterContextProvider>
   }
 }
 
-// Create challenge-only session with proper cleanup and isolation
-export async function createChallengeOnlySession(email: string, challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<string>> {
-  try {
-    // Verify challenge uniqueness first
-    const uniquenessResult = await verifyChallengeUniqueness(challenge, context);
-    if (!uniquenessResult.success) {
-      return uniquenessResult;
-    }
-
-    // First, cleanup any existing challenge session for this email
-    await cleanupChallengeSession(email, context);
-
-    // Create new challenge session in KV with TTL
-    await createChallengeSession(email, challenge, context);
-
-    // SECURITY: Always create a new session for challenges to prevent session fixation
-    const sessionStorage = createAuthSessionStorage(context);
-    const session = await sessionStorage.getSession(); // New session
-
-    // Set minimal challenge data in the fresh session
-    session.set('challenge', challenge);
-    session.set('email', email);
-    session.set('challengeCreatedAt', Date.now());
-
-    const cookie = await sessionStorage.commitSession(session, {
-      maxAge: 300, // 5 minutes for challenge sessions
-    });
-    return ok(cookie);
-  } catch (error) {
-    return err('Failed to create challenge session', { email, error });
-  }
-}
 
 // Destroy session with proper cookie clearing
 export async function destroyAuthSession(request: Request, context: Readonly<RouterContextProvider>): Promise<Result<string>> {

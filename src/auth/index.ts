@@ -1,10 +1,9 @@
-export type { ProfileCardProps, ProfilePageProps, SignInFormProps, SignInPageProps, SignUpFormProps, SignUpPageProps, WebAuthnCredentialResponse } from './@types/auth.component.types';
+export type { AuthenticatorsCardProps, ProfileCardProps, ProfilePageProps, SignInFormProps, SignInPageProps, SignUpFormProps, SignUpPageProps, WebAuthnCredentialResponse } from './@types/auth.component.types';
 export type { AuthConfig, AuthRoutes, SessionConfig, WebAuthnConfig } from './@types/auth.config.types';
-export type { SessionData, SessionFlashData, SignInActionArgs, SignInLoaderArgs, SignUpActionArgs, SignUpLoaderArgs, UserDetails, WebAuthnAuthenticationData, WebAuthnOptionsResponse, WebAuthnRegistrationData, } from './@types/auth.types';
+export type { SessionData, SessionFlashData, SignInActionArgs, SignInLoaderArgs, SignUpActionArgs, SignUpLoaderArgs, UserDetails, WebAuthnAuthenticationData, WebAuthnOptionsResponse, WebAuthnRegistrationData } from './@types/auth.types';
 export { defaultAuthConfig, defaultAuthRoutes } from './auth.config';
-export { authConfigContext, authGuardMiddleware, authRouteMiddleware, authSessionMiddleware, authUserContext, getSignedOutRoute, getUser, isAuthenticated, protectedRouteMiddleware, publicRouteMiddleware } from './auth.context';
-export { authConfigContext as authConfigContextInternal, getAuthConfig, setAuthConfig } from './auth-config.context';
-export { ProfileCard, ProfilePage } from './components/profile-page';
+export { authConfigContext, authUserContext, getAuthConfig, getUser, isAuthenticated, setAuthConfig } from './auth.context';
+export { AuthenticatorsCard, ProfileCard, ProfilePage } from './components/profile-page';
 export { SignInForm, SignInPage } from './components/signin-page';
 export { SignUpForm, SignUpPage } from './components/signup-page';
-export { authFormSchema, signinFormSchema, signupFormSchema } from './services/auth-validation';
+export { authFormSchema, signinFormSchema, signupFormSchema } from './services/auth.validation';
