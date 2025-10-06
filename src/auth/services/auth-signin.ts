@@ -27,13 +27,7 @@ export async function signinLoader({ context }: SignInLoaderArgs) {
 
   const cookie = await sessionStorage.commitSession(session);
 
-  return respondOk(
-    {
-      csrfToken: csrfData?.token,
-      challenge,
-    },
-    { headers: { 'Set-Cookie': cookie } }
-  );
+  return respondOk({ csrfData, challenge, }, { headers: { 'Set-Cookie': cookie } });
 }
 
 export async function signinAction({ request, context }: SignInActionArgs) {

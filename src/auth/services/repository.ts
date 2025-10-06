@@ -8,25 +8,22 @@ import type { Authenticator, NewAuthenticator, NewUser, User } from '../schema';
 import { authenticators, users } from '../schema';
 
 export class AuthRepository {
-  constructor(private db: DrizzleD1Database<Record<string, unknown>>) { }
+  constructor(private db: DrizzleD1Database<Record<string, unknown>>) {}
 
   /**
    * Get user by ID
    * Returns User or AppError (including not found error)
    */
   async getUserById(id: string): Promise<Result<User>> {
-    return tryCatch(
-      async () => {
-        const result = await this.db.select().from(users).where(eq(users.id, id)).get();
+    return tryCatch(async () => {
+      const result = await this.db.select().from(users).where(eq(users.id, id)).get();
 
-        if (!result) {
-          return notFoundError('User', id);
-        }
+      if (!result) {
+        return notFoundError('User', id);
+      }
 
-        return result;
-      },
-      `Failed to get user by ID: ${id}`
-    );
+      return result;
+    }, `Failed to get user by ID: ${id}`);
   }
 
   /**
@@ -34,16 +31,15 @@ export class AuthRepository {
    * Returns User or AppError (including not found error)
    */
   async getUserByEmail(email: string): Promise<Result<User>> {
-    return tryCatch(
-      async () => {
-        const result = await this.db.select().from(users).where(eq(users.email, email)).get();
+    return tryCatch(async () => {
+      const result = await this.db.select().from(users).where(eq(users.email, email)).get();
 
-        if (!result) {
-          return notFoundError('User', email);
-        }
+      if (!result) {
+        return notFoundError('User', email);
+      }
 
-        return result;
-      }, `Failed to get user by email: ${email}`);
+      return result;
+    }, `Failed to get user by email: ${email}`);
   }
 
   /**
@@ -65,7 +61,7 @@ export class AuthRepository {
       if (error instanceof Error && error.message.includes('UNIQUE')) {
         return err('Email already exists', {
           email,
-          code: 'DUPLICATE_USER'
+          code: 'DUPLICATE_USER',
         });
       }
 
@@ -78,18 +74,15 @@ export class AuthRepository {
    * Returns Authenticator or AppError (including not found error)
    */
   async getAuthenticatorById(id: string): Promise<Result<Authenticator>> {
-    return tryCatch(
-      async () => {
-        const result = await this.db.select().from(authenticators).where(eq(authenticators.id, id)).get();
+    return tryCatch(async () => {
+      const result = await this.db.select().from(authenticators).where(eq(authenticators.id, id)).get();
 
-        if (!result) {
-          return notFoundError('Authenticator', id);
-        }
+      if (!result) {
+        return notFoundError('Authenticator', id);
+      }
 
-        return result;
-      },
-      `Failed to get authenticator by ID: ${id}`
-    );
+      return result;
+    }, `Failed to get authenticator by ID: ${id}`);
   }
 
   /**
@@ -97,14 +90,11 @@ export class AuthRepository {
    * Returns array of Authenticators (empty if none) or AppError if database error
    */
   async getAuthenticatorsByUserId(userId: string): Promise<Result<Authenticator[]>> {
-    return tryCatch(
-      async () => {
-        const result = await this.db.select().from(authenticators).where(eq(authenticators.userId, userId)).all();
+    return tryCatch(async () => {
+      const result = await this.db.select().from(authenticators).where(eq(authenticators.userId, userId)).all();
 
-        return result;
-      },
-      `Failed to get authenticators for user: ${userId}`
-    );
+      return result;
+    }, `Failed to get authenticators for user: ${userId}`);
   }
 
   /**
@@ -149,10 +139,11 @@ export class AuthRepository {
    */
   async updateAuthenticatorUsage(id: string, counter: number, lastUsedAt: Date): Promise<Result<boolean>> {
     try {
-      const result = await this.db.update(authenticators)
+      const result = await this.db
+        .update(authenticators)
         .set({
           counter,
-          lastUsedAt
+          lastUsedAt,
         })
         .where(eq(authenticators.id, id))
         .returning();
@@ -173,10 +164,7 @@ export class AuthRepository {
    */
   async updateAuthenticatorName(id: string, name: string): Promise<Result<Authenticator>> {
     try {
-      const result = await this.db.update(authenticators)
-        .set({ name })
-        .where(eq(authenticators.id, id))
-        .returning();
+      const result = await this.db.update(authenticators).set({ name }).where(eq(authenticators.id, id)).returning();
 
       if (result.length === 0) {
         return notFoundError('Authenticator', id);
@@ -191,6 +179,52 @@ export class AuthRepository {
     } catch (error) {
       return serverError('Failed to update authenticator name', error as Error);
     }
+  }
+
+  /**
+   * Delete an authenticator
+   * Returns true if deleted, or AppError if failed
+   */
+  async deleteAuthenticator(id: string): Promise<Result<boolean>> {
+    try {
+      const result = await this.db.delete(authenticators).where(eq(authenticators.id, id)).returning();
+
+      if (result.length === 0) {
+        return notFoundError('Authenticator', id);
+      }
+
+      return true;
+    } catch (error) {
+      return serverError('Failed to delete authenticator', error as Error);
+    }
+  }
+
+  /**
+   * Check if an authenticator belongs to a specific user
+   * Returns true if authenticator exists and belongs to user, false otherwise
+   */
+  async authenticatorBelongsToUser(id: string, userId: string): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const result = await this.db.select().from(authenticators).where(eq(authenticators.id, id)).get();
+
+      if (!result) {
+        return false;
+      }
+
+      return result.userId === userId;
+    }, `Failed to verify authenticator ownership for ID: ${id}`);
+  }
+
+  /**
+   * Count authenticators for a user
+   * Returns count or AppError if database error
+   */
+  async countAuthenticatorsByUserId(userId: string): Promise<Result<number>> {
+    return tryCatch(async () => {
+      const result = await this.db.select().from(authenticators).where(eq(authenticators.userId, userId)).all();
+
+      return result.length;
+    }, `Failed to count authenticators for user: ${userId}`);
   }
 
   /**

@@ -1,6 +1,5 @@
 import { isError, middlewarePassthrough } from '@ycore/forge/result';
 import { type MiddlewareFunction, redirect } from 'react-router';
-
 import type { AuthConfig } from '../@types/auth.config.types';
 import { defaultAuthConfig, defaultAuthRoutes } from '../auth.config';
 import { authUserContext, setAuthConfig } from '../auth.context';

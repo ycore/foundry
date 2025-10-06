@@ -27,13 +27,7 @@ export async function signupLoader({ context }: SignUpLoaderArgs) {
 
   const cookie = await sessionStorage.commitSession(session);
 
-  return respondOk(
-    {
-      csrfToken: csrfData?.token,
-      challenge,
-    },
-    { headers: { 'Set-Cookie': cookie } }
-  );
+  return respondOk({ csrfData, challenge, }, { headers: { 'Set-Cookie': cookie } });
 }
 
 export async function signupAction({ request, context }: SignUpActionArgs) {
@@ -113,8 +107,10 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
       response: {
         attestationObject: decodeBase64url(credential.response.attestationObject).buffer,
         clientDataJSON: decodeBase64url(credential.response.clientDataJSON).buffer,
+        transports: credential.response?.transports || [],
       },
       type: 'public-key' as const,
+      authenticatorAttachment: credential.authenticatorAttachment || null,
     };
 
     // Resolve WebAuthn configuration values

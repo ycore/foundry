@@ -1,14 +1,16 @@
 import { Label } from '@ycore/componentry/shadcn-ui';
 import type { FieldErrors } from '@ycore/forge/result';
-import { extractFieldErrors, isError } from '@ycore/forge/result';
 import clsx from 'clsx';
 import React from 'react';
 import { Form } from 'react-router';
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react';
+import { useSecureContext } from './csrf.context';
 
 // Types
 export interface SecureFormProps extends React.ComponentProps<typeof Form> {
+  /** Override the CSRF token field name (optional) */
   csrf_name?: string;
+  /** Form-level and field-level errors */
   errors?: FieldErrors | null;
   children?: React.ReactNode;
 }
@@ -29,90 +31,71 @@ export interface SecureFormErrorProps {
   id?: string;
 }
 
-// Context for passing errors down
+// Context for passing errors down to field components
 const SecureFormContext = React.createContext<{ errors: FieldErrors | null; }>({ errors: null });
 
-/**
- * SecureForm component with CSRF protection and error handling
- */
-export function SecureForm({ children, csrf_name = 'csrf_token', errors, ...props }: SecureFormProps) {
+/** Form with CSRF protection and error handling */
+export function SecureForm({ children, csrf_name, errors, ...props }: SecureFormProps) {
+  const csrfData = useSecureContext();
+
+  // Use override if provided, otherwise use config value
+  const tokenFieldName = csrf_name ?? csrfData.formDataKey;
   const contextValue = React.useMemo(() => ({ errors: errors || null }), [errors]);
 
   return (
     <SecureFormContext.Provider value={contextValue}>
       <Form role="form" {...props}>
-        <AuthenticityTokenInput name={csrf_name} />
+        {/* CSRF token hidden input - uses configured field name */}
+        <AuthenticityTokenInput name={tokenFieldName} />
+
+        {/* Display CSRF validation error if present */}
         {errors?.csrf && <SecureFormError error={errors.csrf} className="mb-4" />}
+
+        {/* Display general form error if present (and no CSRF error) */}
         {errors?.form && !errors.csrf && <SecureFormError error={errors.form} className="mb-4" />}
+
         {children}
       </Form>
     </SecureFormContext.Provider>
   );
 }
 
-/**
- * SecureFormField component for consistent field rendering with errors
- */
-export function SecureFormField({ name, label, description, error: explicitError, required, className, children }: SecureFormFieldProps) {
-  const context = React.useContext(SecureFormContext);
-  const id = React.useId();
-
-  // Get error from context or use explicit error
-  const error = explicitError ?? context.errors?.[name] ?? null;
-  const hasError = Boolean(error);
-
-  const fieldId = `${id}-field`;
-  const descriptionId = `${id}-description`;
-  const errorId = `${id}-error`;
-
-  // Enhance children with ARIA attributes
-  const enhancedChildren = React.Children.map(children, child => {
-    if (!React.isValidElement(child)) return child;
-
-    const childProps = child.props as Record<string, unknown>;
-
-    // Only enhance form inputs with the matching name
-    if (childProps.name === name) {
-      const ariaDescribedBy = [description && descriptionId, error && errorId].filter(Boolean).join(' ') || undefined;
-
-      // biome-ignore lint/suspicious/noExplicitAny: acceptable
-      return React.cloneElement(child as React.ReactElement<any>, {
-        id: (typeof childProps.id === 'string' ? childProps.id : undefined) || fieldId,
-        'aria-invalid': hasError || undefined,
-        'aria-describedby': ariaDescribedBy,
-        'aria-required': required || undefined,
-        'data-error': hasError || undefined,
-      });
-    }
-
-    return child;
-  });
+/** Form field with automatic error display and ARIA attributes */
+export function SecureFormField({ name, label, description, error, required, className, children }: SecureFormFieldProps) {
+  const { errors } = React.useContext(SecureFormContext);
+  const fieldError = error || errors?.[name];
+  const errorId = fieldError ? `${name}-error` : undefined;
 
   return (
-    <div className={clsx('space-y-2', className)} data-slot="form-field">
+    <div className={clsx('space-y-2', className)}>
       {label && (
-        <Label htmlFor={fieldId} data-slot="form-label" data-error={hasError} className={clsx(hasError && 'text-destructive')}>
+        <Label htmlFor={name}>
           {label}
           {required && <span className="ml-1 text-destructive">*</span>}
         </Label>
       )}
-
-      {enhancedChildren}
-
-      {description && !error && (
-        <p id={descriptionId} data-slot="form-description" className="text-muted-foreground text-sm">
-          {description}
+      {description && <p className="text-muted-foreground text-sm">{description}</p>}
+      {React.Children.map(children, (child) => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(child as React.ReactElement<any>, {
+            id: (child.props as any).id || name,
+            name: (child.props as any).name || name,
+            'aria-invalid': fieldError ? true : undefined,
+            'aria-describedby': fieldError ? errorId : (child.props as any)['aria-describedby'],
+          });
+        }
+        return child;
+      })}
+      {fieldError && (
+        <p id={errorId} className="text-destructive text-sm" role="alert">
+          {fieldError}
         </p>
       )}
-
-      {error && <SecureFormError id={errorId} error={error} />}
     </div>
   );
 }
 
-/**
- * SecureFormError component for displaying errors
- */
+/** Displays form-level error messages */
 export function SecureFormError({ error, className, id }: SecureFormErrorProps) {
   if (!error) {
     return null;
@@ -125,41 +108,18 @@ export function SecureFormError({ error, className, id }: SecureFormErrorProps) 
   );
 }
 
-/**
- * Hook to access form context
- */
-export function useSecureForm() {
-  const context = React.useContext(SecureFormContext);
-
-  if (!context) {
-    throw new Error('useSecureForm must be used within a SecureForm');
-  }
-
-  return context;
-}
-
-/**
- * Helper component to extract errors from action data
- */
-export function SecureFormWithData<T = unknown>({ actionData, children, ...props }: SecureFormProps & { actionData?: T }) {
-  const errors = actionData && isError(actionData) ? extractFieldErrors(actionData) : null;
-
-  return (
-    <SecureForm errors={errors} {...props}>
-      {children}
-    </SecureForm>
-  );
-}
-
-/**
- * Utility to create field props from errors
- */
-export function createFieldProps(name: string, errors?: FieldErrors | null): { error?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string; } {
+/** Returns form field props with error handling */
+export function useSecureFormField(name: string): { error?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string; } {
+  const { errors } = React.useContext(SecureFormContext);
   const error = errors?.[name];
 
   if (!error) {
     return {};
   }
 
-  return { error, 'aria-invalid': true, 'aria-describedby': `${name}-error`, };
+  return {
+    error,
+    'aria-invalid': true,
+    'aria-describedby': `${name}-error`,
+  };
 }

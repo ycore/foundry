@@ -1,4 +1,3 @@
-import { UNCONFIGURED } from '@ycore/forge/services';
 import type { AuthConfig, AuthRoutes } from './@types/auth.config.types';
 
 export const defaultAuthRoutes: AuthRoutes = {
@@ -12,8 +11,8 @@ export const defaultAuthRoutes: AuthRoutes = {
 export const defaultAuthConfig: AuthConfig = {
   routes: defaultAuthRoutes,
   session: {
-    kvBinding: UNCONFIGURED, // Must be configured in app config
-    secretKey: UNCONFIGURED, // Must be configured in app config
+    kvBinding: 'UNCONFIGURED',
+    secretKey: 'UNCONFIGURED',
     cookie: {
       name: '__auth_session',
       httpOnly: true,

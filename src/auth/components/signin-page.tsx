@@ -190,10 +190,10 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
 }
 
 export function SignInPage({ loaderData, children, title = 'Sign In', description = 'Sign in to your account with your passkey' }: SignInPageProps) {
-  const secureLoaderData = isError(loaderData) ? { csrfToken: null, errors: loaderData } : loaderData;
+  const csrfData = isError(loaderData) ? null : loaderData?.csrfData ?? null;
 
   return (
-    <SecureProvider loaderData={secureLoaderData}>
+    <SecureProvider csrfData={csrfData}>
       <div className="mx-auto min-w-md max-w-lg px-4 py-8">
         <Card>
           <Card.Header>
