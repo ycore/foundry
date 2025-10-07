@@ -1,5 +1,5 @@
 import type { Result } from '@ycore/forge/result';
-import type { KVBindingNames } from '@ycore/forge/services';
+import type { KVBindings } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
 export type RouteRateLimitConfig = {
@@ -21,7 +21,7 @@ export type RateLimiterConfig = {
 };
 
 export type KvRateLimiterOptions = {
-  kvBinding: KVBindingNames; // The KV namespace binding name
+  kvBinding: KVBindings; // The KV namespace binding name
 };
 
 export type CloudflareRateLimiterOptions = {

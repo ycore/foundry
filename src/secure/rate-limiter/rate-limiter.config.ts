@@ -6,8 +6,8 @@ export const defaultRateLimiterConfig: RateLimiterConfig = {
   providers: [
     {
       name: 'kv',
-      maxRequests: 10,      // Default global limit
-      windowMs: 60 * 1000,  // 1 minute window
+      maxRequests: 10, // Default global limit
+      windowMs: 60 * 1000, // 1 minute window
       options: {
         kvBinding: 'invalid_kv_name',
       } as any,

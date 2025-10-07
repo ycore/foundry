@@ -24,17 +24,10 @@ export function rateLimiterMiddleware(config: RateLimiterConfig): MiddlewareFunc
 
     try {
       // Get client identifier (IP address with fallbacks)
-      const clientIP =
-        request.headers.get('CF-Connecting-IP') ||
-        request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
-        request.headers.get('X-Real-IP') ||
-        'unknown';
+      const clientIP = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || request.headers.get('X-Real-IP') || 'unknown';
 
       // Create temporary config with effective settings for this request
-      const requestConfig = {
-        ...config,
-        providers: [effectiveConfig.providerConfig],
-      };
+      const requestConfig = { ...config, providers: [effectiveConfig.providerConfig] };
 
       const rateLimitRequest = {
         identifier: clientIP,
@@ -53,12 +46,7 @@ export function rateLimiterMiddleware(config: RateLimiterConfig): MiddlewareFunc
       const { allowed, remaining, resetAt, retryAfter } = rateLimitResult;
 
       if (!allowed) {
-        logger.warning('Rate limit exceeded', {
-          path: rateLimitRequest.path,
-          remaining,
-          resetAt,
-          retryAfter
-        });
+        logger.warning('Rate limit exceeded', { path: rateLimitRequest.path, remaining, resetAt, retryAfter });
 
         const headers = new Headers({
           'Content-Type': 'application/json',
@@ -74,11 +62,11 @@ export function rateLimiterMiddleware(config: RateLimiterConfig): MiddlewareFunc
         return new Response(
           JSON.stringify({
             message: 'Too many requests. Please try again later.',
-            retryAfter
+            retryAfter,
           }),
           {
             status: 429,
-            headers
+            headers,
           }
         );
       }
@@ -95,7 +83,6 @@ export function rateLimiterMiddleware(config: RateLimiterConfig): MiddlewareFunc
       }
 
       return response;
-
     } catch (error) {
       logger.error('Rate limiter middleware error', { error: error instanceof Error ? error.message : 'Unknown error' });
       // On error, allow the request through (fail open)

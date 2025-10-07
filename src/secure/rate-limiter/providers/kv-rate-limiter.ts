@@ -1,6 +1,6 @@
 import type { Result } from '@ycore/forge/result';
 import { err, tryCatch } from '@ycore/forge/result';
-import { getBindings } from '@ycore/forge/services';
+import { getKVStore } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 import type { KvRateLimiterOptions, RateLimiterProvider, RateLimiterProviderConfig, RateLimitRequest, RateLimitResponse } from '../@types/rate-limiter.types';
 
@@ -25,8 +25,7 @@ export const kvRateLimiter: RateLimiterProvider = {
     }
 
     // Get the KV namespace from context using the configured binding
-    const bindings = getBindings(context);
-    const kv = bindings[kvOptions.kvBinding as keyof typeof bindings] as KVNamespace | undefined;
+    const kv = getKVStore(context, kvOptions.kvBinding);
 
     if (!kv) {
       return err(`KV namespace '${kvOptions.kvBinding}' not found in bindings`);
@@ -97,8 +96,7 @@ export const kvRateLimiter: RateLimiterProvider = {
     }
 
     // Get the KV namespace from context using the configured binding
-    const bindings = getBindings(context);
-    const kv = bindings[kvOptions.kvBinding as keyof typeof bindings] as KVNamespace | undefined;
+    const kv = getKVStore(context, kvOptions.kvBinding);
 
     if (!kv) {
       return err(`KV namespace '${kvOptions.kvBinding}' not found in bindings`);
