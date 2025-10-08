@@ -1,7 +1,7 @@
 import type { EmailConfig } from './@types/email.types';
 
 export const defaultEmailConfig: EmailConfig = {
-  active: 'mock', // Default to mock (dev)
+  active: 'local-dev', // Default to local-dev (dev)
   providers: [
     {
       name: 'resend',
@@ -12,7 +12,7 @@ export const defaultEmailConfig: EmailConfig = {
       sendFrom: 'noreply@example.com',
     },
     {
-      name: 'mock',
+      name: 'local-dev',
       sendFrom: 'dev@localhost',
     },
   ],

@@ -17,6 +17,6 @@ export function createCSRF(secret: string, config: CSRFConfig): CSRF {
   return new CSRF({
     cookie,
     secret,
-    formDataKey: config.formDataKey
+    formDataKey: config.formDataKey,
   });
 }

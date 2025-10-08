@@ -20,47 +20,44 @@ export class MailChannelsEmailProvider implements EmailProvider {
       return err('From address is required');
     }
 
-    return tryCatch(
-      async () => {
-        const payload = {
-          personalizations: [
-            {
-              to: [{ email: to }],
-            },
-          ],
-          from: { email: from },
-          subject: template.subject,
-          content: [
-            { type: 'text/plain', value: template.text },
-            { type: 'text/html', value: template.html },
-          ],
-        };
-
-        const response = await fetch(this.apiUrl, {
-          method: 'POST',
-          headers: {
-            'X-Api-Key': apiKey,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
+    return tryCatch(async () => {
+      const payload = {
+        personalizations: [
+          {
+            to: [{ email: to }],
           },
-          body: JSON.stringify(payload),
-        });
+        ],
+        from: { email: from },
+        subject: template.subject,
+        content: [
+          { type: 'text/plain', value: template.text },
+          { type: 'text/html', value: template.html },
+        ],
+      };
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`MailChannels API error: ${response.status} ${errorText}`);
-        }
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'X-Api-Key': apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-        logger.debug({
-          event: 'email_sent_success',
-          provider: 'mailchannels',
-          to,
-          subject: template.subject,
-        });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`MailChannels API error: ${response.status} ${errorText}`);
+      }
 
-        return; // Success - void return
-      },
-      'Failed to send email via MailChannels'
-    );
+      logger.debug({
+        event: 'email_sent_success',
+        provider: 'mailchannels',
+        to,
+        subject: template.subject,
+      });
+
+      return; // Success - void return
+    }, 'Failed to send email via MailChannels');
   }
 }

@@ -36,25 +36,22 @@ export class TestMockEmailProvider implements EmailProvider {
       return err(TestMockEmailProvider.failureReason);
     }
 
-    return tryCatch(
-      async () => {
-        // Faster delay for tests (10ms vs 100ms)
-        await new Promise(resolve => setTimeout(resolve, 10));
+    return tryCatch(async () => {
+      // Faster delay for tests (10ms vs 100ms)
+      await new Promise(resolve => setTimeout(resolve, 10));
 
-        logger.debug({
-          event: 'email_test_mock_sent',
-          provider: 'test-mock',
-          from,
-          to,
-          subject: template.subject,
-          textLength: template.text.length,
-          htmlLength: template.html.length,
-        });
+      logger.debug({
+        event: 'email_test_mock_sent',
+        provider: 'test-mock',
+        from,
+        to,
+        subject: template.subject,
+        textLength: template.text.length,
+        htmlLength: template.html.length,
+      });
 
-        return; // Success - void return
-      },
-      'Failed to send test mock email'
-    );
+      return; // Success - void return
+    }, 'Failed to send test mock email');
   }
 
   // Test utility methods
@@ -63,9 +60,7 @@ export class TestMockEmailProvider implements EmailProvider {
   }
 
   static getLastSentEmail(): SendEmailOptions | undefined {
-    return TestMockEmailProvider.sentEmails.length > 0
-      ? { ...TestMockEmailProvider.sentEmails[TestMockEmailProvider.sentEmails.length - 1] }
-      : undefined;
+    return TestMockEmailProvider.sentEmails.length > 0 ? { ...TestMockEmailProvider.sentEmails[TestMockEmailProvider.sentEmails.length - 1] } : undefined;
   }
 
   static getEmailCount(): number {

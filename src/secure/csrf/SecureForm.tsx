@@ -32,7 +32,7 @@ export interface SecureFormErrorProps {
 }
 
 // Context for passing errors down to field components
-const SecureFormContext = React.createContext<{ errors: FieldErrors | null; }>({ errors: null });
+const SecureFormContext = React.createContext<{ errors: FieldErrors | null }>({ errors: null });
 
 /** Form with CSRF protection and error handling */
 export function SecureForm({ children, csrf_name, errors, ...props }: SecureFormProps) {
@@ -75,7 +75,7 @@ export function SecureFormField({ name, label, description, error, required, cla
         </Label>
       )}
       {description && <p className="text-muted-foreground text-sm">{description}</p>}
-      {React.Children.map(children, (child) => {
+      {React.Children.map(children, child => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child as React.ReactElement<any>, {
             id: (child.props as any).id || name,
@@ -109,7 +109,7 @@ export function SecureFormError({ error, className, id }: SecureFormErrorProps) 
 }
 
 /** Returns form field props with error handling */
-export function useSecureFormField(name: string): { error?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string; } {
+export function useSecureFormField(name: string): { error?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string } {
   const { errors } = React.useContext(SecureFormContext);
   const error = errors?.[name];
 

@@ -142,7 +142,7 @@ export function SecureFetcherError({ error, className, id }: { error?: string | 
 export { SecureFormField as SecureFetcherField } from './SecureForm';
 
 /** Creates field props with error handling for fetchers */
-export function createFetcherFieldProps(name: string, errors?: FieldErrors | null): { error?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string; } {
+export function createFetcherFieldProps(name: string, errors?: FieldErrors | null): { error?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string } {
   const error = errors?.[name];
 
   if (!error) {

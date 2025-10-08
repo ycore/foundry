@@ -28,11 +28,11 @@ export interface MockEmailData {
 }
 
 export interface EmailProviderConfig {
-  name: string;
+  name: EmailProviders;
   sendFrom: string;
 }
 
-export type EmailProviders = 'resend' | 'mock' | 'mailchannels' | 'test-mock';
+export type EmailProviders = 'local-dev' | 'mailchannels' | 'resend' | 'test-mock';
 
 export interface EmailConfig {
   active: EmailProviders | null;

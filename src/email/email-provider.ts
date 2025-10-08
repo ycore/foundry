@@ -1,15 +1,15 @@
 import type { Result } from '@ycore/forge/result';
 import { err } from '@ycore/forge/result';
 import type { EmailConfig, EmailProvider, EmailProviderConfig, EmailProviders } from './@types/email.types';
+import { MockEmailProvider } from './providers/local-dev';
 import { MailChannelsEmailProvider } from './providers/mailchannels';
-import { MockEmailProvider } from './providers/mock';
 import { ResendEmailProvider } from './providers/resend';
 import { TestMockEmailProvider } from './providers/test-mock';
 
 const providerRegistry: Record<EmailProviders, () => EmailProvider> = {
-  resend: () => new ResendEmailProvider(),
-  mock: () => new MockEmailProvider(),
+  'local-dev': () => new MockEmailProvider(),
   mailchannels: () => new MailChannelsEmailProvider(),
+  resend: () => new ResendEmailProvider(),
   'test-mock': () => new TestMockEmailProvider(),
 };
 
@@ -22,11 +22,7 @@ export function createEmailProvider(providerName: string): Result<EmailProvider>
     const factory = providerRegistry[providerName];
     return factory();
   } catch (error) {
-    return err(
-      `Failed to create email provider: ${providerName}`,
-      undefined,
-      { cause: error }
-    );
+    return err(`Failed to create email provider: ${providerName}`, undefined, { cause: error });
   }
 }
 
