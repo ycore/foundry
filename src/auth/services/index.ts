@@ -9,6 +9,7 @@ export { cleanupChallengeSession, createAuthSession, createAuthSessionStorage, c
 export { getWebAuthnErrorMessage } from './webauthn';
 export { webAuthnCSRFBypassMiddleware } from './webauthn.middleware';
 export { resolveOrigins, resolveRpId, validateOrigin } from './webauthn-config';
+export { arrayBufferFromObject, convertServerOptionsToWebAuthn, convertWebAuthnCredentialToStorage } from './webauthn-credential';
 export { createAuthenticatedSession, createAuthSuccessResponse, parseWebAuthnCredential } from './webauthn-utils';
 export type { ChallengeValidationOptions, OriginValidationOptions, WebAuthnValidationResult } from './webauthn-validation';
 export { validateChallenge, validateWebAuthnOrigin, validateWebAuthnRequest } from './webauthn-validation';

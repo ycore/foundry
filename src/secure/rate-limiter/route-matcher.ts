@@ -50,8 +50,7 @@ export function findRouteConfig(path: string, routes: RouteRateLimitConfig[]): R
 /**
  * Get effective rate limit configuration for a specific request
  *
- * Determines which provider to use based on route configuration.
- * Returns provider config as-is (no merging) - providers are self-contained.
+ * Rate limiting is applied to configured routes, null otherwise.
  */
 export function getEffectiveRateLimitConfig(config: RateLimiterConfig, path: string, method: string): { providerConfig: RateLimiterProviderConfig; providerId: string; } | null {
   // Check if path should be skipped entirely
@@ -59,30 +58,28 @@ export function getEffectiveRateLimitConfig(config: RateLimiterConfig, path: str
     return null;
   }
 
-  // Check if method should be rate limited
-  const allowedMethods = config.conditions?.methods || ['POST', 'PUT', 'DELETE', 'PATCH'];
-  if (!allowedMethods.includes(method)) {
+  // Find route-specific configuration - only explicit routes are rate limited
+  const routeConfig = findRouteConfig(path, config.routes);
+
+  // No matching route = no rate limiting
+  if (!routeConfig) {
     return null;
   }
 
-  // Find route-specific configuration
-  const routeConfig = config.routes ? findRouteConfig(path, config.routes) : null;
-
-  // Determine which provider to use
-  const providerId = routeConfig?.provider ?? config.active;
+  // Check if method is allowed for this specific route
+  if (routeConfig.methods && !routeConfig.methods.includes(method)) {
+    return null;
+  }
 
   // Get provider configuration by ID
+  const providerId = routeConfig.provider;
   const providerConfig = config.providers.find(p => p.id === providerId);
+
   if (!providerConfig) {
     // Provider not found - skip rate limiting for safety
     return null;
   }
 
-  // Check if method is allowed for this specific route
-  if (routeConfig?.methods && !routeConfig.methods.includes(method)) {
-    return null;
-  }
-
-  // Return provider configuration as-is (no merging needed)
+  // Return provider configuration
   return { providerConfig, providerId };
 }

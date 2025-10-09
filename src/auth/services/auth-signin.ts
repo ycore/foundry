@@ -197,5 +197,6 @@ export async function signinAction({ request, context }: SignInActionArgs) {
   }
 
   // Handle successful signin with redirect
-  throw redirect(result.redirectTo, { headers: { 'Set-Cookie': result.cookie } });
+  const successData = result as { redirectTo: string; cookie: string };
+  throw redirect(successData.redirectTo, { headers: { 'Set-Cookie': successData.cookie } });
 }

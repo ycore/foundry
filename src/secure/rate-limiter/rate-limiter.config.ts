@@ -9,11 +9,11 @@ import type { CloudflareProviderConfig, KvProviderConfig, RateLimiterConfig } fr
  * The app is responsible for:
  * - Configuring kvBinding to match a KV namespace from wrangler.jsonc
  * - Configuring limiterBinding to match a RateLimit binding from wrangler.jsonc
- * - Defining route-specific configurations with provider assignments
+ * - Defining explicit route configurations with provider assignments
  *
+ * Rate limiting is ONLY applied to routes explicitly configured in the routes array.
  */
 export const defaultRateLimiterConfig: RateLimiterConfig = {
-  active: 'default-kv',
   providers: [
     {
       id: 'default-kv',
@@ -34,9 +34,15 @@ export const defaultRateLimiterConfig: RateLimiterConfig = {
       },
     } satisfies CloudflareProviderConfig,
   ],
-  routes: [],
+  routes: [
+    // Example route configuration (uncomment and customize as needed):
+    // {
+    //   pattern: '/api/**',
+    //   provider: 'default-kv',
+    //   methods: ['POST', 'PUT', 'DELETE', 'PATCH'],
+    // },
+  ],
   conditions: {
-    methods: ['POST', 'PUT', 'DELETE', 'PATCH'],
     skipPaths: ['/favicon.ico'],
   },
 };

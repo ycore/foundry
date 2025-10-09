@@ -45,24 +45,12 @@ export function createRateLimiterProvider(providerType: string): Result<RateLimi
 /**
  * Check rate limit using a specific provider (by ID)
  */
-export async function checkRateLimit(config: RateLimiterConfig, request: RateLimitRequest, context: Readonly<RouterContextProvider>, providerId?: string): Promise<Result<RateLimitResponse>> {
-  // Use specified provider ID, or fall back to active default
-  const targetProviderId = providerId || config.active;
-
-  // Special case: 'none' disables rate limiting
-  if (targetProviderId === 'none') {
-    return {
-      allowed: true,
-      remaining: 999,
-      resetAt: Date.now() + 60000,
-    };
-  }
-
+export async function checkRateLimit(config: RateLimiterConfig, request: RateLimitRequest, context: Readonly<RouterContextProvider>, providerId: string): Promise<Result<RateLimitResponse>> {
   // Get provider configuration by ID
-  const providerConfig = getProviderConfig(config, targetProviderId);
+  const providerConfig = getProviderConfig(config, providerId);
   if (!providerConfig) {
-    return err(`Provider configuration not found for ID: ${targetProviderId}`, {
-      providerId: targetProviderId,
+    return err(`Provider configuration not found for ID: ${providerId}`, {
+      providerId: providerId,
       availableProviders: getRateLimiterProviderIds(config),
     });
   }

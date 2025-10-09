@@ -49,11 +49,9 @@ export type RouteRateLimitConfig = {
  * Rate limiter configuration - multiple named providers that can be assigned to routes
  */
 export type RateLimiterConfig = {
-  active: string; // ID of default provider to use (references RateLimiterProviderConfig.id)
   providers: RateLimiterProviderConfig[];
-  routes?: RouteRateLimitConfig[]; // Route-specific configurations
+  routes: RouteRateLimitConfig[]; // Route-specific configurations (required - no implicit rate limiting)
   conditions?: {
-    methods?: string[]; // Default methods to rate limit (e.g., ['POST', 'PUT', 'DELETE'])
     skipPaths?: string[]; // Paths to skip rate limiting entirely
   };
 };
