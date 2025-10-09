@@ -1,7 +1,7 @@
 import { createWorkersKVSessionStorage } from '@react-router/cloudflare';
 import type { Result } from '@ycore/forge/result';
 import { err, ok } from '@ycore/forge/result';
-import { getBindings, isProduction, UNCONFIGURED } from '@ycore/forge/services';
+import { getBindings, getKVStore, isProduction, UNCONFIGURED } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
 import type { SessionData, SessionFlashData } from '../@types/auth.types';
@@ -10,13 +10,16 @@ import { getAuthConfig } from '../auth.context';
 const challengeKvTemplate = (email: string): string => `challenge:${email}`;
 const challengeUniqueKvTemplate = (challenge: string): string => `challenge-unique:${challenge}`;
 
-export function createAuthSessionStorage(context: Readonly<RouterContextProvider>) {
+/**
+ * Resolves auth bindings from context following CSRF middleware pattern
+ * Centralizes binding resolution with proper error handling
+ */
+function resolveAuthBindings(context: Readonly<RouterContextProvider>): { secret: string; kv: KVNamespace } {
   const authConfig = getAuthConfig(context);
   if (!authConfig) {
     throw new Error('Auth configuration not found in context. Ensure auth middleware is properly configured.');
   }
 
-  const env = getBindings(context);
   const { session } = authConfig;
 
   // Check for unconfigured values
@@ -27,14 +30,30 @@ export function createAuthSessionStorage(context: Readonly<RouterContextProvider
     throw new Error('Auth session secret key is not configured. Please specify secretKey in your auth config.');
   }
 
-  // Get secret from environment using configured key
-  const secret = env[session.secretKey as keyof typeof env] as string || 'default-session-secret';
+  const bindings = getBindings(context);
 
-  // Get KV binding using configured name
-  const kv = env[session.kvBinding as keyof typeof env] as KVNamespace;
-  if (!kv) {
-    throw new Error(`KV binding '${session.kvBinding}' not found in environment`);
+  // Access secret using type assertion (following CSRF pattern)
+  const secret = (bindings as Record<string, unknown>)[session.secretKey] as string | undefined;
+  if (!secret) {
+    throw new Error(`Auth secret binding '${session.secretKey}' not found in environment. ` + `Available bindings: ${Object.keys(bindings).join(', ')}`);
   }
+
+  const kv = getKVStore(context, session.kvBinding);
+  if (!kv) {
+    throw new Error(`KV binding '${session.kvBinding}' not found for session. `);
+  }
+
+  return { secret, kv };
+}
+
+export function createAuthSessionStorage(context: Readonly<RouterContextProvider>) {
+  const authConfig = getAuthConfig(context);
+  if (!authConfig) {
+    throw new Error('Auth configuration not found in context. Ensure auth middleware is properly configured.');
+  }
+
+  const { secret, kv } = resolveAuthBindings(context);
+  const { session } = authConfig;
 
   return createWorkersKVSessionStorage<SessionData, SessionFlashData>({
     kv,
@@ -45,12 +64,14 @@ export function createAuthSessionStorage(context: Readonly<RouterContextProvider
       path: session.cookie.path,
       sameSite: session.cookie.sameSite,
       secrets: [secret],
-      secure: (session.cookie.secure === 'auto') ? isProduction(context) : session.cookie.secure ?? false,
+      secure: session.cookie.secure === 'auto' ? isProduction(context) : (session.cookie.secure ?? false),
     },
   });
 }
 
-// Get session from request
+/**
+ * Get session from request
+ */
 export async function getAuthSession(request: Request, context: Readonly<RouterContextProvider>): Promise<Result<SessionData | null>> {
   try {
     const sessionStorage = createAuthSessionStorage(context);
@@ -69,20 +90,12 @@ export async function getAuthSession(request: Request, context: Readonly<RouterC
   }
 }
 
-
-// Verify challenge uniqueness
+/**
+ * Verify challenge uniqueness
+ */
 export async function verifyChallengeUniqueness(challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<boolean>> {
   try {
-    const authConfig = getAuthConfig(context);
-    if (!authConfig) {
-      throw new Error('Auth configuration not found in context');
-    }
-
-    const env = getBindings(context);
-    const kv = env[authConfig.session.kvBinding as keyof typeof env] as KVNamespace;
-    if (!kv) {
-      throw new Error(`KV binding '${authConfig.session.kvBinding}' not found in environment`);
-    }
+    const { kv } = resolveAuthBindings(context);
 
     const uniqueKey = challengeUniqueKvTemplate(challenge);
     const existing = await kv.get(uniqueKey);
@@ -99,20 +112,12 @@ export async function verifyChallengeUniqueness(challenge: string, context: Read
   }
 }
 
-
-// Clean up challenge session
+/**
+ * Clean up challenge session
+ */
 export async function cleanupChallengeSession(email: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
   try {
-    const authConfig = getAuthConfig(context);
-    if (!authConfig) {
-      throw new Error('Auth configuration not found in context');
-    }
-
-    const env = getBindings(context);
-    const kv = env[authConfig.session.kvBinding as keyof typeof env] as KVNamespace;
-    if (!kv) {
-      throw new Error(`KV binding '${authConfig.session.kvBinding}' not found in environment`);
-    }
+    const { kv } = resolveAuthBindings(context);
 
     const challengeKey = challengeKvTemplate(email);
     await kv.delete(challengeKey);
@@ -123,7 +128,99 @@ export async function cleanupChallengeSession(email: string, context: Readonly<R
   }
 }
 
-// Create new session (for authenticated users only)
+/**
+ * Create a challenge session for WebAuthn registration/authentication
+ *
+ * @param context - Router context provider
+ * @param challenge - The generated challenge string
+ * @returns Result with Set-Cookie header value
+ *
+ * @example
+ * ```ts
+ * const challenge = generateChallenge();
+ * const result = await createChallengeSession(context, challenge);
+ * if (isError(result)) {
+ *   return respondError(result);
+ * }
+ * return respondOk({ challenge }, { headers: { 'Set-Cookie': result } });
+ * ```
+ */
+export async function createChallengeSession(context: Readonly<RouterContextProvider>, challenge: string): Promise<Result<string>> {
+  try {
+    const sessionStorage = createAuthSessionStorage(context);
+    const session = await sessionStorage.getSession();
+
+    session.set('challenge', challenge);
+    session.set('challengeCreatedAt', Date.now());
+
+    const cookie = await sessionStorage.commitSession(session);
+    return ok(cookie);
+  } catch (error) {
+    return err('Failed to create challenge session', { error });
+  }
+}
+
+/**
+ * Get challenge from session with validation
+ *
+ * @param request - The incoming request
+ * @param context - Router context provider
+ * @returns Result with challenge data or error
+ *
+ * @example
+ * ```ts
+ * const result = await getChallengeFromSession(request, context);
+ * if (isError(result)) {
+ *   return respondError(result);
+ * }
+ * const { challenge, challengeCreatedAt, session } = result;
+ * ```
+ */
+export async function getChallengeFromSession(request: Request, context: Readonly<RouterContextProvider>): Promise<Result<{ challenge: string; challengeCreatedAt: number; session: any }>> {
+  try {
+    const sessionStorage = createAuthSessionStorage(context);
+    const session = await sessionStorage.getSession(request.headers.get('Cookie'));
+    const storedChallenge = session.get('challenge');
+    const challengeCreatedAt = session.get('challengeCreatedAt');
+
+    if (!storedChallenge || !challengeCreatedAt) {
+      return err('Invalid session. Please refresh and try again.', { field: 'general' });
+    }
+
+    return ok({ challenge: storedChallenge, challengeCreatedAt, session });
+  } catch (error) {
+    return err('Failed to get challenge from session', { error });
+  }
+}
+
+/**
+ * Destroy a challenge session (clears challenge data)
+ *
+ * @param session - The session object to destroy
+ * @param context - Router context provider
+ * @returns Result with void on success
+ *
+ * @example
+ * ```ts
+ * const result = await destroyChallengeSession(session, context);
+ * if (isError(result)) {
+ *   logger.warning('challenge_cleanup_failed', { error: result });
+ * }
+ * ```
+ */
+export async function destroyChallengeSession(session: any, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
+  try {
+    const sessionStorage = createAuthSessionStorage(context);
+    await sessionStorage.destroySession(session);
+    return ok(undefined);
+  } catch (error) {
+    return err('Failed to destroy challenge session', { error });
+  }
+}
+
+/**
+ * Create new session (for authenticated users only)
+ */
 export async function createAuthSession(context: Readonly<RouterContextProvider>, sessionData: SessionData): Promise<Result<string>> {
   try {
     const sessionStorage = createAuthSessionStorage(context);
@@ -142,8 +239,9 @@ export async function createAuthSession(context: Readonly<RouterContextProvider>
   }
 }
 
-
-// Destroy session with proper cookie clearing
+/**
+ * Destroy session with proper cookie clearing
+ */
 export async function destroyAuthSession(request: Request, context: Readonly<RouterContextProvider>): Promise<Result<string>> {
   try {
     const sessionStorage = createAuthSessionStorage(context);

@@ -6,7 +6,7 @@ import { logger } from '@ycore/forge/logger';
 import { err, type Result } from '@ycore/forge/result';
 
 import type { DeviceInfo, EnhancedDeviceInfo, WebAuthnAuthenticationData, WebAuthnRegistrationData } from '../@types/auth.types';
-import { ATTESTATION_FORMAT_HANDLERS, ATTESTATION_TYPES, AUTHENTICATOR_FLAGS, convertAAGUIDToUUID, DEFAULT_DEVICE_INFO, isAAGUIDAllZeros, TRANSPORT_METHODS, WEBAUTHN_ALGORITHMS, WEBAUTHN_CONFIG, WEBAUTHN_ERROR_MESSAGES, WebAuthnErrorCode } from '../auth.constants';
+import { ATTESTATION_FORMAT_HANDLERS, ATTESTATION_TYPES, AUTHENTICATOR_FLAGS, convertAAGUIDToUUID, DEFAULT_DEVICE_INFO, isAAGUIDAllZeros, WEBAUTHN_ALGORITHMS, WEBAUTHN_CONFIG, WEBAUTHN_ERROR_MESSAGES, WebAuthnErrorCode } from '../auth.constants';
 import type { Authenticator as AuthenticatorModel } from '../schema';
 
 /**
@@ -22,7 +22,7 @@ function toArrayBuffer(uint8Array: Uint8Array): ArrayBuffer {
 /**
  * Extract backup state from authenticator data flags
  */
-function extractBackupState(authenticatorData: any): { isBackupEligible: boolean; isBackedUp: boolean; } {
+function extractBackupState(authenticatorData: any): { isBackupEligible: boolean; isBackedUp: boolean } {
   const flags = authenticatorData.flags || 0;
 
   const isBackupEligible = (flags & AUTHENTICATOR_FLAGS.BACKUP_ELIGIBLE) !== 0;
@@ -74,7 +74,7 @@ function generateDefaultAuthenticatorName(deviceInfo: DeviceInfo): string {
   const deviceType = deviceInfo.type === 'platform' ? 'Biometric Device' : 'Security Key';
   const timestamp = new Date().toLocaleDateString('en-US', {
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
   });
 
   return `${deviceType} (${timestamp})`;
@@ -102,7 +102,7 @@ async function getDeviceInfoByAAGUID(aaguid: Uint8Array, metadataKV?: KVNamespac
     } catch (error) {
       logger.warning('device_info_kv_lookup_failed', {
         uuid,
-        error: error instanceof Error ? error.message : 'Unknown'
+        error: error instanceof Error ? error.message : 'Unknown',
       });
     }
   }
@@ -142,7 +142,14 @@ export function generateUserId(): string {
 /**
  * Create WebAuthn registration options
  */
-export function createRegistrationOptions(rpName: string, rpId: string, userName: string, userDisplayName: string, challenge: string, excludeCredentials: string[] = []): PublicKeyCredentialCreationOptions {
+export function createRegistrationOptions(
+  rpName: string,
+  rpId: string,
+  userName: string,
+  userDisplayName: string,
+  challenge: string,
+  excludeCredentials: Array<{ id: string; transports?: AuthenticatorTransport[] }> = []
+): PublicKeyCredentialCreationOptions {
   return {
     challenge: toArrayBuffer(decodeBase64url(challenge)),
     rp: {
@@ -160,10 +167,11 @@ export function createRegistrationOptions(rpName: string, rpId: string, userName
     ],
     timeout: WEBAUTHN_CONFIG.CHALLENGE_TIMEOUT,
     attestation: 'none',
-    excludeCredentials: excludeCredentials.map(id => ({
-      id: toArrayBuffer(decodeBase64url(id)),
+    excludeCredentials: excludeCredentials.map(cred => ({
+      id: toArrayBuffer(decodeBase64url(cred.id)),
       type: 'public-key' as PublicKeyCredentialType,
-      transports: [TRANSPORT_METHODS.INTERNAL, TRANSPORT_METHODS.HYBRID] as AuthenticatorTransport[],
+      // Use actual transports if available, otherwise omit (let browser decide)
+      ...(cred.transports && cred.transports.length > 0 ? { transports: cred.transports } : {}),
     })),
     authenticatorSelection: {
       residentKey: 'discouraged',
@@ -176,7 +184,7 @@ export function createRegistrationOptions(rpName: string, rpId: string, userName
 /**
  * Create WebAuthn authentication options
  */
-export function createAuthenticationOptions(rpId: string, challenge: string, allowCredentials: string[] = []): PublicKeyCredentialRequestOptions {
+export function createAuthenticationOptions(rpId: string, challenge: string, allowCredentials: Array<{ id: string; transports?: AuthenticatorTransport[] }> = []): PublicKeyCredentialRequestOptions {
   return {
     challenge: toArrayBuffer(decodeBase64url(challenge)),
     rpId,
@@ -184,10 +192,11 @@ export function createAuthenticationOptions(rpId: string, challenge: string, all
     userVerification: 'preferred',
     allowCredentials:
       allowCredentials.length > 0
-        ? allowCredentials.map(id => ({
-          id: toArrayBuffer(decodeBase64url(id)),
+        ? allowCredentials.map(cred => ({
+          id: toArrayBuffer(decodeBase64url(cred.id)),
           type: 'public-key' as PublicKeyCredentialType,
-          transports: [TRANSPORT_METHODS.INTERNAL, TRANSPORT_METHODS.HYBRID] as AuthenticatorTransport[],
+          // Use actual transports if available, otherwise omit (let browser decide)
+          ...(cred.transports && cred.transports.length > 0 ? { transports: cred.transports } : {}),
         }))
         : [],
   };
@@ -283,14 +292,42 @@ export async function verifyRegistration(
     // This approach maintains the complete COSE key structure
     const credentialPublicKey = encodeBase64url(new TextEncoder().encode(JSON.stringify(attestedCredential.publicKey.decoded)));
 
-    // Get device information from AAGUID
+    // Use actual transports from the credential if available, otherwise fall back to device info
+    let transports: string[] = [];
+    if (credential.response.transports && credential.response.transports.length > 0) {
+      // Use the actual transports reported by the authenticator
+      transports = credential.response.transports;
+      logger.debug('webauthn_using_actual_transports', { transports });
+    } else {
+      // Fall back to device info based on AAGUID
+      const deviceInfo = await getDeviceInfoByAAGUID(attestedCredential.authenticatorAAGUID, metadataKV);
+      transports = extractTransportMethods(deviceInfo);
+      logger.debug('webauthn_using_fallback_transports', { transports, source: 'deviceInfo' });
+    }
+
+    // Determine device type from authenticatorAttachment if available
+    let credentialDeviceType: 'platform' | 'cross-platform' = 'cross-platform';
+    if (credential.authenticatorAttachment) {
+      credentialDeviceType = credential.authenticatorAttachment === 'platform' ? 'platform' : 'cross-platform';
+      logger.debug('webauthn_device_type_from_attachment', {
+        authenticatorAttachment: credential.authenticatorAttachment,
+        credentialDeviceType,
+      });
+    } else {
+      // Fall back to AAGUID-based detection
+      const deviceInfo = await getDeviceInfoByAAGUID(attestedCredential.authenticatorAAGUID, metadataKV);
+      credentialDeviceType = deviceInfo.type;
+      logger.debug('webauthn_device_type_from_aaguid', {
+        aaguid: encodeBase64url(attestedCredential.authenticatorAAGUID),
+        credentialDeviceType,
+      });
+    }
+
+    // Get device info for generating a friendly name
     const deviceInfo = await getDeviceInfoByAAGUID(attestedCredential.authenticatorAAGUID, metadataKV);
 
     // Extract backup state from authenticator flags
     const backupState = extractBackupState(authenticatorData);
-
-    // Extract transport methods from device info
-    const transports = extractTransportMethods(deviceInfo);
 
     // Get algorithm from public key
     const keyAlgorithm = attestedCredential.publicKey.algorithm();
@@ -305,7 +342,7 @@ export async function verifyRegistration(
       id: encodeBase64url(attestedCredential.id),
       credentialPublicKey,
       counter: authenticatorData.signatureCounter,
-      credentialDeviceType: deviceInfo.type,
+      credentialDeviceType,
       credentialBackedUp: backupState.isBackedUp,
       transports,
       aaguid: encodeBase64url(attestedCredential.authenticatorAAGUID),
@@ -399,10 +436,7 @@ export async function verifyAuthentication(
     }
 
     // Create assertion message for signature verification using Oslo.js utility
-    const signatureMessage = createAssertionSignatureMessage(
-      new Uint8Array(credential.response.authenticatorData),
-      new Uint8Array(credential.response.clientDataJSON)
-    );
+    const signatureMessage = createAssertionSignatureMessage(new Uint8Array(credential.response.authenticatorData), new Uint8Array(credential.response.clientDataJSON));
 
     // Reconstruct the COSE key from stored JSON
     let publicKeyData: any;
@@ -554,9 +588,6 @@ export async function verifyAuthentication(
         });
       }
 
-      logger.info('webauthn_authentication_signature_verified', {
-        credentialId: credential.id,
-      });
     } catch (error) {
       logger.error('webauthn_authentication_signature_verification_error', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -567,12 +598,6 @@ export async function verifyAuthentication(
         code: WebAuthnErrorCode.SIGNATURE_FAILED,
       });
     }
-
-    logger.info('webauthn_authentication_verified', {
-      credentialId: credential.id,
-      userVerified: authenticatorData.userVerified,
-      newCounter: authenticatorData.signatureCounter,
-    });
 
     return {
       verified: true,

@@ -14,9 +14,9 @@ export function authSessionMiddleware(authConfig: AuthConfig): MiddlewareFunctio
     setAuthConfig(context, authConfig);
 
     // Load user from session
-    const sessionResult = await getAuthSession(request, context);
-    if (!isError(sessionResult) && sessionResult?.user) {
-      context.set(authUserContext, sessionResult.user);
+    const authSession = await getAuthSession(request, context);
+    if (!isError(authSession) && authSession?.user) {
+      context.set(authUserContext, authSession.user);
       return next();
     }
 
@@ -38,9 +38,7 @@ export function authSessionMiddleware(authConfig: AuthConfig): MiddlewareFunctio
 
         if (!isError(destroyResult)) {
           const response = await next();
-          return middlewarePassthrough(response, {
-            set: { 'Set-Cookie': destroyResult },
-          });
+          return middlewarePassthrough(response, { set: { 'Set-Cookie': destroyResult } });
         }
       }
     }

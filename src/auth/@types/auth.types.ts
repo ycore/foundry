@@ -98,8 +98,10 @@ export interface WebAuthnRegistrationData {
   response: {
     attestationObject: ArrayBufferLike;
     clientDataJSON: ArrayBufferLike;
+    transports?: AuthenticatorTransport[];
   };
   type: 'public-key';
+  authenticatorAttachment?: AuthenticatorAttachment | null;
 }
 
 export interface WebAuthnAuthenticationData {

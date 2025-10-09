@@ -1,23 +1,38 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: acceptable */
-import type { RateLimiterConfig } from './@types/rate-limiter.types';
+import type { CloudflareProviderConfig, KvProviderConfig, RateLimiterConfig } from './@types/rate-limiter.types';
 
+/**
+ * Default rate limiter configuration
+ *
+ * IMPORTANT: This configuration uses 'UNCONFIGURED' placeholders that MUST be
+ * replaced by the consuming application in config.system.ts
+ *
+ * The app is responsible for:
+ * - Configuring kvBinding to match a KV namespace from wrangler.jsonc
+ * - Configuring limiterBinding to match a RateLimit binding from wrangler.jsonc
+ * - Defining route-specific configurations with provider assignments
+ *
+ */
 export const defaultRateLimiterConfig: RateLimiterConfig = {
-  active: 'kv',
+  active: 'default-kv',
   providers: [
     {
-      name: 'kv',
-      maxRequests: 10, // Default global limit
-      windowMs: 60 * 1000, // 1 minute window
+      id: 'default-kv',
+      type: 'kv',
       options: {
-        kvBinding: 'invalid_kv_name',
-      } as any,
-    },
+        kvBinding: 'UNCONFIGURED',
+      },
+      limits: {
+        maxRequests: 10,
+        windowMs: 60 * 1000, // 1 minute window
+      },
+    } satisfies KvProviderConfig,
     {
-      name: 'cloudflare',
-      maxRequests: 10,
-      windowMs: 60 * 1000,
-      // Options can be added when Cloudflare rate limiter is implemented
-    },
+      id: 'default-cloudflare',
+      type: 'cloudflare',
+      options: {
+        limiterBinding: 'UNCONFIGURED',
+      },
+    } satisfies CloudflareProviderConfig,
   ],
   routes: [],
   conditions: {

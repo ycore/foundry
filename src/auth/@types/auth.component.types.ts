@@ -44,11 +44,13 @@ export interface WebAuthnCredentialResponse {
   id: string;
   rawId: string;
   type: string;
+  authenticatorAttachment?: AuthenticatorAttachment | null;
   response: {
     attestationObject?: string;
     clientDataJSON: string;
     authenticatorData?: string;
     signature?: string;
     userHandle?: string;
+    transports?: AuthenticatorTransport[];
   };
 }

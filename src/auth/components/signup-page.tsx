@@ -198,7 +198,7 @@ export function SignUpForm({ signinUrl }: SignUpFormProps) {
 }
 
 export function SignUpPage({ loaderData, children, title = 'Create Account', description = 'Sign up for a new account with your passkey' }: SignUpPageProps) {
-  const csrfData = isError(loaderData) ? null : loaderData?.csrfData ?? null;
+  const csrfData = isError(loaderData) ? null : (loaderData?.csrfData ?? null);
 
   return (
     <SecureProvider csrfData={csrfData}>

@@ -24,20 +24,7 @@ export const defaultAuthConfig: AuthConfig = {
   },
   webauthn: {
     rpName: 'React Router Cloudflare App',
-    rpID: (request: Request) => {
-      const hostname = new URL(request.url).hostname;
-      // Handle localhost specially for development
-      return hostname === 'localhost' || hostname === '127.0.0.1' ? 'localhost' : hostname;
-    },
-    origin: (request: Request) => {
-      const url = new URL(request.url);
-      // For development, return array of possible origins
-      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-        return ['http://localhost:5173', 'https://localhost:5173', `${url.protocol}//${url.host}`];
-      }
-      return url.origin;
-    },
     challengeSessionKey: 'challenge',
-    requireUserVerification: false,
+    requireUserVerification: true, // More secure
   },
 };

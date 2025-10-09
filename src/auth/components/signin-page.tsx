@@ -190,7 +190,7 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
 }
 
 export function SignInPage({ loaderData, children, title = 'Sign In', description = 'Sign in to your account with your passkey' }: SignInPageProps) {
-  const csrfData = isError(loaderData) ? null : loaderData?.csrfData ?? null;
+  const csrfData = isError(loaderData) ? null : (loaderData?.csrfData ?? null);
 
   return (
     <SecureProvider csrfData={csrfData}>

@@ -49,19 +49,11 @@ export function findRouteConfig(path: string, routes: RouteRateLimitConfig[]): R
 
 /**
  * Get effective rate limit configuration for a specific request
- * Merges global provider config with route-specific overrides
+ *
+ * Determines which provider to use based on route configuration.
+ * Returns provider config as-is (no merging) - providers are self-contained.
  */
-export function getEffectiveRateLimitConfig(
-  config: RateLimiterConfig,
-  path: string,
-  method: string
-): {
-  providerConfig: RateLimiterProviderConfig;
-  keyPrefix?: string;
-} | null {
-  const globalProviderConfig = config.providers.find(p => p.name === config.active);
-  if (!globalProviderConfig) return null;
-
+export function getEffectiveRateLimitConfig(config: RateLimiterConfig, path: string, method: string): { providerConfig: RateLimiterProviderConfig; providerId: string; } | null {
   // Check if path should be skipped entirely
   if (config.conditions?.skipPaths?.some(skipPath => matchesRoute(path, skipPath))) {
     return null;
@@ -76,25 +68,21 @@ export function getEffectiveRateLimitConfig(
   // Find route-specific configuration
   const routeConfig = config.routes ? findRouteConfig(path, config.routes) : null;
 
-  if (routeConfig) {
-    // Check if method is allowed for this specific route
-    if (routeConfig.methods && !routeConfig.methods.includes(method)) {
-      return null;
-    }
+  // Determine which provider to use
+  const providerId = routeConfig?.provider ?? config.active;
 
-    // Merge global and route-specific configurations
-    return {
-      providerConfig: {
-        ...globalProviderConfig,
-        maxRequests: routeConfig.maxRequests ?? globalProviderConfig.maxRequests,
-        windowMs: routeConfig.windowMs ?? globalProviderConfig.windowMs,
-      },
-      keyPrefix: routeConfig.keyPrefix,
-    };
+  // Get provider configuration by ID
+  const providerConfig = config.providers.find(p => p.id === providerId);
+  if (!providerConfig) {
+    // Provider not found - skip rate limiting for safety
+    return null;
   }
 
-  // Return global configuration
-  return {
-    providerConfig: globalProviderConfig,
-  };
+  // Check if method is allowed for this specific route
+  if (routeConfig?.methods && !routeConfig.methods.includes(method)) {
+    return null;
+  }
+
+  // Return provider configuration as-is (no merging needed)
+  return { providerConfig, providerId };
 }

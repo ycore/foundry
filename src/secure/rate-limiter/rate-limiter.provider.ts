@@ -5,45 +5,52 @@ import type { RateLimiterConfig, RateLimiterProvider, RateLimiterProviderConfig,
 import { cloudflareRateLimiter } from './providers/cloudflare-rate-limiter';
 import { kvRateLimiter } from './providers/kv-rate-limiter';
 
+/**
+ * Provider type registry
+ * Maps provider type to implementation
+ */
 const rateLimiterProviders: Record<string, RateLimiterProvider> = {
   kv: kvRateLimiter,
   cloudflare: cloudflareRateLimiter,
 };
 
 /**
- * Get rate limiter provider names from config
+ * Get all configured provider IDs from config
  */
-export function getRateLimiterProviderNames(config: RateLimiterConfig): string[] {
-  return config.providers.map(provider => provider.name);
+export function getRateLimiterProviderIds(config: RateLimiterConfig): string[] {
+  return config.providers.map(provider => provider.id);
 }
 
 /**
- * Get provider configuration by name
+ * Get provider configuration by ID
  */
-export function getProviderConfig(config: RateLimiterConfig, providerName: string): RateLimiterProviderConfig | null {
-  return config.providers.find(provider => provider.name === providerName) || null;
+export function getProviderConfig(config: RateLimiterConfig, providerId: string): RateLimiterProviderConfig | null {
+  return config.providers.find(provider => provider.id === providerId) || null;
 }
 
 /**
- * Create a rate limiter provider instance
+ * Create a rate limiter provider instance by type
  */
-export function createRateLimiterProvider(providerName: string): Result<RateLimiterProvider> {
-  const provider = rateLimiterProviders[providerName];
+export function createRateLimiterProvider(providerType: string): Result<RateLimiterProvider> {
+  const provider = rateLimiterProviders[providerType];
 
   if (!provider) {
     const availableProviders = Object.keys(rateLimiterProviders).join(', ');
-    return err(`Unknown rate limiter provider: ${providerName}. Available: ${availableProviders}`);
+    return err(`Unknown rate limiter provider type: ${providerType}. Available: ${availableProviders}`);
   }
 
   return provider;
 }
 
 /**
- * Check rate limit using the active provider
+ * Check rate limit using a specific provider (by ID)
  */
-export async function checkRateLimit(config: RateLimiterConfig, request: RateLimitRequest, context: RouterContextProvider): Promise<Result<RateLimitResponse>> {
-  if (config.active === 'none') {
-    // No rate limiting enabled
+export async function checkRateLimit(config: RateLimiterConfig, request: RateLimitRequest, context: Readonly<RouterContextProvider>, providerId?: string): Promise<Result<RateLimitResponse>> {
+  // Use specified provider ID, or fall back to active default
+  const targetProviderId = providerId || config.active;
+
+  // Special case: 'none' disables rate limiting
+  if (targetProviderId === 'none') {
     return {
       allowed: true,
       remaining: 999,
@@ -51,15 +58,21 @@ export async function checkRateLimit(config: RateLimiterConfig, request: RateLim
     };
   }
 
-  const providerConfig = getProviderConfig(config, config.active);
+  // Get provider configuration by ID
+  const providerConfig = getProviderConfig(config, targetProviderId);
   if (!providerConfig) {
-    return err(`Provider configuration not found for: ${config.active}`);
+    return err(`Provider configuration not found for ID: ${targetProviderId}`, {
+      providerId: targetProviderId,
+      availableProviders: getRateLimiterProviderIds(config),
+    });
   }
 
-  const providerResult = createRateLimiterProvider(config.active);
+  // Create provider instance by type
+  const providerResult = createRateLimiterProvider(providerConfig.type);
   if (isError(providerResult)) {
     return providerResult;
   }
 
+  // Execute rate limit check
   return await providerResult.checkLimit(request, providerConfig, context);
 }

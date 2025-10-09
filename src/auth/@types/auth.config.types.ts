@@ -1,4 +1,4 @@
-import type { KVBindingNames, SecretNames } from '@ycore/forge/services';
+import type { KVBindings, SecretBindings } from '@ycore/forge/services';
 
 export type AuthConfig = {
   routes: AuthRoutes;
@@ -15,8 +15,8 @@ export type AuthRoutes = {
 };
 
 export type SessionConfig = {
-  kvBinding: KVBindingNames;
-  secretKey: SecretNames;
+  kvBinding: KVBindings;
+  secretKey: SecretBindings;
   cookie: {
     name: string;
     httpOnly: boolean;
@@ -29,8 +29,7 @@ export type SessionConfig = {
 
 export type WebAuthnConfig = {
   rpName: string;
-  rpID: string | ((request: Request) => string | Promise<string>);
-  origin: string | string[] | ((request: Request) => string | string[] | Promise<string | string[]>);
+  kvBinding?: KVBindings;
   challengeSessionKey?: string;
   requireUserVerification?: boolean;
 };
