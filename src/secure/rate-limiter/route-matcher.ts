@@ -17,7 +17,7 @@ function globToRegex(pattern: string): RegExp {
 /**
  * Check if a path matches a route pattern
  */
-export function matchesRoute(path: string, pattern: string): boolean {
+function matchesRoute(path: string, pattern: string): boolean {
   if (pattern === path) return true;
   if (!pattern.includes('*')) return false;
 
@@ -29,7 +29,7 @@ export function matchesRoute(path: string, pattern: string): boolean {
  * Find the most specific route configuration for a given path
  * Returns the route config with the longest matching pattern
  */
-export function findRouteConfig(path: string, routes: RouteRateLimitConfig[]): RouteRateLimitConfig | null {
+function findRouteConfig(path: string, routes: RouteRateLimitConfig[]): RouteRateLimitConfig | null {
   let bestMatch: RouteRateLimitConfig | null = null;
   let bestMatchLength = 0;
 

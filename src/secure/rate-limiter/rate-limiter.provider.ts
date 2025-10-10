@@ -17,7 +17,7 @@ const rateLimiterProviders: Record<string, RateLimiterProvider> = {
 /**
  * Get all configured provider IDs from config
  */
-export function getRateLimiterProviderIds(config: RateLimiterConfig): string[] {
+function getRateLimiterProviderIds(config: RateLimiterConfig): string[] {
   return config.providers.map(provider => provider.id);
 }
 
@@ -31,7 +31,7 @@ export function getProviderConfig(config: RateLimiterConfig, providerId: string)
 /**
  * Create a rate limiter provider instance by type
  */
-export function createRateLimiterProvider(providerType: string): Result<RateLimiterProvider> {
+function createRateLimiterProvider(providerType: string): Result<RateLimiterProvider> {
   const provider = rateLimiterProviders[providerType];
 
   if (!provider) {

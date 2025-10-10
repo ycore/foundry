@@ -1,4 +1,3 @@
-import type { PublicKeyCredentialDescriptorJSON } from '@simplewebauthn/types';
 import type { RouterContextProvider, SessionStorage } from 'react-router';
 import type { Authenticator, User } from '../schema';
 

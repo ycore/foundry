@@ -1,5 +1,5 @@
 import { logger } from '@ycore/forge/logger';
-import { type AppResult, createAppError, flattenErrors, returnFailure, returnSuccess, transformError } from '@ycore/forge/result';
+import { transformError } from '@ycore/forge/result';
 
 import type { EnhancedDeviceInfo } from '../@types/auth.types';
 import { DEVICE_TYPES, TRANSPORT_METHODS } from '../auth.constants';
@@ -235,11 +235,6 @@ async function verifyMDSJWT(jwt: string): Promise<{ payload: MDSPayload }> {
     const payloadJson = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
     const payload = JSON.parse(payloadJson) as MDSPayload;
 
-    logger.debug('mds_jwt_parsed', {
-      entriesCount: payload.entries?.length || 0,
-      nextUpdate: payload.nextUpdate,
-    });
-
     return { payload };
   } catch (error) {
     throw new Error(`Failed to parse JWT payload: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -248,8 +243,6 @@ async function verifyMDSJWT(jwt: string): Promise<{ payload: MDSPayload }> {
 
 export async function syncMetadataFromMDS(metadataKV: KVNamespace): Promise<AppResult<SyncResult>> {
   try {
-    logger.info('mds_sync_started');
-
     // 1. Fetch MDS JWT blob
     const mdsResponse = await fetch('https://mds.fidoalliance.org/v1/metadata');
 
@@ -281,15 +274,9 @@ export async function syncMetadataFromMDS(metadataKV: KVNamespace): Promise<AppR
               { expirationTtl: 7 * 24 * 60 * 60 } // 7 days
             );
 
-            logger.debug('mds_device_cached', {
-              aaguid: entry.aaguid,
-              vendor: deviceInfo.vendor,
-              model: deviceInfo.model,
-            });
-
             return entry.aaguid;
           } catch (error) {
-            logger.warn('mds_device_processing_failed', {
+            logger.warning('mds_device_processing_failed', {
               aaguid: entry.aaguid,
               error: error instanceof Error ? error.message : 'Unknown error',
             });
