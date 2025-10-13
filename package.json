@@ -50,6 +50,9 @@
   },
   "scripts": {
     "clean": "rm -rf dist node_modules",
-    "ws:types": "wrangler types --include-env=false './src/@types/worker-runtime.d.ts' && tsc --noEmit"
+    "ws:format": "biome format src",
+    "ws:lint": "biome lint src",
+    "ws:tc": "tsc --noEmit",
+    "ws:types": "wrangler types --include-env=false './src/@types/worker-runtime.d.ts' && bun run ws:tc"
   }
 }

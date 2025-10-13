@@ -1,4 +1,4 @@
-import { Label } from '@ycore/componentry/shadcn-ui';
+import { Label } from '@ycore/componentry/vibrant';
 import clsx from 'clsx';
 import React from 'react';
 import type { FormErrorProps, FormFieldContextValue, FormFieldProps } from './@types/form.types';

@@ -1,4 +1,4 @@
-import { Label } from '@ycore/componentry/shadcn-ui';
+import { Label } from '@ycore/componentry/vibrant';
 import type { FieldErrors } from '@ycore/forge/result';
 import clsx from 'clsx';
 import React from 'react';
