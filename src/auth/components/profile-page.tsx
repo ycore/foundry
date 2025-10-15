@@ -271,7 +271,7 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
             <Card.Description>Security keys and devices used to sign in to your account</Card.Description>
           </div>
           <Button onClick={handleAddPasskey} disabled={isAddingPasskey || authenticators.length >= 10 || (isClient && !isWebAuthnSupported())} size="sm">
-            <Spinner spriteUrl={svgSpriteUrl} className={clsx('mr-1 size-4', !isAddingPasskey && 'hidden')} />
+            <Spinner className={clsx('mr-1 size-4', !isAddingPasskey && 'hidden')} />
             {isAddingPasskey ? (isRegistering ? 'Setting up...' : 'Adding...') : 'Add Passkey'}
           </Button>
         </div>
@@ -290,7 +290,7 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
         {isRegistering && (
           <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-700 text-sm">
             <div className="flex items-center gap-2">
-              <Spinner spriteUrl={svgSpriteUrl} className="size-4" />
+              <Spinner className="size-4" />
               <span>Please set up your authenticator...</span>
             </div>
             <p className="mt-1 text-xs">Follow the prompts to create a passkey on your device.</p>

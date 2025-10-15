@@ -1,7 +1,7 @@
 import { SpriteIcon } from '@ycore/componentry/images';
-import type { IconName } from '@ycore/componentry/shadcn-ui';
-import { Button, Card, Input, Link, Spinner } from '@ycore/componentry/shadcn-ui';
-import svgSpriteUrl from '@ycore/componentry/shadcn-ui/assets/lucide-sprites.svg?url';
+import type { IconName } from '@ycore/componentry/vibrant';
+import { Button, Card, Input, Link, Spinner } from '@ycore/componentry/vibrant';
+import svgSpriteUrl from '@ycore/componentry/vibrant/assets/lucide-sprites.svg?url';
 import { isError } from '@ycore/forge/result';
 import clsx from 'clsx';
 import * as React from 'react';
@@ -160,12 +160,12 @@ export function SignUpForm({ signinUrl }: SignUpFormProps) {
         <div className="text-muted-foreground text-sm">
           {platformAuthAvailable ? (
             <span className="flex items-center gap-2">
-              <SpriteIcon<IconName> url={svgSpriteUrl} iconId="CircleCheck" className="h-4 w-4 text-green-500" />
+              <SpriteIcon<IconName> spriteUrl={svgSpriteUrl} iconId="CircleCheck" className="h-4 w-4 text-green-500" />
               Platform authenticator available
             </span>
           ) : (
             <span className="flex items-center gap-2">
-              <SpriteIcon<IconName> url={svgSpriteUrl} iconId="CircleAlert" className="h-4 w-4 text-yellow-500" />
+              <SpriteIcon<IconName> spriteUrl={svgSpriteUrl} iconId="CircleAlert" className="h-4 w-4 text-yellow-500" />
               External security key may be required
             </span>
           )}
@@ -176,7 +176,7 @@ export function SignUpForm({ signinUrl }: SignUpFormProps) {
       {isRegistering && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-700 text-sm">
           <div className="flex items-center gap-2">
-            <Spinner spriteUrl={svgSpriteUrl} className="size-4" />
+            <Spinner className="size-4" />
             <span>Please set up your authenticator...</span>
           </div>
           <p className="mt-1 text-xs">Follow the prompts to create a passkey on your device.</p>
@@ -185,7 +185,7 @@ export function SignUpForm({ signinUrl }: SignUpFormProps) {
 
       <div className="flex justify-between gap-x-2">
         <Button type="submit" name="intent" value="signup" disabled={isSubmitting || isRegistering || !webAuthnSupported} className="flex-1">
-          <Spinner spriteUrl={svgSpriteUrl} className={clsx('size-5', !(isSubmitting || isRegistering) && 'hidden')} />
+          <Spinner className={clsx('size-5', !(isSubmitting || isRegistering) && 'hidden')} />
           {isSubmitting || isRegistering ? 'Creating account...' : !webAuthnSupported ? 'WebAuthn not supported' : 'Sign up with Passkey'}
         </Button>
 
