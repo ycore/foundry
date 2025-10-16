@@ -1,6 +1,6 @@
 {
   "name": "@ycore/foundry",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "private": true,
   "type": "module",
   "repository": {
@@ -9,29 +9,29 @@
   },
   "exports": {
     "./auth": {
-      "types": "./src/auth/index.ts",
-      "import": "./src/auth/index.ts"
+      "types": "./dist/auth/index.d.ts",
+      "import": "./dist/auth/index.js"
     },
     "./auth/services": {
-      "types": "./src/auth/services/index.ts",
-      "import": "./src/auth/services/index.ts"
+      "types": "./dist/auth/services/index.d.ts",
+      "import": "./dist/auth/services/index.js"
     },
     "./auth/schema": {
-      "types": "./src/auth/schema/index.ts",
-      "import": "./src/auth/schema/index.ts",
-      "require": "./src/auth/schema/index.ts"
+      "types": "./dist/auth/schema/index.d.ts",
+      "import": "./dist/auth/schema/index.js",
+      "require": "./dist/auth/schema/index.js"
     },
     "./email": {
-      "types": "./src/email/index.ts",
-      "import": "./src/email/index.ts"
+      "types": "./dist/email/index.d.ts",
+      "import": "./dist/email/index.js"
     },
     "./secure": {
-      "types": "./src/secure/index.ts",
-      "import": "./src/secure/index.ts"
+      "types": "./dist/secure/index.d.ts",
+      "import": "./dist/secure/index.js"
     },
     "./secure/services": {
-      "types": "./src/secure/services/index.ts",
-      "import": "./src/secure/services/index.ts"
+      "types": "./dist/secure/services/index.d.ts",
+      "import": "./dist/secure/services/index.js"
     },
     "./package.json": "./package.json"
   },
@@ -42,6 +42,10 @@
     "@oslojs/webauthn": "^1.0.0",
     "jose": "^6.1.0",
     "remix-auth": "^4.2.0"
+  },
+  "peerDependencies": {
+    "@ycore/componentry": "workspace:*",
+    "@ycore/forge": "workspace:*"
   },
   "devDependencies": {
     "@total-typescript/tsconfig": "^1.0.4",
