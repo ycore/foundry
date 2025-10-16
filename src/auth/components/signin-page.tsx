@@ -1,7 +1,4 @@
-import { SpriteIcon } from '@ycore/componentry/images';
-import type { IconName } from '@ycore/componentry/vibrant';
-import { Button, Card, Input, Link, Spinner } from '@ycore/componentry/vibrant';
-import svgSpriteUrl from '@ycore/componentry/vibrant/assets/lucide-sprites.svg?url';
+import { Button, Card, Input, Link, Spinner, SvgIcon } from '@ycore/componentry/vibrant';
 import { isError } from '@ycore/forge/result';
 import clsx from 'clsx';
 import * as React from 'react';
@@ -152,12 +149,12 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
         <div className="text-muted-foreground text-sm">
           {platformAuthAvailable ? (
             <span className="flex items-center gap-2">
-              <SpriteIcon<IconName> spriteUrl={svgSpriteUrl} iconId="CircleCheck" className="h-4 w-4 text-green-500" />
+              <SvgIcon iconId="CircleCheck" className="h-4 w-4 text-green-500" />
               Platform authenticator available
             </span>
           ) : (
             <span className="flex items-center gap-2">
-              <SpriteIcon<IconName> spriteUrl={svgSpriteUrl} iconId="CircleAlert" className="h-4 w-4 text-yellow-500" />
+              <SvgIcon iconId="CircleAlert" className="h-4 w-4 text-yellow-500" />
               External security key may be required
             </span>
           )}

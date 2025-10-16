@@ -311,7 +311,7 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
                     <div className="flex items-center gap-2">
                       {editingId === auth.id ? (
                         <div className="flex items-center gap-2">
-                          <Input value={editingName} onChange={e => setEditingName(e.target.value)} className="h-8 w-48" placeholder="Enter passkey name" />
+                          <Input value={editingName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingName(e.target.value)} className="h-8 w-48" placeholder="Enter passkey name" />
                           <Button size="sm" onClick={handleSaveEdit} disabled={isRenamingPasskey}>
                             {isRenamingPasskey ? 'Saving...' : 'Save'}
                           </Button>
