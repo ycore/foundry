@@ -44,8 +44,8 @@
     "remix-auth": "^4.2.0"
   },
   "peerDependencies": {
-    "@ycore/componentry": "workspace:*",
-    "@ycore/forge": "workspace:*"
+    "@ycore/componentry": ">= 2.3.0 < 3",
+    "@ycore/forge": ">= 2.3.0 < 3"
   },
   "devDependencies": {
     "@total-typescript/tsconfig": "^1.0.4",
