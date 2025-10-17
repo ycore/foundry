@@ -31,6 +31,8 @@ export interface SecureFormErrorProps {
   id?: string;
 }
 
+const CSRF_TOKER_ERROR = 'Form load error. Please refresh the page or contact support if the issue persists.' as const;
+
 // Context for passing errors down to field components
 const SecureFormContext = React.createContext<{ errors: FieldErrors | null }>({ errors: null });
 
@@ -43,20 +45,25 @@ export function SecureForm({ children, csrf_name, errors, ...props }: SecureForm
   const contextValue = React.useMemo(() => ({ errors: errors || null }), [errors]);
 
   return (
-    <SecureFormContext.Provider value={contextValue}>
-      <Form role="form" {...props}>
-        {/* CSRF token hidden input - uses configured field name */}
-        <AuthenticityTokenInput name={tokenFieldName} />
+    // if CSRF token is missing, avoid unsecured form
+    (!csrfData.token) ?
+      <div role="alert" className="rounded-lg border border-destructive bg-destructive/10 p-4">
+        <SecureFormError error={CSRF_TOKER_ERROR} />
+      </div>
+      :
+      <SecureFormContext.Provider value={contextValue}>
+        <Form role="form" {...props}>
+          <AuthenticityTokenInput name={tokenFieldName} />
 
-        {/* Display CSRF validation error if present */}
-        {errors?.csrf && <SecureFormError error={errors.csrf} className="mb-4" />}
+          {/* CSRF validation errors, if present */}
+          {errors?.csrf && <SecureFormError error={errors.csrf} className="mb-4" />}
 
-        {/* Display general form error if present (and no CSRF error) */}
-        {errors?.form && !errors.csrf && <SecureFormError error={errors.form} className="mb-4" />}
+          {/* General form errors, if present */}
+          {errors?.form && !errors.csrf && <SecureFormError error={errors.form} className="mb-4" />}
 
-        {children}
-      </Form>
-    </SecureFormContext.Provider>
+          {children}
+        </Form>
+      </SecureFormContext.Provider>
   );
 }
 

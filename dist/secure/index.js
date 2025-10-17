@@ -243,28 +243,19 @@ import React2 from "react";
 import { Form as Form2 } from "react-router";
 import { AuthenticityTokenInput } from "remix-utils/csrf/react";
 import { jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
+var CSRF_TOKER_ERROR = "Form load error. Please refresh the page or contact support if the issue persists.";
 var SecureFormContext = React2.createContext({ errors: null });
 function SecureForm({ children, csrf_name, errors, ...props }) {
   const csrfData = useSecureContext();
   const tokenFieldName = csrf_name ?? csrfData.formDataKey;
   const contextValue = React2.useMemo(() => ({ errors: errors || null }), [errors]);
-  if (!csrfData.token) {
-    return /* @__PURE__ */ jsxs2("div", {
-      role: "alert",
-      className: "rounded-lg border border-destructive bg-destructive/10 p-4",
-      children: [
-        /* @__PURE__ */ jsx2("p", {
-          className: "font-semibold text-destructive",
-          children: "Security Error"
-        }),
-        /* @__PURE__ */ jsx2("p", {
-          className: "mt-1 text-destructive/90 text-sm",
-          children: "CSRF protection token is missing. This form cannot be submitted securely. Please refresh the page or contact support if the issue persists."
-        })
-      ]
-    });
-  }
-  return /* @__PURE__ */ jsx2(SecureFormContext.Provider, {
+  return !csrfData.token ? /* @__PURE__ */ jsx2("div", {
+    role: "alert",
+    className: "rounded-lg border border-destructive bg-destructive/10 p-4",
+    children: /* @__PURE__ */ jsx2(SecureFormError, {
+      error: CSRF_TOKER_ERROR
+    })
+  }) : /* @__PURE__ */ jsx2(SecureFormContext.Provider, {
     value: contextValue,
     children: /* @__PURE__ */ jsxs2(Form2, {
       role: "form",
@@ -874,4 +865,4 @@ export {
   Form3 as Form
 };
 
-//# debugId=3DBF12CBBBE054F964756E2164756E21
+//# debugId=49433BD5649172C564756E2164756E21
