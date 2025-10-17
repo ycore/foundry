@@ -1,7 +1,8 @@
 import type { Result } from '@ycore/forge/result';
 import { isError, ok } from '@ycore/forge/result';
+import { authUserContext } from '@ycore/foundry/auth';
 import type { RouterContextProvider } from 'react-router';
-import { authUserContext } from '../auth.context';
+
 import type { Authenticator, User } from '../schema';
 import { getAuthRepository } from './repository';
 

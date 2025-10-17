@@ -1,5 +1,5 @@
 import { logger } from '@ycore/forge/logger';
-import { transformError } from '@ycore/forge/result';
+import { err, flattenError, ok, type Result, transformError } from '@ycore/forge/result';
 
 import type { EnhancedDeviceInfo } from '../@types/auth.types';
 import { DEVICE_TYPES, TRANSPORT_METHODS } from '../auth.constants';
@@ -134,7 +134,7 @@ function mapTransportHints(attachmentHint: string[] = []): string[] {
         transports.push(TRANSPORT_METHODS.HYBRID);
         break;
       default:
-        logger.debug('mds_unknown_transport_hint', { hint });
+        logger.error('mds_unknown_transport_hint', { hint });
     }
   }
 
@@ -198,6 +198,16 @@ function transformMDSToDeviceInfo(entry: MDSEntry): EnhancedDeviceInfo {
 
   const isCertified = latestStatus?.status?.includes('FIDO_CERTIFIED') || false;
 
+  // Map certification status to supported values only
+  const mapCertificationStatus = (status?: string) => {
+    if (!status) return undefined;
+    if (status.includes('FIDO_CERTIFIED_L2')) return 'FIDO_CERTIFIED_L2';
+    if (status.includes('FIDO_CERTIFIED_L1')) return 'FIDO_CERTIFIED_L1';
+    if (status.includes('FIDO_CERTIFIED')) return 'FIDO_CERTIFIED';
+    if (status === 'NOT_FIDO_CERTIFIED') return 'NOT_FIDO_CERTIFIED';
+    return undefined;
+  };
+
   return {
     type: deviceType,
     vendor,
@@ -205,7 +215,7 @@ function transformMDSToDeviceInfo(entry: MDSEntry): EnhancedDeviceInfo {
     certified: isCertified,
     transports,
     // Enhanced MDS fields
-    certificationStatus: latestStatus?.status,
+    certificationStatus: mapCertificationStatus(latestStatus?.status),
     effectiveDate: latestStatus?.effectiveDate,
     policyVersion: latestStatus?.certificationPolicyVersion,
     protocolFamily: metadata?.protocolFamily,
@@ -241,7 +251,7 @@ async function verifyMDSJWT(jwt: string): Promise<{ payload: MDSPayload }> {
   }
 }
 
-export async function syncMetadataFromMDS(metadataKV: KVNamespace): Promise<AppResult<SyncResult>> {
+export async function syncMetadataFromMDS(metadataKV: KVNamespace): Promise<Result<SyncResult>> {
   try {
     // 1. Fetch MDS JWT blob
     const mdsResponse = await fetch('https://mds.fidoalliance.org/v1/metadata');
@@ -309,22 +319,22 @@ export async function syncMetadataFromMDS(metadataKV: KVNamespace): Promise<AppR
       nextUpdate: payload.nextUpdate,
     });
 
-    return returnSuccess({
+    return ok({
       synced: successful,
       failed,
       lastSync,
     });
   } catch (error) {
     logger.error('mds_sync_failed', {
-      error: flattenErrors(transformError(error)),
+      error: flattenError(transformError(error)),
     });
 
-    return returnFailure(createAppError('Failed to sync metadata from MDS', { sync: error instanceof Error ? error.message : 'Unknown sync error' }));
+    return err('Failed to sync metadata from MDS', { sync: error instanceof Error ? error.message : 'Unknown sync error' });
   }
 }
 
 export async function getMDSSyncStatus(metadataKV: KVNamespace): Promise<
-  AppResult<{
+  Result<{
     lastSync: string | null;
     stats: any;
   }>
@@ -334,15 +344,15 @@ export async function getMDSSyncStatus(metadataKV: KVNamespace): Promise<
 
     const stats = statsJson ? JSON.parse(statsJson) : null;
 
-    return returnSuccess({
+    return ok({
       lastSync,
       stats,
     });
   } catch (error) {
     logger.error('mds_status_fetch_failed', {
-      error: flattenErrors(transformError(error)),
+      error: flattenError(transformError(error)),
     });
 
-    return returnFailure(transformError(error));
+    return transformError(error);
   }
 }

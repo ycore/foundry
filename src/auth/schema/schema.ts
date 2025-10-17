@@ -5,6 +5,7 @@ export const users = sqliteTable('users', {
   id: cuid('id').primaryKey().notNull(),
   email: text('email').notNull().unique(),
   displayName: text('display_name').notNull(),
+  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
   createdAt,
   updatedAt,
 });

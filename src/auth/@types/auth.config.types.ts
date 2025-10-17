@@ -4,6 +4,7 @@ export type AuthConfig = {
   routes: AuthRoutes;
   session: SessionConfig;
   webauthn: WebAuthnConfig;
+  verification: VerificationConfig;
 };
 
 export type AuthRoutes = {
@@ -12,6 +13,7 @@ export type AuthRoutes = {
   signout: string;
   signedin: string;
   signedout: string;
+  verify: string;
 };
 
 export type SessionConfig = {
@@ -32,4 +34,13 @@ export type WebAuthnConfig = {
   kvBinding?: KVBindings;
   challengeSessionKey?: string;
   requireUserVerification?: boolean;
+};
+
+export type VerificationConfig = {
+  digits: number;
+  period: number;
+  maxAttempts: number;
+  window: number;
+  requireEmailVerification: boolean;
+  resendCooldown: number;
 };

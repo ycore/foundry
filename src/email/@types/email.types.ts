@@ -1,4 +1,5 @@
 import type { Result } from '@ycore/forge/result';
+import type { SecretBindings } from '@ycore/forge/services';
 
 export interface EmailTemplate {
   subject: string;
@@ -30,6 +31,7 @@ export interface MockEmailData {
 export interface EmailProviderConfig {
   name: EmailProviders;
   sendFrom: string;
+  apiKey?: SecretBindings;
 }
 
 export type EmailProviders = 'local-dev' | 'mailchannels' | 'resend' | 'test-mock';

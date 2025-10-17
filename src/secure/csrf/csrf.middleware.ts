@@ -20,14 +20,17 @@ export function createCommitCSRFMiddleware(config: CSRFConfig): MiddlewareFuncti
     }
 
     const bindings = getBindings(context);
-    // Access the secret using a type assertion since we can't know the binding names at compile time
-    const secret = (bindings as Record<string, unknown>)[config.secretKey] as string | undefined;
+
+    if (!bindings) {
+      logger.error('csrf_bindings_not_available', { secretKey: config.secretKey });
+      throw new Error('Cloudflare bindings not available - context setup issue');
+    }
+
+    // Access the secret using bracket notation to ensure runtime safety
+    const secret = bindings[config.secretKey as keyof typeof bindings] as string | undefined;
 
     if (!secret) {
-      logger.error('CSRF secret not found', {
-        secretKey: config.secretKey,
-        availableBindings: Object.keys(bindings),
-      });
+      logger.error('csrf_secret_not_found', { secretKey: config.secretKey, availableBindings: Object.keys(bindings) });
       throw new Error(`CSRF secret binding '${config.secretKey}' not found in environment`);
     }
 
@@ -44,11 +47,8 @@ export function createCommitCSRFMiddleware(config: CSRFConfig): MiddlewareFuncti
     const [token, cookieHeader] = await csrf.commitToken();
 
     // Set both token and config in context
-    context.set(csrfContext, {
-      token,
-      formDataKey: config.formDataKey,
-      headerName: config.headerName,
-    });
+    const csrfData = { token, formDataKey: config.formDataKey, headerName: config.headerName };
+    context.set(csrfContext, csrfData);
 
     const response = await next();
 
@@ -78,14 +78,18 @@ export function createValidateCSRFMiddleware(config: CSRFConfig): MiddlewareFunc
     }
 
     const bindings = getBindings(context);
-    // Access the secret using a type assertion since we can't know the binding names at compile time
-    const secret = (bindings as Record<string, unknown>)[config.secretKey] as string | undefined;
+
+    // Error handling for missing bindings
+    if (!bindings) {
+      logger.error('csrf_bindings_not_available', { secretKey: config.secretKey });
+      throw new Error('Cloudflare bindings not available - context setup issue');
+    }
+
+    // Access the secret using bracket notation to ensure runtime safety
+    const secret = bindings[config.secretKey as keyof typeof bindings] as string | undefined;
 
     if (!secret) {
-      logger.error('CSRF secret not found', {
-        secretKey: config.secretKey,
-        availableBindings: Object.keys(bindings),
-      });
+      logger.error('csrf_secret_not_found', { secretKey: config.secretKey, availableBindings: Object.keys(bindings) });
       throw new Error(`CSRF secret binding '${config.secretKey}' not found in environment`);
     }
 
@@ -108,12 +112,7 @@ export function createValidateCSRFMiddleware(config: CSRFConfig): MiddlewareFunc
       await csrf.validate(formData, request.headers);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Token mismatch';
-      logger.error('CSRF validation failed', {
-        error: errorMessage,
-        url: request.url,
-        formDataKeys: Array.from((await request.clone().formData()).keys()),
-        hasCsrfToken: (await request.clone().formData()).has(config.formDataKey),
-      });
+      logger.error('csrf_validation_failed', { error: errorMessage, url: request.url });
 
       throw new Response('Token mismatch', { status: 403, statusText: errorMessage });
     }

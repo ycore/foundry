@@ -1,11 +1,9 @@
 import { Button, Card, Input, Link, Spinner, SvgIcon } from '@ycore/componentry/vibrant';
 import { isError } from '@ycore/forge/result';
+import { FormError, FormField, SecureForm, SecureProvider } from '@ycore/foundry/secure';
 import clsx from 'clsx';
 import * as React from 'react';
 import { useActionData, useLoaderData, useNavigation, useSubmit } from 'react-router';
-import { FormError, FormField } from '../../secure/csrf/form';
-import { SecureForm } from '../../secure/csrf/SecureForm';
-import { SecureProvider } from '../../secure/csrf/SecureProvider';
 import type { SignInFormProps, SignInPageProps } from '../@types/auth.component.types';
 import { createAuthenticationOptions } from '../services/webauthn';
 import { isPlatformAuthenticatorAvailable, isWebAuthnSupported, startAuthentication } from './webauthn-client';

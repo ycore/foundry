@@ -1,6 +1,5 @@
 import { DateFormat } from '@ycore/componentry/impetus/intl';
-import { AlertDialog, Badge, Button, Card, Input, Label, Separator, Spinner } from '@ycore/componentry/shadcn-ui';
-import svgSpriteUrl from '@ycore/componentry/shadcn-ui/assets/lucide-sprites.svg?url';
+import { AlertDialog, Badge, Button, Card, Input, Label, Link, Separator, Spinner } from '@ycore/componentry/vibrant';
 import { useSecureFetcher } from '@ycore/foundry/secure';
 import clsx from 'clsx';
 import { useEffect, useRef, useState } from 'react';
@@ -10,7 +9,7 @@ import type { AuthenticatorsCardProps, ProfileCardProps, ProfilePageProps } from
 import { convertServerOptionsToWebAuthn } from '../services/webauthn-credential';
 import { isWebAuthnSupported, startRegistration } from './webauthn-client';
 
-export function ProfileCard({ user, signoutUrl }: ProfileCardProps) {
+export function ProfileCard({ user, signoutUrl, verifyUrl }: ProfileCardProps) {
   return (
     <Card>
       <Card.Header>
@@ -40,7 +39,13 @@ export function ProfileCard({ user, signoutUrl }: ProfileCardProps) {
 
       <Card.Footer className="flex justify-between pt-6">
         <div className="flex gap-2">
-          <Badge variant="secondary">Verified Account</Badge>
+          {user?.emailVerified ? (
+            <Badge variant="secondary">Verified Account</Badge>
+          ) : (
+            <Button asChild variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700">
+              <Link href={verifyUrl}>Verify Email</Link>
+            </Button>
+          )}
         </div>
         <Form method="post" action={signoutUrl}>
           <Button type="submit" variant="destructive" size="sm">

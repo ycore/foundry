@@ -10,7 +10,6 @@ export { cleanupChallengeSession, createAuthSession, createAuthSessionStorage, c
 export { createVerificationCode, type VerificationPurpose, verifyCode } from './totp-service';
 export { sendVerificationEmail } from './verification-service';
 export { getWebAuthnErrorMessage } from './webauthn';
-export { webAuthnCSRFBypassMiddleware } from './webauthn.middleware';
 export { resolveOrigins, resolveRpId, validateOrigin } from './webauthn-config';
 export { arrayBufferFromObject, convertServerOptionsToWebAuthn, convertWebAuthnCredentialToStorage } from './webauthn-credential';
 export { createAuthenticatedSession, createAuthSuccessResponse, parseWebAuthnCredential } from './webauthn-utils';

@@ -4,11 +4,12 @@ import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, respondError, respondOk, transformError, validateFormData } from '@ycore/forge/result';
 import { getKVStore } from '@ycore/forge/services';
+import { getAuthConfig } from '@ycore/foundry/auth';
+import { csrfContext } from '@ycore/foundry/secure';
 import { redirect } from 'react-router';
-import { csrfContext } from '../../secure/csrf/csrf.middleware';
+
 import type { SignUpActionArgs, SignUpLoaderArgs } from '../@types/auth.types';
 import type { WebAuthnErrorCode } from '../auth.constants';
-import { getAuthConfig } from '../auth.context';
 import { signupFormSchema } from './auth.validation';
 import { getAuthRepository } from './repository';
 import { createChallengeSession, destroyChallengeSession, getChallengeFromSession } from './session';

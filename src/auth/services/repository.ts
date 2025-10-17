@@ -8,7 +8,7 @@ import type { Authenticator, NewAuthenticator, NewUser, User } from '../schema';
 import { authenticators, users } from '../schema';
 
 export class AuthRepository {
-  constructor(private db: DrizzleD1Database<Record<string, unknown>>) {}
+  constructor(private db: DrizzleD1Database<Record<string, unknown>>) { }
 
   /**
    * Get user by ID
@@ -225,6 +225,68 @@ export class AuthRepository {
 
       return result.length;
     }, `Failed to count authenticators for user: ${userId}`);
+  }
+
+  /**
+   * Update user email
+   * Returns updated User or AppError if failed
+   */
+  async updateUserEmail(id: string, newEmail: string): Promise<Result<User>> {
+    try {
+      const result = await this.db
+        .update(users)
+        .set({ email: newEmail, emailVerified: false })
+        .where(eq(users.id, id))
+        .returning();
+
+      if (result.length === 0) {
+        return notFoundError('User', id);
+      }
+
+      const updatedUser = result[0];
+      if (!updatedUser) {
+        return serverError('Failed to retrieve updated user', new Error('Update returned empty result'));
+      }
+
+      return updatedUser;
+    } catch (error) {
+      // Check for unique constraint violation
+      if (error instanceof Error && error.message.includes('UNIQUE')) {
+        return err('Email already exists', {
+          email: newEmail,
+          code: 'DUPLICATE_EMAIL',
+        });
+      }
+
+      return serverError('Failed to update user email', error as Error);
+    }
+  }
+
+  /**
+   * Update user email verified status
+   * Returns updated User or AppError if failed
+   */
+  async updateEmailVerified(id: string, verified: boolean): Promise<Result<User>> {
+    try {
+      const result = await this.db
+        .update(users)
+        .set({ emailVerified: verified })
+        .where(eq(users.id, id))
+        .returning();
+
+      if (result.length === 0) {
+        return notFoundError('User', id);
+      }
+
+      const updatedUser = result[0];
+      if (!updatedUser) {
+        return serverError('Failed to retrieve updated user', new Error('Update returned empty result'));
+      }
+
+      return updatedUser;
+    } catch (error) {
+      return serverError('Failed to update email verified status', error as Error);
+    }
   }
 
   /**

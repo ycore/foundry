@@ -2,10 +2,9 @@ import { createWorkersKVSessionStorage } from '@react-router/cloudflare';
 import type { Result } from '@ycore/forge/result';
 import { err, ok } from '@ycore/forge/result';
 import { getBindings, getKVStore, isProduction, UNCONFIGURED } from '@ycore/forge/services';
+import { getAuthConfig } from '@ycore/foundry/auth';
 import type { RouterContextProvider } from 'react-router';
-
 import type { SessionData, SessionFlashData } from '../@types/auth.types';
-import { getAuthConfig } from '../auth.context';
 
 const challengeKvTemplate = (email: string): string => `challenge:${email}`;
 const challengeUniqueKvTemplate = (challenge: string): string => `challenge-unique:${challenge}`;
@@ -32,8 +31,7 @@ function resolveAuthBindings(context: Readonly<RouterContextProvider>): { secret
 
   const bindings = getBindings(context);
 
-  // Access secret using type assertion (following CSRF pattern)
-  const secret = (bindings as Record<string, unknown>)[session.secretKey] as string | undefined;
+  const secret = bindings[session.secretKey as keyof typeof bindings] as string | undefined;
   if (!secret) {
     throw new Error(`Auth secret binding '${session.secretKey}' not found in environment. ` + `Available bindings: ${Object.keys(bindings).join(', ')}`);
   }

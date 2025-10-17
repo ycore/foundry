@@ -6,6 +6,7 @@ export const defaultAuthRoutes: AuthRoutes = {
   signout: '/auth/signout',
   signedin: '/',
   signedout: '/',
+  verify: '/auth/verify',
 };
 
 export const defaultAuthConfig: AuthConfig = {
@@ -26,5 +27,13 @@ export const defaultAuthConfig: AuthConfig = {
     rpName: 'React Router Cloudflare App',
     challengeSessionKey: 'challenge',
     requireUserVerification: true, // More secure
+  },
+  verification: {
+    digits: 6,
+    period: 60 * 8, // 8 minutes in seconds
+    maxAttempts: 3,
+    window: 1, // ±30 seconds
+    requireEmailVerification: false,
+    resendCooldown: 60, // seconds
   },
 };

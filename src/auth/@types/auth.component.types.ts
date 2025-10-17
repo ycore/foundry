@@ -5,6 +5,7 @@ import type { Authenticator, User } from '../schema';
 export interface ProfileCardProps {
   user: User | null | undefined;
   signoutUrl: string;
+  verifyUrl: string;
 }
 
 export interface AuthenticatorsCardProps {

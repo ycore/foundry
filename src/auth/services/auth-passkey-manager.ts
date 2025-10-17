@@ -1,9 +1,10 @@
 import { logger } from '@ycore/forge/logger';
 import { err, isError, ok, type Result } from '@ycore/forge/result';
 import { getKVStore } from '@ycore/forge/services';
+import { getAuthConfig } from '@ycore/foundry/auth';
 import type { RouterContextProvider } from 'react-router';
+
 import type { WebAuthnRegistrationData } from '../@types/auth.types';
-import { getAuthConfig } from '../auth.context';
 import type { Authenticator } from '../schema';
 import { getAuthRepository } from './repository';
 import { getAuthSession } from './session';
@@ -177,7 +178,7 @@ export async function generateAddPasskeyOptions(context: Readonly<RouterContextP
   }
 
   // Map to include both ID and transports for proper exclusion
-  const excludeCredentials = existingAuthsResult.map(auth => ({ id: auth.id, transports: auth.transports as AuthenticatorTransport[] }));
+  const excludeCredentials = existingAuthsResult.map((auth: Authenticator) => ({ id: auth.id, transports: auth.transports as string[] }));
   const challenge = generateChallenge();
   const options = createRegistrationOptions(rpName, rpId, session.user.email, session.user.displayName, challenge, excludeCredentials);
 

@@ -84,7 +84,7 @@ class MockEmailProvider {
     }
     return tryCatch2(async () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
-      logger2.debug({
+      logger2.info({
         event: "local_dev_email_sent",
         provider: "local-dev",
         from,
@@ -504,4 +504,4 @@ export {
   EmailSchema
 };
 
-//# debugId=F62C49F282CC226364756E2164756E21
+//# debugId=87E782DF51EFA3E064756E2164756E21
