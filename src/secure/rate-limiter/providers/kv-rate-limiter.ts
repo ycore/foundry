@@ -247,10 +247,10 @@ export const kvRateLimiter: RateLimiterProvider = {
         const listResult = await kv.list({ prefix: KV_KEY_PREFIX, cursor });
 
         // Filter keys that match this identifier (keys end with :identifier)
-        const keysToDelete = listResult.keys.filter(keyInfo => keyInfo.name.endsWith(`:${identifier}`)).map(keyInfo => keyInfo.name);
+        const keysToDelete = listResult.keys.filter((keyInfo: { name: string }) => keyInfo.name.endsWith(`:${identifier}`)).map((keyInfo: { name: string }) => keyInfo.name);
 
         // Delete matching keys in batch
-        await Promise.all(keysToDelete.map(key => kv.delete(key)));
+        await Promise.all(keysToDelete.map((key: string) => kv.delete(key)));
 
         deletedCount += keysToDelete.length;
 

@@ -56,9 +56,9 @@ export function useSecureFetcher<T = unknown>({ key }: UseSecureFetcherOptions =
       const secureData = new FormData();
 
       // Copy all existing form data
-      for (const [key, value] of data.entries()) {
+      data.forEach((value, key) => {
         secureData.append(key, value);
-      }
+      });
 
       // Add CSRF token if not already present using configured field name
       if (!secureData.has(csrfData.formDataKey) && csrfData.token) {
