@@ -30,20 +30,12 @@ function createCommitCSRFMiddleware(config) {
     }
     const bindings = getBindings(context);
     if (!bindings) {
-      logger.error("CSRF bindings not available", {
-        secretKey: config.secretKey
-      });
+      logger.error("csrf_bindings_not_available", { secretKey: config.secretKey });
       throw new Error("Cloudflare bindings not available - context setup issue");
     }
     const secret = bindings[config.secretKey];
     if (!secret) {
-      logger.error("CSRF secret not found in bindings", {
-        secretKey: config.secretKey,
-        availableBindings: Object.keys(bindings),
-        bindingsType: typeof bindings,
-        hasBindingsObject: !!bindings,
-        specificSecretType: typeof bindings[config.secretKey]
-      });
+      logger.error("csrf_secret_not_found", { secretKey: config.secretKey, availableBindings: Object.keys(bindings) });
       throw new Error(`CSRF secret binding '${config.secretKey}' not found in environment`);
     }
     const runtimeConfig = {
@@ -55,11 +47,8 @@ function createCommitCSRFMiddleware(config) {
     };
     const csrf = createCSRF(secret, runtimeConfig);
     const [token, cookieHeader] = await csrf.commitToken();
-    context.set(csrfContext, {
-      token,
-      formDataKey: config.formDataKey,
-      headerName: config.headerName
-    });
+    const csrfData = { token, formDataKey: config.formDataKey, headerName: config.headerName };
+    context.set(csrfContext, csrfData);
     const response = await next();
     if (cookieHeader) {
       return middlewarePassthrough(response, {
@@ -81,20 +70,12 @@ function createValidateCSRFMiddleware(config) {
     }
     const bindings = getBindings(context);
     if (!bindings) {
-      logger.error("CSRF bindings not available", {
-        secretKey: config.secretKey
-      });
+      logger.error("csrf_bindings_not_available", { secretKey: config.secretKey });
       throw new Error("Cloudflare bindings not available - context setup issue");
     }
     const secret = bindings[config.secretKey];
     if (!secret) {
-      logger.error("CSRF secret not found in bindings", {
-        secretKey: config.secretKey,
-        availableBindings: Object.keys(bindings),
-        bindingsType: typeof bindings,
-        hasBindingsObject: !!bindings,
-        specificSecretType: typeof bindings[config.secretKey]
-      });
+      logger.error("csrf_secret_not_found", { secretKey: config.secretKey, availableBindings: Object.keys(bindings) });
       throw new Error(`CSRF secret binding '${config.secretKey}' not found in environment`);
     }
     const runtimeConfig = {
@@ -111,17 +92,7 @@ function createValidateCSRFMiddleware(config) {
       await csrf.validate(formData, request.headers);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Token mismatch";
-      const clonedFormData = await request.clone().formData();
-      const formDataKeys = [];
-      clonedFormData.forEach((_, key) => {
-        formDataKeys.push(key);
-      });
-      logger.error("CSRF validation failed", {
-        error: errorMessage,
-        url: request.url,
-        formDataKeys,
-        hasCsrfToken: clonedFormData.has(config.formDataKey)
-      });
+      logger.error("csrf_validation_failed", { error: errorMessage, url: request.url });
       throw new Response("Token mismatch", { status: 403, statusText: errorMessage });
     }
     return next();
@@ -510,14 +481,12 @@ function rateLimiterMiddleware(config) {
   };
 }
 export {
-  skipCSRFValidation,
   unstable_createSecureHeadersMiddleware as secureHeadersMiddleware,
   rateLimiterMiddleware,
-  csrfContext,
   createValidateCSRFMiddleware,
   createCommitCSRFMiddleware,
   createCSRFMiddleware,
   createCSRF
 };
 
-//# debugId=79565B9C4FF07DBC64756E2164756E21
+//# debugId=32CA6613D5C9106A64756E2164756E21

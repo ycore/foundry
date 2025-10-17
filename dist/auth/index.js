@@ -733,171 +733,9 @@ function ProfilePage({ children }) {
 // src/auth/components/signin-page.tsx
 import { Button as Button2, Card as Card2, Input as Input2, Link as Link2, Spinner as Spinner2, SvgIcon } from "@ycore/componentry/vibrant";
 import { isError } from "@ycore/forge/result";
-import * as React3 from "react";
+import { FormError, FormField, SecureForm, SecureProvider } from "@ycore/foundry/secure";
+import * as React from "react";
 import { useActionData, useLoaderData, useNavigation, useSubmit } from "react-router";
-
-// src/secure/csrf/form.tsx
-import { Label as Label2 } from "@ycore/componentry/vibrant";
-import React from "react";
-import { Form as Form2 } from "react-router";
-import { jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
-var FormFieldContext = React.createContext(null);
-function FormField({ label, description, error, className, children }) {
-  const id = React.useId();
-  const fieldId = `${id}-field`;
-  const descriptionId = `${id}-description`;
-  const errorId = `${id}-error`;
-  const hasError = Boolean(error);
-  const contextValue = React.useMemo(() => ({ fieldId, descriptionId, errorId, hasError }), [fieldId, descriptionId, errorId, hasError]);
-  const enhancedChildren = React.Children.map(children, (child) => {
-    if (!React.isValidElement(child))
-      return child;
-    const childProps = child.props;
-    if (childProps.name) {
-      const ariaDescribedBy = [description && descriptionId, error && errorId].filter(Boolean).join(" ") || undefined;
-      return React.cloneElement(child, {
-        id: childProps.id || fieldId,
-        "aria-invalid": hasError || undefined,
-        "aria-describedby": ariaDescribedBy,
-        "data-error": hasError || undefined
-      });
-    }
-    return child;
-  });
-  return /* @__PURE__ */ jsx2(FormFieldContext.Provider, {
-    value: contextValue,
-    children: /* @__PURE__ */ jsxs2("div", {
-      className,
-      "data-slot": "form-field",
-      children: [
-        label && /* @__PURE__ */ jsx2(Label2, {
-          htmlFor: fieldId,
-          "data-slot": "form-label",
-          "data-error": hasError,
-          className: clsx_default(hasError && "text-destructive"),
-          children: label
-        }),
-        enhancedChildren,
-        description && !error && /* @__PURE__ */ jsx2("p", {
-          id: descriptionId,
-          "data-slot": "form-description",
-          className: "text-muted-foreground text-sm",
-          children: description
-        }),
-        error && /* @__PURE__ */ jsx2(FormError, {
-          id: errorId,
-          error
-        })
-      ]
-    })
-  });
-}
-function FormError({ error, className, id }) {
-  if (!error) {
-    return null;
-  }
-  return /* @__PURE__ */ jsx2("p", {
-    id,
-    "data-slot": "form-error",
-    className: clsx_default("text-destructive text-sm", className),
-    children: error
-  });
-}
-
-// src/secure/csrf/SecureForm.tsx
-import { Label as Label3 } from "@ycore/componentry/vibrant";
-import React2 from "react";
-import { Form as Form3 } from "react-router";
-import { AuthenticityTokenInput } from "remix-utils/csrf/react";
-
-// src/secure/csrf/csrf.context.tsx
-import { createContext as createContext2, useContext } from "react";
-
-// src/secure/csrf/csrf.config.ts
-var defaultCSRFConfig = {
-  secretKey: "UNCONFIGURED",
-  cookieName: "__csrf",
-  formDataKey: "csrf_token",
-  headerName: "x-csrf-token",
-  cookie: {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: true,
-    maxAge: undefined
-  }
-};
-
-// src/secure/csrf/csrf.context.tsx
-var SecureContext = createContext2(null);
-var SecureContextProvider = SecureContext.Provider;
-function useSecureContext() {
-  const data = useContext(SecureContext);
-  if (!data) {
-    return {
-      token: "",
-      formDataKey: defaultCSRFConfig.formDataKey,
-      headerName: defaultCSRFConfig.headerName
-    };
-  }
-  return data;
-}
-
-// src/secure/csrf/SecureForm.tsx
-import { jsx as jsx3, jsxs as jsxs3 } from "react/jsx-runtime";
-var SecureFormContext = React2.createContext({ errors: null });
-function SecureForm({ children, csrf_name, errors, ...props }) {
-  const csrfData = useSecureContext();
-  const tokenFieldName = csrf_name ?? csrfData.formDataKey;
-  const contextValue = React2.useMemo(() => ({ errors: errors || null }), [errors]);
-  return /* @__PURE__ */ jsx3(SecureFormContext.Provider, {
-    value: contextValue,
-    children: /* @__PURE__ */ jsxs3(Form3, {
-      role: "form",
-      ...props,
-      children: [
-        csrfData.token && /* @__PURE__ */ jsx3(AuthenticityTokenInput, {
-          name: tokenFieldName
-        }),
-        errors?.csrf && /* @__PURE__ */ jsx3(SecureFormError, {
-          error: errors.csrf,
-          className: "mb-4"
-        }),
-        errors?.form && !errors.csrf && /* @__PURE__ */ jsx3(SecureFormError, {
-          error: errors.form,
-          className: "mb-4"
-        }),
-        children
-      ]
-    })
-  });
-}
-function SecureFormError({ error, className, id }) {
-  if (!error) {
-    return null;
-  }
-  return /* @__PURE__ */ jsx3("p", {
-    id,
-    "data-slot": "form-error",
-    className: clsx_default("text-destructive text-sm", className),
-    role: "alert",
-    children: error
-  });
-}
-
-// src/secure/csrf/SecureProvider.tsx
-import { AuthenticityTokenProvider } from "remix-utils/csrf/react";
-import { jsx as jsx4 } from "react/jsx-runtime";
-var SecureProvider = ({ children, csrfData }) => {
-  const token = csrfData?.token ?? "";
-  return /* @__PURE__ */ jsx4(SecureContextProvider, {
-    value: csrfData,
-    children: /* @__PURE__ */ jsx4(AuthenticityTokenProvider, {
-      token,
-      children
-    })
-  });
-};
 
 // src/auth/services/webauthn.ts
 import { decodePKIXECDSASignature, ECDSAPublicKey, p256, verifyECDSASignature } from "@oslojs/crypto/ecdsa";
@@ -1055,7 +893,7 @@ function createAuthenticationOptions(rpId, challenge, allowCredentials = []) {
 }
 
 // src/auth/components/signin-page.tsx
-import { jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
+import { jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
 function SignInForm({ signupUrl }) {
   const navigation = useNavigation();
   const actionData = useActionData();
@@ -1063,12 +901,12 @@ function SignInForm({ signupUrl }) {
   const submit = useSubmit();
   const isSubmitting = navigation.state === "submitting";
   const errors = actionData?.success === false ? actionData.error?.details || {} : {};
-  const [webAuthnSupported, setWebAuthnSupported] = React3.useState(false);
-  const [webAuthnError, setWebAuthnError] = React3.useState(null);
-  const [isAuthenticating, setIsAuthenticating] = React3.useState(false);
-  const [platformAuthAvailable, setPlatformAuthAvailable] = React3.useState(false);
-  const abortControllerRef = React3.useRef(null);
-  React3.useEffect(() => {
+  const [webAuthnSupported, setWebAuthnSupported] = React.useState(false);
+  const [webAuthnError, setWebAuthnError] = React.useState(null);
+  const [isAuthenticating, setIsAuthenticating] = React.useState(false);
+  const [platformAuthAvailable, setPlatformAuthAvailable] = React.useState(false);
+  const abortControllerRef = React.useRef(null);
+  React.useEffect(() => {
     const checkWebAuthn = async () => {
       const supported = isWebAuthnSupported();
       setWebAuthnSupported(supported);
@@ -1079,7 +917,7 @@ function SignInForm({ signupUrl }) {
     };
     checkWebAuthn();
   }, []);
-  React3.useEffect(() => {
+  React.useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -1145,15 +983,15 @@ function SignInForm({ signupUrl }) {
       setWebAuthnError(errorMessage);
     }
   };
-  return /* @__PURE__ */ jsxs4(SecureForm, {
+  return /* @__PURE__ */ jsxs2(SecureForm, {
     method: "post",
     onSubmit: handleSubmit,
     className: "flex flex-col gap-6",
     children: [
-      /* @__PURE__ */ jsx5(FormField, {
+      /* @__PURE__ */ jsx2(FormField, {
         label: "Email",
         error: errors.email,
-        children: /* @__PURE__ */ jsx5(Input2, {
+        children: /* @__PURE__ */ jsx2(Input2, {
           name: "email",
           type: "email",
           placeholder: "Enter your email",
@@ -1162,24 +1000,24 @@ function SignInForm({ signupUrl }) {
           autoFocus: true
         })
       }),
-      (errors.form || webAuthnError) && /* @__PURE__ */ jsx5(FormError, {
+      (errors.form || webAuthnError) && /* @__PURE__ */ jsx2(FormError, {
         error: errors.form || webAuthnError
       }),
-      webAuthnSupported && /* @__PURE__ */ jsx5("div", {
+      webAuthnSupported && /* @__PURE__ */ jsx2("div", {
         className: "text-muted-foreground text-sm",
-        children: platformAuthAvailable ? /* @__PURE__ */ jsxs4("span", {
+        children: platformAuthAvailable ? /* @__PURE__ */ jsxs2("span", {
           className: "flex items-center gap-2",
           children: [
-            /* @__PURE__ */ jsx5(SvgIcon, {
+            /* @__PURE__ */ jsx2(SvgIcon, {
               iconId: "CircleCheck",
               className: "h-4 w-4 text-green-500"
             }),
             "Platform authenticator available"
           ]
-        }) : /* @__PURE__ */ jsxs4("span", {
+        }) : /* @__PURE__ */ jsxs2("span", {
           className: "flex items-center gap-2",
           children: [
-            /* @__PURE__ */ jsx5(SvgIcon, {
+            /* @__PURE__ */ jsx2(SvgIcon, {
               iconId: "CircleAlert",
               className: "h-4 w-4 text-yellow-500"
             }),
@@ -1187,48 +1025,48 @@ function SignInForm({ signupUrl }) {
           ]
         })
       }),
-      isAuthenticating && /* @__PURE__ */ jsxs4("div", {
+      isAuthenticating && /* @__PURE__ */ jsxs2("div", {
         className: "rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-700 text-sm",
         children: [
-          /* @__PURE__ */ jsxs4("div", {
+          /* @__PURE__ */ jsxs2("div", {
             className: "flex items-center gap-2",
             children: [
-              /* @__PURE__ */ jsx5(Spinner2, {
+              /* @__PURE__ */ jsx2(Spinner2, {
                 className: "size-4"
               }),
-              /* @__PURE__ */ jsx5("span", {
+              /* @__PURE__ */ jsx2("span", {
                 children: "Please interact with your authenticator..."
               })
             ]
           }),
-          /* @__PURE__ */ jsx5("p", {
+          /* @__PURE__ */ jsx2("p", {
             className: "mt-1 text-xs",
             children: "Touch your security key or approve the prompt on your device."
           })
         ]
       }),
-      /* @__PURE__ */ jsxs4("div", {
+      /* @__PURE__ */ jsxs2("div", {
         className: "flex justify-between gap-x-2",
         children: [
-          /* @__PURE__ */ jsxs4(Button2, {
+          /* @__PURE__ */ jsxs2(Button2, {
             type: "submit",
             name: "intent",
             value: "signin",
             disabled: isSubmitting || isAuthenticating || !webAuthnSupported,
             className: "flex-1",
             children: [
-              /* @__PURE__ */ jsx5(Spinner2, {
+              /* @__PURE__ */ jsx2(Spinner2, {
                 className: clsx_default("size-5", !(isSubmitting || isAuthenticating) && "hidden")
               }),
               isSubmitting || isAuthenticating ? "Authenticating..." : !webAuthnSupported ? "WebAuthn not supported" : "Sign in with Passkey"
             ]
           }),
-          /* @__PURE__ */ jsx5(Button2, {
+          /* @__PURE__ */ jsx2(Button2, {
             type: "button",
             variant: "outline",
             asChild: true,
             disabled: isSubmitting || isAuthenticating,
-            children: /* @__PURE__ */ jsx5(Link2, {
+            children: /* @__PURE__ */ jsx2(Link2, {
               href: signupUrl,
               children: "Sign Up"
             })
@@ -1240,23 +1078,23 @@ function SignInForm({ signupUrl }) {
 }
 function SignInPage({ loaderData, children, title = "Sign In", description = "Sign in to your account with your passkey" }) {
   const csrfData = isError(loaderData) ? null : loaderData?.csrfData ?? null;
-  return /* @__PURE__ */ jsx5(SecureProvider, {
+  return /* @__PURE__ */ jsx2(SecureProvider, {
     csrfData,
-    children: /* @__PURE__ */ jsx5("div", {
+    children: /* @__PURE__ */ jsx2("div", {
       className: "mx-auto min-w-md max-w-lg px-4 py-8",
-      children: /* @__PURE__ */ jsxs4(Card2, {
+      children: /* @__PURE__ */ jsxs2(Card2, {
         children: [
-          /* @__PURE__ */ jsxs4(Card2.Header, {
+          /* @__PURE__ */ jsxs2(Card2.Header, {
             children: [
-              /* @__PURE__ */ jsx5(Card2.Title, {
+              /* @__PURE__ */ jsx2(Card2.Title, {
                 children: title
               }),
-              /* @__PURE__ */ jsx5(Card2.Description, {
+              /* @__PURE__ */ jsx2(Card2.Description, {
                 children: description
               })
             ]
           }),
-          /* @__PURE__ */ jsx5(Card2.Content, {
+          /* @__PURE__ */ jsx2(Card2.Content, {
             children
           })
         ]
@@ -1267,9 +1105,10 @@ function SignInPage({ loaderData, children, title = "Sign In", description = "Si
 // src/auth/components/signup-page.tsx
 import { Button as Button3, Card as Card3, Input as Input3, Link as Link3, Spinner as Spinner3, SvgIcon as SvgIcon2 } from "@ycore/componentry/vibrant";
 import { isError as isError2 } from "@ycore/forge/result";
-import * as React4 from "react";
+import { FormError as FormError2, FormField as FormField2, SecureForm as SecureForm2, SecureProvider as SecureProvider2 } from "@ycore/foundry/secure";
+import * as React2 from "react";
 import { useActionData as useActionData2, useLoaderData as useLoaderData2, useNavigation as useNavigation2, useSubmit as useSubmit2 } from "react-router";
-import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
+import { jsx as jsx3, jsxs as jsxs3 } from "react/jsx-runtime";
 function SignUpForm({ signinUrl }) {
   const navigation = useNavigation2();
   const actionData = useActionData2();
@@ -1277,12 +1116,12 @@ function SignUpForm({ signinUrl }) {
   const submit = useSubmit2();
   const isSubmitting = navigation.state === "submitting";
   const errors = actionData?.success === false ? actionData.error?.details || {} : {};
-  const [webAuthnSupported, setWebAuthnSupported] = React4.useState(false);
-  const [webAuthnError, setWebAuthnError] = React4.useState(null);
-  const [isRegistering, setIsRegistering] = React4.useState(false);
-  const [platformAuthAvailable, setPlatformAuthAvailable] = React4.useState(false);
-  const abortControllerRef = React4.useRef(null);
-  React4.useEffect(() => {
+  const [webAuthnSupported, setWebAuthnSupported] = React2.useState(false);
+  const [webAuthnError, setWebAuthnError] = React2.useState(null);
+  const [isRegistering, setIsRegistering] = React2.useState(false);
+  const [platformAuthAvailable, setPlatformAuthAvailable] = React2.useState(false);
+  const abortControllerRef = React2.useRef(null);
+  React2.useEffect(() => {
     const checkWebAuthn = async () => {
       const supported = isWebAuthnSupported();
       setWebAuthnSupported(supported);
@@ -1293,7 +1132,7 @@ function SignUpForm({ signinUrl }) {
     };
     checkWebAuthn();
   }, []);
-  React4.useEffect(() => {
+  React2.useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -1360,15 +1199,15 @@ function SignUpForm({ signinUrl }) {
       setWebAuthnError(errorMessage);
     }
   };
-  return /* @__PURE__ */ jsxs5(SecureForm, {
+  return /* @__PURE__ */ jsxs3(SecureForm2, {
     method: "post",
     onSubmit: handleSubmit,
     className: "flex flex-col gap-6",
     children: [
-      /* @__PURE__ */ jsx6(FormField, {
+      /* @__PURE__ */ jsx3(FormField2, {
         label: "Email",
         error: errors.email,
-        children: /* @__PURE__ */ jsx6(Input3, {
+        children: /* @__PURE__ */ jsx3(Input3, {
           name: "email",
           type: "email",
           placeholder: "Enter your email",
@@ -1377,10 +1216,10 @@ function SignUpForm({ signinUrl }) {
           autoFocus: true
         })
       }),
-      /* @__PURE__ */ jsx6(FormField, {
+      /* @__PURE__ */ jsx3(FormField2, {
         label: "Display Name",
         error: errors.displayName,
-        children: /* @__PURE__ */ jsx6(Input3, {
+        children: /* @__PURE__ */ jsx3(Input3, {
           name: "displayName",
           type: "text",
           placeholder: "Enter your display name",
@@ -1388,24 +1227,24 @@ function SignUpForm({ signinUrl }) {
           required: true
         })
       }),
-      (errors.form || webAuthnError) && /* @__PURE__ */ jsx6(FormError, {
+      (errors.form || webAuthnError) && /* @__PURE__ */ jsx3(FormError2, {
         error: errors.form || webAuthnError
       }),
-      webAuthnSupported && /* @__PURE__ */ jsx6("div", {
+      webAuthnSupported && /* @__PURE__ */ jsx3("div", {
         className: "text-muted-foreground text-sm",
-        children: platformAuthAvailable ? /* @__PURE__ */ jsxs5("span", {
+        children: platformAuthAvailable ? /* @__PURE__ */ jsxs3("span", {
           className: "flex items-center gap-2",
           children: [
-            /* @__PURE__ */ jsx6(SvgIcon2, {
+            /* @__PURE__ */ jsx3(SvgIcon2, {
               iconId: "CircleCheck",
               className: "h-4 w-4 text-green-500"
             }),
             "Platform authenticator available"
           ]
-        }) : /* @__PURE__ */ jsxs5("span", {
+        }) : /* @__PURE__ */ jsxs3("span", {
           className: "flex items-center gap-2",
           children: [
-            /* @__PURE__ */ jsx6(SvgIcon2, {
+            /* @__PURE__ */ jsx3(SvgIcon2, {
               iconId: "CircleAlert",
               className: "h-4 w-4 text-yellow-500"
             }),
@@ -1413,48 +1252,48 @@ function SignUpForm({ signinUrl }) {
           ]
         })
       }),
-      isRegistering && /* @__PURE__ */ jsxs5("div", {
+      isRegistering && /* @__PURE__ */ jsxs3("div", {
         className: "rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-700 text-sm",
         children: [
-          /* @__PURE__ */ jsxs5("div", {
+          /* @__PURE__ */ jsxs3("div", {
             className: "flex items-center gap-2",
             children: [
-              /* @__PURE__ */ jsx6(Spinner3, {
+              /* @__PURE__ */ jsx3(Spinner3, {
                 className: "size-4"
               }),
-              /* @__PURE__ */ jsx6("span", {
+              /* @__PURE__ */ jsx3("span", {
                 children: "Please set up your authenticator..."
               })
             ]
           }),
-          /* @__PURE__ */ jsx6("p", {
+          /* @__PURE__ */ jsx3("p", {
             className: "mt-1 text-xs",
             children: "Follow the prompts to create a passkey on your device."
           })
         ]
       }),
-      /* @__PURE__ */ jsxs5("div", {
+      /* @__PURE__ */ jsxs3("div", {
         className: "flex justify-between gap-x-2",
         children: [
-          /* @__PURE__ */ jsxs5(Button3, {
+          /* @__PURE__ */ jsxs3(Button3, {
             type: "submit",
             name: "intent",
             value: "signup",
             disabled: isSubmitting || isRegistering || !webAuthnSupported,
             className: "flex-1",
             children: [
-              /* @__PURE__ */ jsx6(Spinner3, {
+              /* @__PURE__ */ jsx3(Spinner3, {
                 className: clsx_default("size-5", !(isSubmitting || isRegistering) && "hidden")
               }),
               isSubmitting || isRegistering ? "Creating account..." : !webAuthnSupported ? "WebAuthn not supported" : "Sign up with Passkey"
             ]
           }),
-          /* @__PURE__ */ jsx6(Button3, {
+          /* @__PURE__ */ jsx3(Button3, {
             type: "button",
             variant: "outline",
             asChild: true,
             disabled: isSubmitting || isRegistering,
-            children: /* @__PURE__ */ jsx6(Link3, {
+            children: /* @__PURE__ */ jsx3(Link3, {
               href: signinUrl,
               children: "Sign In"
             })
@@ -1466,23 +1305,23 @@ function SignUpForm({ signinUrl }) {
 }
 function SignUpPage({ loaderData, children, title = "Create Account", description = "Sign up for a new account with your passkey" }) {
   const csrfData = isError2(loaderData) ? null : loaderData?.csrfData ?? null;
-  return /* @__PURE__ */ jsx6(SecureProvider, {
+  return /* @__PURE__ */ jsx3(SecureProvider2, {
     csrfData,
-    children: /* @__PURE__ */ jsx6("div", {
+    children: /* @__PURE__ */ jsx3("div", {
       className: "mx-auto min-w-md max-w-lg px-4 py-8",
-      children: /* @__PURE__ */ jsxs5(Card3, {
+      children: /* @__PURE__ */ jsxs3(Card3, {
         children: [
-          /* @__PURE__ */ jsxs5(Card3.Header, {
+          /* @__PURE__ */ jsxs3(Card3.Header, {
             children: [
-              /* @__PURE__ */ jsx6(Card3.Title, {
+              /* @__PURE__ */ jsx3(Card3.Title, {
                 children: title
               }),
-              /* @__PURE__ */ jsx6(Card3.Description, {
+              /* @__PURE__ */ jsx3(Card3.Description, {
                 children: description
               })
             ]
           }),
-          /* @__PURE__ */ jsx6(Card3.Content, {
+          /* @__PURE__ */ jsx3(Card3.Content, {
             children
           })
         ]
@@ -1493,9 +1332,9 @@ function SignUpPage({ loaderData, children, title = "Create Account", descriptio
 // src/auth/components/VerifyForm.tsx
 import { Button as Button4, Input as Input4, InputOtp } from "@ycore/componentry/vibrant";
 import { formErrors, isError as isError3 } from "@ycore/forge/result";
-import { SecureForm as SecureForm2 } from "@ycore/foundry/secure";
+import { SecureForm as SecureForm3 } from "@ycore/foundry/secure";
 import { useEffect as useEffect4, useState as useState4 } from "react";
-import { jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx4, jsxs as jsxs4 } from "react/jsx-runtime";
 function VerifyForm({ email, purpose = "signup", resendCooldown: initialCooldown = 60, period = 480, digits = 6, actionData }) {
   const [code, setCode] = useState4("");
   const [resendCooldown, setResendCooldown] = useState4(0);
@@ -1527,23 +1366,23 @@ function VerifyForm({ email, purpose = "signup", resendCooldown: initialCooldown
     "account-delete": "Confirm Removing Account",
     recovery: "Recover Account"
   };
-  return /* @__PURE__ */ jsxs6("div", {
+  return /* @__PURE__ */ jsxs4("div", {
     className: "mx-auto w-full max-w-md space-y-6",
     children: [
-      /* @__PURE__ */ jsxs6("div", {
+      /* @__PURE__ */ jsxs4("div", {
         className: "space-y-2 text-center",
         children: [
-          /* @__PURE__ */ jsx7("h1", {
+          /* @__PURE__ */ jsx4("h1", {
             className: "font-bold text-3xl tracking-tight",
             children: purposeLabels[purpose]
           }),
-          /* @__PURE__ */ jsxs6("p", {
+          /* @__PURE__ */ jsxs4("p", {
             className: "text-muted-foreground",
             children: [
               "Please enter the ",
               digits,
               "-digit verification code sent to ",
-              /* @__PURE__ */ jsx7("strong", {
+              /* @__PURE__ */ jsx4("strong", {
                 className: "text-nowrap",
                 children: email
               })
@@ -1551,58 +1390,58 @@ function VerifyForm({ email, purpose = "signup", resendCooldown: initialCooldown
           })
         ]
       }),
-      /* @__PURE__ */ jsxs6(SecureForm2, {
+      /* @__PURE__ */ jsxs4(SecureForm3, {
         method: "post",
         className: "space-y-4",
         errors,
         children: [
-          /* @__PURE__ */ jsx7(Input4, {
+          /* @__PURE__ */ jsx4(Input4, {
             type: "hidden",
             name: "email",
             value: email
           }),
-          /* @__PURE__ */ jsx7(Input4, {
+          /* @__PURE__ */ jsx4(Input4, {
             type: "hidden",
             name: "purpose",
             value: purpose
           }),
-          /* @__PURE__ */ jsx7(SecureForm2.Field, {
+          /* @__PURE__ */ jsx4(SecureForm3.Field, {
             label: "Verification Code",
             name: "code",
             error: errors.code,
             className: "flex flex-col items-center",
-            children: /* @__PURE__ */ jsxs6(InputOtp, {
+            children: /* @__PURE__ */ jsxs4(InputOtp, {
               value: code,
               onValueChange: setCode,
               autoComplete: "one-time-code",
               validationType: "numeric",
               disabled: false,
               children: [
-                /* @__PURE__ */ jsx7(InputOtp.Group, {
-                  children: Array.from({ length: digits }).map((_, index) => /* @__PURE__ */ jsx7(InputOtp.Slot, {
+                /* @__PURE__ */ jsx4(InputOtp.Group, {
+                  children: Array.from({ length: digits }).map((_, index) => /* @__PURE__ */ jsx4(InputOtp.Slot, {
                     index
                   }, index))
                 }),
-                /* @__PURE__ */ jsx7(InputOtp.HiddenInput, {
+                /* @__PURE__ */ jsx4(InputOtp.HiddenInput, {
                   name: "code"
                 })
               ]
             })
           }),
-          /* @__PURE__ */ jsxs6("div", {
+          /* @__PURE__ */ jsxs4("div", {
             className: "space-y-3",
             children: [
-              /* @__PURE__ */ jsxs6("div", {
+              /* @__PURE__ */ jsxs4("div", {
                 className: "flex justify-around",
                 children: [
-                  /* @__PURE__ */ jsx7(Button4, {
+                  /* @__PURE__ */ jsx4(Button4, {
                     type: "submit",
                     name: "intent",
                     value: "verify",
                     disabled: code.length !== digits,
                     children: "Verify Code"
                   }),
-                  /* @__PURE__ */ jsx7(Button4, {
+                  /* @__PURE__ */ jsx4(Button4, {
                     type: "submit",
                     name: "intent",
                     value: "resend",
@@ -1613,9 +1452,9 @@ function VerifyForm({ email, purpose = "signup", resendCooldown: initialCooldown
                   })
                 ]
               }),
-              /* @__PURE__ */ jsx7("div", {
+              /* @__PURE__ */ jsx4("div", {
                 className: "flex justify-center",
-                children: /* @__PURE__ */ jsx7(Button4, {
+                children: /* @__PURE__ */ jsx4(Button4, {
                   type: "submit",
                   name: "intent",
                   value: "unverify",
@@ -1626,7 +1465,7 @@ function VerifyForm({ email, purpose = "signup", resendCooldown: initialCooldown
               })
             ]
           }),
-          /* @__PURE__ */ jsxs6("p", {
+          /* @__PURE__ */ jsxs4("p", {
             className: "text-center text-muted-foreground text-sm",
             children: [
               "The code expires within ",
@@ -1668,4 +1507,4 @@ export {
   AuthenticatorsCard
 };
 
-//# debugId=25A9DDDD02AC1A6464756E2164756E21
+//# debugId=1C474B96D114BC1A64756E2164756E21

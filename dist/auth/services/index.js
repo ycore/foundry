@@ -1,5 +1,6 @@
 // src/auth/services/auth.middleware.ts
 import { isError, middlewarePassthrough } from "@ycore/forge/result";
+import { authUserContext, setAuthConfig } from "@ycore/foundry/auth";
 import { redirect } from "react-router";
 
 // src/auth/auth.config.ts
@@ -39,17 +40,6 @@ var defaultAuthConfig = {
     resendCooldown: 60
   }
 };
-
-// src/auth/auth.context.ts
-import { createContext } from "react-router";
-var authConfigContext = createContext(null);
-function getAuthConfig(context) {
-  return context.get(authConfigContext);
-}
-function setAuthConfig(context, config) {
-  context.set(authConfigContext, config);
-}
-var authUserContext = createContext(null);
 
 // ../../node_modules/@react-router/cloudflare/dist/index.mjs
 import { createSessionStorage } from "react-router";
@@ -94,6 +84,7 @@ function createWorkersKVSessionStorage({
 // src/auth/services/session.ts
 import { err, ok } from "@ycore/forge/result";
 import { getBindings, getKVStore, isProduction, UNCONFIGURED } from "@ycore/forge/services";
+import { getAuthConfig } from "@ycore/foundry/auth";
 var challengeKvTemplate = (email) => `challenge:${email}`;
 var challengeUniqueKvTemplate = (challenge) => `challenge-unique:${challenge}`;
 function resolveAuthBindings(context) {
@@ -296,6 +287,7 @@ function protectedAuthMiddleware(authConfig) {
 import { logger as logger2 } from "@ycore/forge/logger";
 import { err as err4, isError as isError2, ok as ok2 } from "@ycore/forge/result";
 import { getKVStore as getKVStore2 } from "@ycore/forge/services";
+import { getAuthConfig as getAuthConfig2 } from "@ycore/foundry/auth";
 
 // src/auth/services/repository.ts
 import { err as err2, notFoundError, serverError, tryCatch } from "@ycore/forge/result";
@@ -2282,7 +2274,7 @@ var MAX_AUTHENTICATORS_PER_USER = 10;
 var MIN_AUTHENTICATORS_PER_USER = 1;
 async function addPasskeyForUser(context, userId, credential, challenge, origin, request) {
   const repo = getAuthRepository(context);
-  const authConfig = getAuthConfig(context);
+  const authConfig = getAuthConfig2(context);
   if (!authConfig) {
     return err4("Auth configuration not found", { field: "general" });
   }
@@ -2389,8 +2381,9 @@ async function generateAddPasskeyOptions(context, request, userId, rpName, rpId)
 }
 // src/auth/services/auth-profile.ts
 import { isError as isError3, ok as ok3 } from "@ycore/forge/result";
+import { authUserContext as authUserContext2 } from "@ycore/foundry/auth";
 async function profileLoader({ context }) {
-  const user = context.get(authUserContext);
+  const user = context.get(authUserContext2);
   return ok3({ user });
 }
 async function getUserWithAuthenticators(context, userId) {
@@ -2411,23 +2404,11 @@ async function getUserWithAuthenticators(context, userId) {
 // src/auth/services/auth-signin.ts
 import { decodeBase64url as decodeBase64url3 } from "@oslojs/encoding";
 import { handleIntent } from "@ycore/forge/intent/server";
-import { logger as logger6 } from "@ycore/forge/logger";
+import { logger as logger5 } from "@ycore/forge/logger";
 import { err as err7, flattenError, isError as isError6, ok as ok6, respondError, respondOk, transformError, validateFormData } from "@ycore/forge/result";
+import { getAuthConfig as getAuthConfig4 } from "@ycore/foundry/auth";
+import { csrfContext } from "@ycore/foundry/secure";
 import { redirect as redirect2 } from "react-router";
-
-// src/secure/csrf/csrf.middleware.ts
-import { logger as logger3 } from "@ycore/forge/logger";
-import { middlewarePassthrough as middlewarePassthrough2 } from "@ycore/forge/result";
-import { getBindings as getBindings2, isDevelopment as isDevelopment2 } from "@ycore/forge/services";
-import { createContext as createContext2 } from "react-router";
-
-// src/secure/csrf/csrf.ts
-import { createCookie } from "react-router";
-import { CSRF } from "remix-utils/csrf/server";
-
-// src/secure/csrf/csrf.middleware.ts
-var csrfContext = createContext2(null);
-var skipCSRFValidation = createContext2(false);
 
 // src/auth/services/auth.validation.ts
 import { email, maxLength, minLength, nonEmpty, object, pipe, string } from "valibot";
@@ -2438,20 +2419,21 @@ var signupFormSchema = object({ email: emailField, displayName: displayNameField
 var signinFormSchema = object({ email: emailField });
 
 // src/auth/services/webauthn-utils.ts
-import { logger as logger4 } from "@ycore/forge/logger";
+import { logger as logger3 } from "@ycore/forge/logger";
 import { err as err5, isError as isError4, ok as ok4 } from "@ycore/forge/result";
+import { getAuthConfig as getAuthConfig3 } from "@ycore/foundry/auth";
 function parseWebAuthnCredential(formData, operation) {
   const webauthnResponse = formData.get("webauthn_response")?.toString();
   if (!webauthnResponse) {
     const errorMessage = operation === "signin" ? "Authentication failed. Please try again." : "Registration failed. Please try again.";
-    logger4.warning(`${operation}_missing_webauthn_response`);
+    logger3.warning(`${operation}_missing_webauthn_response`);
     return err5(errorMessage, { field: "general" });
   }
   try {
     const credential = JSON.parse(webauthnResponse);
     return ok4(credential);
   } catch (error) {
-    logger4.error(`${operation}_webauthn_parse_error`, {
+    logger3.error(`${operation}_webauthn_parse_error`, {
       error: error instanceof Error ? error.message : "Unknown error"
     });
     return err5("Invalid authentication data. Please try again.", { field: "general" });
@@ -2460,7 +2442,7 @@ function parseWebAuthnCredential(formData, operation) {
 async function createAuthenticatedSession(context, user, email2, operation) {
   const sessionResult = await createAuthSession(context, { user });
   if (isError4(sessionResult)) {
-    logger4.error(`${operation}_session_creation_failed`, {
+    logger3.error(`${operation}_session_creation_failed`, {
       email: email2,
       userId: user.id,
       error: sessionResult.message
@@ -2470,14 +2452,14 @@ async function createAuthenticatedSession(context, user, email2, operation) {
   return ok4(sessionResult);
 }
 function createAuthSuccessResponse(context, cookie) {
-  const authConfig = getAuthConfig(context);
+  const authConfig = getAuthConfig3(context);
   const redirectTo = authConfig?.routes.signedin || defaultAuthRoutes.signedin;
   return { redirectTo, cookie };
 }
 
 // src/auth/services/webauthn-validation.ts
 import { decodeBase64url as decodeBase64url2 } from "@oslojs/encoding";
-import { logger as logger5 } from "@ycore/forge/logger";
+import { logger as logger4 } from "@ycore/forge/logger";
 import { err as err6, isError as isError5, ok as ok5 } from "@ycore/forge/result";
 async function validateChallenge(options, context) {
   const { storedChallenge, challengeCreatedAt, maxAge = 5 * 60 * 1000 } = options;
@@ -2501,7 +2483,7 @@ async function validateWebAuthnOrigin(request, options, context) {
   const allowedOrigins = resolveOrigins(context, request);
   const serverOrigin = new URL(request.url).origin;
   if (!validateOrigin(serverOrigin, allowedOrigins)) {
-    logger5.error(`${operation}_server_origin_not_allowed`, {
+    logger4.error(`${operation}_server_origin_not_allowed`, {
       serverOrigin,
       allowedOrigins,
       ...logContext
@@ -2535,16 +2517,16 @@ async function signinLoader({ context }) {
   const challenge = generateChallenge();
   const cookieResult = await createChallengeSession(context, challenge);
   if (isError6(cookieResult)) {
-    logger6.error("signin_loader_session_creation_failed", { error: cookieResult.message });
+    logger5.error("signin_loader_session_creation_failed", { error: cookieResult.message });
     return respondError(cookieResult);
   }
   return respondOk({ csrfData, challenge }, { headers: { "Set-Cookie": cookieResult } });
 }
 async function signinAction({ request, context }) {
   const repository = getAuthRepository(context);
-  const authConfig = getAuthConfig(context);
+  const authConfig = getAuthConfig4(context);
   if (!authConfig) {
-    logger6.warning("signin_action_no_config");
+    logger5.warning("signin_action_no_config");
     return respondError(err7("Auth configuration not found", { field: "general" }));
   }
   const formData = await request.formData();
@@ -2553,7 +2535,7 @@ async function signinAction({ request, context }) {
       try {
         const validationResult = await validateFormData(signinFormSchema, formData2);
         if (isError6(validationResult)) {
-          logger6.warning("signin_validation_failed", { error: flattenError(validationResult) });
+          logger5.warning("signin_validation_failed", { error: flattenError(validationResult) });
           return validationResult;
         }
         const email2 = validationResult.email;
@@ -2563,13 +2545,13 @@ async function signinAction({ request, context }) {
         const authenticatorsResult = user ? await repository.getAuthenticatorsByUserId(user.id) : [];
         const hasAuthenticators = !isError6(authenticatorsResult) && authenticatorsResult.length > 0;
         if (!userExists || !hasAuthenticators) {
-          logger6.warning("signin_invalid_credentials", { email: email2 });
+          logger5.warning("signin_invalid_credentials", { email: email2 });
           return err7("The credentials are incorrect", { email: "The credentials are incorrect" });
         }
         const authenticators2 = authenticatorsResult;
         const sessionResult = await getChallengeFromSession(request, context);
         if (isError6(sessionResult)) {
-          logger6.warning("signin_invalid_session", { email: email2, error: flattenError(sessionResult) });
+          logger5.warning("signin_invalid_session", { email: email2, error: flattenError(sessionResult) });
           return sessionResult;
         }
         const { challenge: storedChallenge, challengeCreatedAt, session } = sessionResult;
@@ -2580,11 +2562,11 @@ async function signinAction({ request, context }) {
         const credential = credentialResult;
         const authenticator = authenticators2.find((auth) => auth.id === credential.rawId);
         if (!authenticator) {
-          logger6.warning("signin_authenticator_not_found", { email: email2, credentialId: credential.rawId });
+          logger5.warning("signin_authenticator_not_found", { email: email2, credentialId: credential.rawId });
           return err7("The credentials are incorrect", { email: "The credentials are incorrect" });
         }
         if (authenticator.userId !== user.id) {
-          logger6.critical("signin_authenticator_user_mismatch", {
+          logger5.critical("signin_authenticator_user_mismatch", {
             authenticatorUserId: authenticator.userId,
             requestUserId: user.id,
             email: email2,
@@ -2600,7 +2582,7 @@ async function signinAction({ request, context }) {
           logContext: { email: email2 }
         }, context);
         if (isError6(webauthnValidationResult)) {
-          logger6.warning("signin_webauthn_validation_failed", { email: email2, error: flattenError(webauthnValidationResult) });
+          logger5.warning("signin_webauthn_validation_failed", { email: email2, error: flattenError(webauthnValidationResult) });
           return webauthnValidationResult;
         }
         const { challenge, origin, rpId } = webauthnValidationResult;
@@ -2617,7 +2599,7 @@ async function signinAction({ request, context }) {
         };
         const verificationResult = await verifyAuthentication(authenticationData, challenge, origin, rpId, authenticator);
         if (isError6(verificationResult)) {
-          logger6.error("signin_verification_failed", {
+          logger5.error("signin_verification_failed", {
             email: email2,
             error: verificationResult.message,
             code: verificationResult.code,
@@ -2628,11 +2610,11 @@ async function signinAction({ request, context }) {
         }
         const updateResult = await repository.updateAuthenticatorUsage(authenticator.id, verificationResult.newCounter, new Date);
         if (isError6(updateResult)) {
-          logger6.warning("signin_authenticator_update_failed", { authenticatorId: authenticator.id, error: updateResult.message });
+          logger5.warning("signin_authenticator_update_failed", { authenticatorId: authenticator.id, error: updateResult.message });
         }
         const cleanupResult = await destroyChallengeSession(session, context);
         if (isError6(cleanupResult)) {
-          logger6.warning("signin_challenge_cleanup_failed", { error: cleanupResult.message });
+          logger5.warning("signin_challenge_cleanup_failed", { error: cleanupResult.message });
         }
         const authSessionResult = await createAuthenticatedSession(context, user, email2, "signin");
         if (isError6(authSessionResult)) {
@@ -2643,57 +2625,60 @@ async function signinAction({ request, context }) {
         if (error instanceof Response) {
           throw error;
         }
-        logger6.error("signin_error", { error: transformError(error) });
+        logger5.error("signin_error", { error: transformError(error) });
         return err7("Authentication failed", { field: "general" });
       }
     }
   };
   const result = await handleIntent(formData, handlers);
   if (isError6(result)) {
-    logger6.warning("signin_action_failed", { error: flattenError(result) });
+    logger5.warning("signin_action_failed", { error: flattenError(result) });
     return respondError(result);
   }
   const successData = result;
   throw redirect2(successData.redirectTo, { headers: { "Set-Cookie": successData.cookie } });
 }
 // src/auth/services/auth-signout.ts
-import { logger as logger7 } from "@ycore/forge/logger";
+import { logger as logger6 } from "@ycore/forge/logger";
 import { isError as isError7 } from "@ycore/forge/result";
 import { redirect as redirect3 } from "react-router";
+import { getAuthConfig as getAuthConfig5 } from "@ycore/foundry/auth";
 async function signoutAction({ request, context }) {
   const destroyResult = await destroyAuthSession(request, context);
   if (isError7(destroyResult)) {
-    logger7.error("Failed to destroy session:", destroyResult.message);
+    logger6.error("Failed to destroy session:", destroyResult.message);
   }
-  const authConfig = getAuthConfig(context);
+  const authConfig = getAuthConfig5(context);
   const redirectTo = authConfig?.routes.signedout || defaultAuthRoutes.signedout;
   return redirect3(redirectTo, { headers: { "Set-Cookie": !isError7(destroyResult) ? destroyResult : "" } });
 }
 async function signoutLoader({ context }) {
-  const authConfig = getAuthConfig(context);
+  const authConfig = getAuthConfig5(context);
   const redirectTo = authConfig?.routes.signedout || defaultAuthRoutes.signedout;
   return redirect3(redirectTo);
 }
 // src/auth/services/auth-signup.ts
 import { decodeBase64url as decodeBase64url4 } from "@oslojs/encoding";
 import { handleIntent as handleIntent2 } from "@ycore/forge/intent/server";
-import { logger as logger8 } from "@ycore/forge/logger";
+import { logger as logger7 } from "@ycore/forge/logger";
 import { err as err8, flattenError as flattenError2, isError as isError8, ok as ok7, respondError as respondError2, respondOk as respondOk2, transformError as transformError2, validateFormData as validateFormData2 } from "@ycore/forge/result";
 import { getKVStore as getKVStore3 } from "@ycore/forge/services";
 import { redirect as redirect4 } from "react-router";
+import { csrfContext as csrfContext2 } from "@ycore/foundry/secure";
+import { getAuthConfig as getAuthConfig6 } from "@ycore/foundry/auth";
 async function signupLoader({ context }) {
-  const csrfData = context.get(csrfContext);
+  const csrfData = context.get(csrfContext2);
   const challenge = generateChallenge();
   const cookieResult = await createChallengeSession(context, challenge);
   if (isError8(cookieResult)) {
-    logger8.error("signup_loader_session_creation_failed", { error: cookieResult.message });
+    logger7.error("signup_loader_session_creation_failed", { error: cookieResult.message });
     return respondError2(cookieResult);
   }
   return respondOk2({ csrfData, challenge }, { headers: { "Set-Cookie": cookieResult } });
 }
 async function signupAction({ request, context }) {
   const repository = getAuthRepository(context);
-  const authConfig = getAuthConfig(context);
+  const authConfig = getAuthConfig6(context);
   if (!authConfig) {
     return respondError2(err8("Auth configuration not found", { field: "general" }));
   }
@@ -2712,7 +2697,7 @@ async function signupAction({ request, context }) {
         }
         const sessionResult = await getChallengeFromSession(request, context);
         if (isError8(sessionResult)) {
-          logger8.warning("signup_invalid_session", { email: email2, error: flattenError2(sessionResult) });
+          logger7.warning("signup_invalid_session", { email: email2, error: flattenError2(sessionResult) });
           return sessionResult;
         }
         const { challenge: storedChallenge, challengeCreatedAt, session } = sessionResult;
@@ -2746,7 +2731,7 @@ async function signupAction({ request, context }) {
         const metadataKV = authConfig.webauthn.kvBinding ? getKVStore3(context, authConfig.webauthn.kvBinding) : undefined;
         const verificationResult = await verifyRegistration(registrationData, challenge, origin, rpId, metadataKV);
         if (isError8(verificationResult)) {
-          logger8.error("signup_verification_failed", {
+          logger7.error("signup_verification_failed", {
             email: email2,
             error: verificationResult.message,
             code: verificationResult.code,
@@ -2757,19 +2742,19 @@ async function signupAction({ request, context }) {
         }
         const createUserResult = await repository.createUser(email2, displayName);
         if (isError8(createUserResult)) {
-          logger8.error("signup_create_user_failed", { email: email2, error: createUserResult.message });
+          logger7.error("signup_create_user_failed", { email: email2, error: createUserResult.message });
           return err8("Failed to create account", { field: "general" });
         }
         const user = createUserResult;
         const createAuthResult = await repository.createAuthenticator({ ...verificationResult, userId: user.id });
         if (isError8(createAuthResult)) {
-          logger8.error("signup_create_authenticator_failed", { email: email2, userId: user.id, error: createAuthResult.message });
+          logger7.error("signup_create_authenticator_failed", { email: email2, userId: user.id, error: createAuthResult.message });
           await repository.deleteUser(user.id);
           return err8("Failed to register authenticator", { field: "general" });
         }
         const cleanupResult = await destroyChallengeSession(session, context);
         if (isError8(cleanupResult)) {
-          logger8.warning("signup_challenge_cleanup_failed", { error: cleanupResult.message });
+          logger7.warning("signup_challenge_cleanup_failed", { error: cleanupResult.message });
         }
         const authSessionResult = await createAuthenticatedSession(context, user, email2, "signup");
         if (isError8(authSessionResult)) {
@@ -2780,14 +2765,14 @@ async function signupAction({ request, context }) {
         if (error instanceof Response) {
           throw error;
         }
-        logger8.error("signup_error", { error: transformError2(error) });
+        logger7.error("signup_error", { error: transformError2(error) });
         return err8("Registration failed", { field: "general" });
       }
     }
   };
   const result = await handleIntent2(formData, handlers);
   if (isError8(result)) {
-    logger8.warning("signup_action_failed", { error: flattenError2(result) });
+    logger7.warning("signup_action_failed", { error: flattenError2(result) });
     return respondError2(result);
   }
   const successResult = result;
@@ -2795,322 +2780,18 @@ async function signupAction({ request, context }) {
 }
 // src/auth/services/auth-verify.ts
 import { handleIntent as handleIntent3 } from "@ycore/forge/intent/server";
-import { logger as logger15 } from "@ycore/forge/logger";
-import { err as err19, flattenError as flattenError4, isError as isError12, ok as ok10, respondError as respondError3, respondOk as respondOk3, validateFormData as validateFormData3 } from "@ycore/forge/result";
+import { logger as logger14 } from "@ycore/forge/logger";
+import { err as err16, flattenError as flattenError4, isError as isError10, ok as ok10, respondError as respondError3, respondOk as respondOk3, validateFormData as validateFormData3 } from "@ycore/forge/result";
+import { getAuthConfig as getAuthConfig8 } from "@ycore/foundry/auth";
+import { csrfContext as csrfContext3 } from "@ycore/foundry/secure";
 import { redirect as redirect5 } from "react-router";
 import { minLength as minLength2, object as object2, pipe as pipe2, string as string2 } from "valibot";
 
-// src/secure/csrf/csrf.config.ts
-var defaultCSRFConfig = {
-  secretKey: "UNCONFIGURED",
-  cookieName: "__csrf",
-  formDataKey: "csrf_token",
-  headerName: "x-csrf-token",
-  cookie: {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: true,
-    maxAge: undefined
-  }
-};
-// src/secure/csrf/csrf.context.tsx
-import { createContext as createContext3, useContext } from "react";
-var SecureContext = createContext3(null);
-var SecureContextProvider = SecureContext.Provider;
-function useSecureContext() {
-  const data = useContext(SecureContext);
-  if (!data) {
-    return {
-      token: "",
-      formDataKey: defaultCSRFConfig.formDataKey,
-      headerName: defaultCSRFConfig.headerName
-    };
-  }
-  return data;
-}
-// src/secure/csrf/form.tsx
-import { Label } from "@ycore/componentry/vibrant";
-
-// ../../node_modules/clsx/dist/clsx.mjs
-function r(e) {
-  var t, f, n = "";
-  if (typeof e == "string" || typeof e == "number")
-    n += e;
-  else if (typeof e == "object")
-    if (Array.isArray(e)) {
-      var o = e.length;
-      for (t = 0;t < o; t++)
-        e[t] && (f = r(e[t])) && (n && (n += " "), n += f);
-    } else
-      for (f in e)
-        e[f] && (n && (n += " "), n += f);
-  return n;
-}
-function clsx() {
-  for (var e, t, f = 0, n = "", o = arguments.length;f < o; f++)
-    (e = arguments[f]) && (t = r(e)) && (n && (n += " "), n += t);
-  return n;
-}
-var clsx_default = clsx;
-
-// src/secure/csrf/form.tsx
-import React from "react";
-import { Form } from "react-router";
-import { jsx, jsxs } from "react/jsx-runtime";
-var FormFieldContext = React.createContext(null);
-function FormField({ label, description, error, className, children }) {
-  const id = React.useId();
-  const fieldId = `${id}-field`;
-  const descriptionId = `${id}-description`;
-  const errorId = `${id}-error`;
-  const hasError = Boolean(error);
-  const contextValue = React.useMemo(() => ({ fieldId, descriptionId, errorId, hasError }), [fieldId, descriptionId, errorId, hasError]);
-  const enhancedChildren = React.Children.map(children, (child) => {
-    if (!React.isValidElement(child))
-      return child;
-    const childProps = child.props;
-    if (childProps.name) {
-      const ariaDescribedBy = [description && descriptionId, error && errorId].filter(Boolean).join(" ") || undefined;
-      return React.cloneElement(child, {
-        id: childProps.id || fieldId,
-        "aria-invalid": hasError || undefined,
-        "aria-describedby": ariaDescribedBy,
-        "data-error": hasError || undefined
-      });
-    }
-    return child;
-  });
-  return /* @__PURE__ */ jsx(FormFieldContext.Provider, {
-    value: contextValue,
-    children: /* @__PURE__ */ jsxs("div", {
-      className,
-      "data-slot": "form-field",
-      children: [
-        label && /* @__PURE__ */ jsx(Label, {
-          htmlFor: fieldId,
-          "data-slot": "form-label",
-          "data-error": hasError,
-          className: clsx_default(hasError && "text-destructive"),
-          children: label
-        }),
-        enhancedChildren,
-        description && !error && /* @__PURE__ */ jsx("p", {
-          id: descriptionId,
-          "data-slot": "form-description",
-          className: "text-muted-foreground text-sm",
-          children: description
-        }),
-        error && /* @__PURE__ */ jsx(FormError, {
-          id: errorId,
-          error
-        })
-      ]
-    })
-  });
-}
-function FormError({ error, className, id }) {
-  if (!error) {
-    return null;
-  }
-  return /* @__PURE__ */ jsx("p", {
-    id,
-    "data-slot": "form-error",
-    className: clsx_default("text-destructive text-sm", className),
-    children: error
-  });
-}
-// src/secure/csrf/SecureFetcher.tsx
-import { extractFieldErrors, isError as isError9 } from "@ycore/forge/result";
-import React3 from "react";
-import { useFetcher } from "react-router";
-import { AuthenticityTokenInput as AuthenticityTokenInput2 } from "remix-utils/csrf/react";
-
-// src/secure/csrf/SecureForm.tsx
-import { Label as Label2 } from "@ycore/componentry/vibrant";
-import React2 from "react";
-import { Form as Form2 } from "react-router";
-import { AuthenticityTokenInput } from "remix-utils/csrf/react";
-import { jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
-var SecureFormContext = React2.createContext({ errors: null });
-function SecureForm({ children, csrf_name, errors, ...props }) {
-  const csrfData = useSecureContext();
-  const tokenFieldName = csrf_name ?? csrfData.formDataKey;
-  const contextValue = React2.useMemo(() => ({ errors: errors || null }), [errors]);
-  return /* @__PURE__ */ jsx2(SecureFormContext.Provider, {
-    value: contextValue,
-    children: /* @__PURE__ */ jsxs2(Form2, {
-      role: "form",
-      ...props,
-      children: [
-        csrfData.token && /* @__PURE__ */ jsx2(AuthenticityTokenInput, {
-          name: tokenFieldName
-        }),
-        errors?.csrf && /* @__PURE__ */ jsx2(SecureFormError, {
-          error: errors.csrf,
-          className: "mb-4"
-        }),
-        errors?.form && !errors.csrf && /* @__PURE__ */ jsx2(SecureFormError, {
-          error: errors.form,
-          className: "mb-4"
-        }),
-        children
-      ]
-    })
-  });
-}
-function SecureFormField({ name, label, description, error, required, className, children }) {
-  const { errors } = React2.useContext(SecureFormContext);
-  const fieldError = error || errors?.[name];
-  const errorId = fieldError ? `${name}-error` : undefined;
-  return /* @__PURE__ */ jsxs2("div", {
-    className: clsx_default("space-y-2", className),
-    children: [
-      label && /* @__PURE__ */ jsxs2(Label2, {
-        htmlFor: name,
-        children: [
-          label,
-          required && /* @__PURE__ */ jsx2("span", {
-            className: "ml-1 text-destructive",
-            children: "*"
-          })
-        ]
-      }),
-      description && /* @__PURE__ */ jsx2("p", {
-        className: "text-muted-foreground text-sm",
-        children: description
-      }),
-      React2.Children.map(children, (child) => {
-        if (React2.isValidElement(child)) {
-          return React2.cloneElement(child, {
-            id: child.props.id || name,
-            name: child.props.name || name,
-            "aria-invalid": fieldError ? true : undefined,
-            "aria-describedby": fieldError ? errorId : child.props["aria-describedby"]
-          });
-        }
-        return child;
-      }),
-      fieldError && /* @__PURE__ */ jsx2("p", {
-        id: errorId,
-        className: "text-destructive text-sm",
-        role: "alert",
-        children: fieldError
-      })
-    ]
-  });
-}
-function SecureFormError({ error, className, id }) {
-  if (!error) {
-    return null;
-  }
-  return /* @__PURE__ */ jsx2("p", {
-    id,
-    "data-slot": "form-error",
-    className: clsx_default("text-destructive text-sm", className),
-    role: "alert",
-    children: error
-  });
-}
-
-// src/secure/csrf/SecureFetcher.tsx
-import { jsx as jsx3, jsxs as jsxs3 } from "react/jsx-runtime";
-var SecureFetcherForm = React3.forwardRef(({ children, csrf_name, errors, fetcher, className, ...props }, ref) => {
-  const csrfData = useSecureContext();
-  const tokenFieldName = csrf_name ?? csrfData.formDataKey;
-  const FetcherForm = fetcher.Form;
-  return /* @__PURE__ */ jsxs3(FetcherForm, {
-    ref,
-    className,
-    ...props,
-    children: [
-      /* @__PURE__ */ jsx3(AuthenticityTokenInput2, {
-        name: tokenFieldName
-      }),
-      errors?.csrf && /* @__PURE__ */ jsx3(SecureFetcherError, {
-        error: errors.csrf,
-        className: "mb-4"
-      }),
-      errors?.form && !errors.csrf && /* @__PURE__ */ jsx3(SecureFetcherError, {
-        error: errors.form,
-        className: "mb-4"
-      }),
-      children
-    ]
-  });
-});
-SecureFetcherForm.displayName = "SecureFetcherForm";
-function SecureFetcherError({ error, className, id }) {
-  if (!error) {
-    return null;
-  }
-  return /* @__PURE__ */ jsx3("p", {
-    id,
-    "data-slot": "form-error",
-    className: clsx_default("text-destructive text-sm", className),
-    role: "alert",
-    children: error
-  });
-}
-// src/secure/csrf/SecureProvider.tsx
-import { AuthenticityTokenProvider } from "remix-utils/csrf/react";
-import { jsx as jsx4 } from "react/jsx-runtime";
-// src/secure/rate-limiter/rate-limiter.config.ts
-var defaultRateLimiterConfig = {
-  providers: [
-    {
-      id: "default-kv",
-      type: "kv",
-      options: {
-        kvBinding: "UNCONFIGURED"
-      },
-      limits: {
-        maxRequests: 10,
-        windowMs: 60 * 1000
-      }
-    },
-    {
-      id: "default-cloudflare",
-      type: "cloudflare",
-      options: {
-        limiterBinding: "UNCONFIGURED"
-      }
-    }
-  ],
-  routes: [],
-  conditions: {
-    skipPaths: ["/favicon.ico"]
-  }
-};
-// src/secure/rate-limiter/rate-limiter.provider.ts
-import { err as err11, isError as isError10 } from "@ycore/forge/result";
-
-// src/secure/rate-limiter/providers/cloudflare-rate-limiter.ts
-import { err as err9 } from "@ycore/forge/result";
-import { getBindings as getBindings3 } from "@ycore/forge/services";
-var DEFAULT_WINDOW_MS = 60 * 1000;
-
-// src/secure/rate-limiter/providers/kv-rate-limiter.ts
-import { err as err10 } from "@ycore/forge/result";
-import { getKVStore as getKVStore4 } from "@ycore/forge/services";
-// src/secure/index.ts
-var SecureForm2 = Object.assign(SecureForm, {
-  Field: SecureFormField,
-  Error: SecureFormError
-});
-var Form3 = Object.assign(Form, {
-  Field: FormField,
-  Error: FormError
-});
-var SecureFetcher = Object.assign(SecureFetcherForm, {
-  Field: SecureFormField,
-  Error: SecureFetcherError
-});
-
 // src/auth/services/totp-service.ts
-import { logger as logger9 } from "@ycore/forge/logger";
-import { err as err12, ok as ok8 } from "@ycore/forge/result";
-import { getBindings as getBindings4 } from "@ycore/forge/services";
+import { logger as logger8 } from "@ycore/forge/logger";
+import { err as err9, ok as ok8 } from "@ycore/forge/result";
+import { getBindings as getBindings2 } from "@ycore/forge/services";
+import { getAuthConfig as getAuthConfig7 } from "@ycore/foundry/auth";
 function base32Decode(input) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const cleanInput = input.replace(/[^A-Z2-7]/gi, "").toUpperCase();
@@ -3216,14 +2897,14 @@ async function verifyTOTP(options) {
 var kvKeyTemplate = (purpose, email2) => `totp:${purpose}:${email2}`;
 async function createVerificationCode(email2, purpose, context, metadata) {
   try {
-    const authConfig = getAuthConfig(context);
+    const authConfig = getAuthConfig7(context);
     if (!authConfig) {
-      return err12("Auth configuration not found");
+      return err9("Auth configuration not found");
     }
-    const env = getBindings4(context);
+    const env = getBindings2(context);
     const kv = env[authConfig.session.kvBinding];
     if (!kv) {
-      return err12(`KV binding '${authConfig.session.kvBinding}' not found`);
+      return err9(`KV binding '${authConfig.session.kvBinding}' not found`);
     }
     const secret = base32Encode(generateSecret());
     const period = authConfig.verification.period;
@@ -3237,53 +2918,53 @@ async function createVerificationCode(email2, purpose, context, metadata) {
       metadata
     };
     await kv.put(kvKeyTemplate(purpose, email2), JSON.stringify(verificationData), { expirationTtl: period });
-    logger9.info("verification_code_created", { email: email2, purpose });
+    logger8.info("verification_code_created", { email: email2, purpose });
     return ok8(code);
   } catch (error) {
-    logger9.error("verification_code_creation_failed", {
+    logger8.error("verification_code_creation_failed", {
       email: email2,
       purpose,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
     });
-    return err12("Failed to create verification code", { error });
+    return err9("Failed to create verification code", { error });
   }
 }
 async function verifyCode(email2, code, purpose, context) {
   try {
-    const authConfig = getAuthConfig(context);
+    const authConfig = getAuthConfig7(context);
     if (!authConfig) {
-      return err12("Auth configuration not found");
+      return err9("Auth configuration not found");
     }
-    const env = getBindings4(context);
+    const env = getBindings2(context);
     const kv = env[authConfig.session.kvBinding];
     if (!kv) {
-      return err12(`KV binding '${authConfig.session.kvBinding}' not found`);
+      return err9(`KV binding '${authConfig.session.kvBinding}' not found`);
     }
     const kvKey = kvKeyTemplate(purpose, email2);
     const storedData = await kv.get(kvKey);
     if (!storedData) {
-      logger9.warning("verification_code_not_found", { email: email2, purpose });
-      return err12("Verification code expired or not found");
+      logger8.warning("verification_code_not_found", { email: email2, purpose });
+      return err9("Verification code expired or not found");
     }
     const verification = JSON.parse(storedData);
     if (verification.purpose !== purpose) {
-      logger9.warning("verification_purpose_mismatch", {
+      logger8.warning("verification_purpose_mismatch", {
         email: email2,
         expected: purpose,
         actual: verification.purpose
       });
-      return err12("Invalid verification code");
+      return err9("Invalid verification code");
     }
     if (verification.attempts >= authConfig.verification.maxAttempts) {
       await kv.delete(kvKey);
-      logger9.warning("verification_max_attempts", { email: email2, purpose });
-      return err12("Maximum verification attempts reached");
+      logger8.warning("verification_max_attempts", { email: email2, purpose });
+      return err9("Maximum verification attempts reached");
     }
     if (Date.now() > verification.expireAt) {
       await kv.delete(kvKey);
-      logger9.warning("verification_expired", { email: email2, purpose });
-      return err12("Verification code has expired");
+      logger8.warning("verification_expired", { email: email2, purpose });
+      return err9("Verification code has expired");
     }
     const result = await verifyTOTP({
       secret: verification.secret,
@@ -3294,43 +2975,43 @@ async function verifyCode(email2, code, purpose, context) {
     });
     if (!result.valid) {
       await kv.put(kvKey, JSON.stringify({ ...verification, attempts: verification.attempts + 1 }), { expirationTtl: authConfig.verification.period });
-      logger9.warning("verification_code_invalid", { email: email2, purpose, attempts: verification.attempts + 1 });
-      return err12("Invalid verification code");
+      logger8.warning("verification_code_invalid", { email: email2, purpose, attempts: verification.attempts + 1 });
+      return err9("Invalid verification code");
     }
     await kv.delete(kvKey);
-    logger9.info("verification_code_verified", { email: email2, purpose });
+    logger8.info("verification_code_verified", { email: email2, purpose });
     return ok8(verification);
   } catch (error) {
-    logger9.error("verification_code_verification_failed", {
+    logger8.error("verification_code_verification_failed", {
       email: email2,
       purpose,
       error: error instanceof Error ? error.message : String(error)
     });
-    return err12("Failed to verify code", { error });
+    return err9("Failed to verify code", { error });
   }
 }
 
 // src/auth/services/verification-service.ts
-import { logger as logger14 } from "@ycore/forge/logger";
-import { err as err18, flattenError as flattenError3, isError as isError11, ok as ok9 } from "@ycore/forge/result";
-import { getBindings as getBindings5 } from "@ycore/forge/services";
+import { logger as logger13 } from "@ycore/forge/logger";
+import { err as err15, flattenError as flattenError3, isError as isError9, ok as ok9 } from "@ycore/forge/result";
+import { getBindings as getBindings3 } from "@ycore/forge/services";
 
 // src/email/email-provider.ts
-import { err as err17 } from "@ycore/forge/result";
+import { err as err14 } from "@ycore/forge/result";
 
 // src/email/providers/local-dev.ts
-import { logger as logger10 } from "@ycore/forge/logger";
-import { err as err13, tryCatch as tryCatch2 } from "@ycore/forge/result";
+import { logger as logger9 } from "@ycore/forge/logger";
+import { err as err10, tryCatch as tryCatch2 } from "@ycore/forge/result";
 
 class MockEmailProvider {
   async sendEmail(options) {
     const { to, from, template } = options;
     if (!from) {
-      return err13("From address is required");
+      return err10("From address is required");
     }
     return tryCatch2(async () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
-      logger10.debug({
+      logger9.info({
         event: "local_dev_email_sent",
         provider: "local-dev",
         from,
@@ -3344,15 +3025,15 @@ class MockEmailProvider {
 }
 
 // src/email/providers/mailchannels.ts
-import { logger as logger11 } from "@ycore/forge/logger";
-import { err as err14, tryCatch as tryCatch3 } from "@ycore/forge/result";
+import { logger as logger10 } from "@ycore/forge/logger";
+import { err as err11, tryCatch as tryCatch3 } from "@ycore/forge/result";
 
 class MailChannelsEmailProvider {
   apiUrl = "https://api.mailchannels.net/tx/v1/send";
   async sendEmail(options) {
     const { apiKey, to, from, template } = options;
     if (!from) {
-      return err14("From address is required");
+      return err11("From address is required");
     }
     return tryCatch3(async () => {
       const payload = {
@@ -3381,7 +3062,7 @@ class MailChannelsEmailProvider {
         const errorText = await response.text();
         throw new Error(`MailChannels API error: ${response.status} ${errorText}`);
       }
-      logger11.debug({
+      logger10.debug({
         event: "email_sent_success",
         provider: "mailchannels",
         to,
@@ -3393,14 +3074,14 @@ class MailChannelsEmailProvider {
 }
 
 // src/email/providers/resend.ts
-import { logger as logger12 } from "@ycore/forge/logger";
-import { err as err15, tryCatch as tryCatch4 } from "@ycore/forge/result";
+import { logger as logger11 } from "@ycore/forge/logger";
+import { err as err12, tryCatch as tryCatch4 } from "@ycore/forge/result";
 
 class ResendEmailProvider {
   async sendEmail(options) {
     const { apiKey, to, from, template } = options;
     if (!from) {
-      return err15("From address is required");
+      return err12("From address is required");
     }
     return tryCatch4(async () => {
       const response = await fetch("https://api.resend.com/emails", {
@@ -3421,7 +3102,7 @@ class ResendEmailProvider {
         const error = await response.text();
         throw new Error(`Resend API error: ${response.status} ${error}`);
       }
-      logger12.debug({
+      logger11.debug({
         event: "email_sent_success",
         provider: "resend",
         to
@@ -3432,8 +3113,8 @@ class ResendEmailProvider {
 }
 
 // src/email/providers/test-mock.ts
-import { logger as logger13 } from "@ycore/forge/logger";
-import { err as err16, tryCatch as tryCatch5 } from "@ycore/forge/result";
+import { logger as logger12 } from "@ycore/forge/logger";
+import { err as err13, tryCatch as tryCatch5 } from "@ycore/forge/result";
 
 class TestMockEmailProvider {
   static sentEmails = [];
@@ -3442,7 +3123,7 @@ class TestMockEmailProvider {
   async sendEmail(options) {
     const { to, from, template } = options;
     if (!from) {
-      return err16("From address is required");
+      return err13("From address is required");
     }
     TestMockEmailProvider.sentEmails.push({
       apiKey: options.apiKey,
@@ -3455,11 +3136,11 @@ class TestMockEmailProvider {
       }
     });
     if (TestMockEmailProvider.shouldFail) {
-      return err16(TestMockEmailProvider.failureReason);
+      return err13(TestMockEmailProvider.failureReason);
     }
     return tryCatch5(async () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
-      logger13.debug({
+      logger12.debug({
         event: "email_test_mock_sent",
         provider: "test-mock",
         from,
@@ -3534,19 +3215,19 @@ var providerRegistry = {
 };
 function createEmailProvider(providerName) {
   if (!isValidProvider(providerName)) {
-    return err17(`Unsupported email provider: ${providerName}`);
+    return err14(`Unsupported email provider: ${providerName}`);
   }
   try {
     const factory = providerRegistry[providerName];
     return factory();
   } catch (error) {
-    return err17(`Failed to create email provider: ${providerName}`, undefined, { cause: error });
+    return err14(`Failed to create email provider: ${providerName}`, undefined, { cause: error });
   }
 }
 function isValidProvider(providerName) {
   return providerName in providerRegistry;
 }
-function getProviderConfig2(emailConfig, providerName) {
+function getProviderConfig(emailConfig, providerName) {
   return emailConfig.providers.find((provider) => provider.name === providerName);
 }
 
@@ -3674,8 +3355,8 @@ async function sendVerificationEmail(options) {
   const { email: email2, purpose, metadata, context, emailConfig } = options;
   try {
     const codeResult = await createVerificationCode(email2, purpose, context, metadata);
-    if (isError11(codeResult)) {
-      logger14.error("verification_email_code_generation_failed", {
+    if (isError9(codeResult)) {
+      logger13.error("verification_email_code_generation_failed", {
         email: email2,
         purpose,
         error: flattenError3(codeResult)
@@ -3686,21 +3367,21 @@ async function sendVerificationEmail(options) {
     const emailContent = createTotpTemplate({ code, purpose });
     const activeProvider = emailConfig.active;
     if (!activeProvider) {
-      logger14.error("verification_email_no_provider", { email: email2, purpose });
-      return err18("No active email provider configured");
+      logger13.error("verification_email_no_provider", { email: email2, purpose });
+      return err15("No active email provider configured");
     }
-    const providerConfig = getProviderConfig2(emailConfig, activeProvider);
+    const providerConfig = getProviderConfig(emailConfig, activeProvider);
     if (!providerConfig) {
-      logger14.error("verification_email_provider_config_missing", {
+      logger13.error("verification_email_provider_config_missing", {
         email: email2,
         purpose,
         provider: activeProvider
       });
-      return err18(`Provider configuration not found for: ${activeProvider}`);
+      return err15(`Provider configuration not found for: ${activeProvider}`);
     }
     const emailProviderResult = createEmailProvider(activeProvider);
-    if (isError11(emailProviderResult)) {
-      logger14.error("verification_email_provider_creation_failed", {
+    if (isError9(emailProviderResult)) {
+      logger13.error("verification_email_provider_creation_failed", {
         email: email2,
         purpose,
         provider: activeProvider,
@@ -3708,7 +3389,7 @@ async function sendVerificationEmail(options) {
       });
       return emailProviderResult;
     }
-    const bindings = getBindings5(context);
+    const bindings = getBindings3(context);
     const apiKey = providerConfig.apiKey ? bindings[providerConfig.apiKey] : undefined;
     const sendResult = await emailProviderResult.sendEmail({
       apiKey: apiKey || "",
@@ -3720,24 +3401,24 @@ async function sendVerificationEmail(options) {
         html: emailContent.html
       }
     });
-    if (isError11(sendResult)) {
-      logger14.error("verification_email_send_failed", {
+    if (isError9(sendResult)) {
+      logger13.error("verification_email_send_failed", {
         email: email2,
         purpose,
         error: flattenError3(sendResult)
       });
       return sendResult;
     }
-    logger14.info("verification_email_sent", { email: email2, purpose });
+    logger13.info("verification_email_sent", { email: email2, purpose });
     return ok9(undefined);
   } catch (error) {
-    logger14.error("verification_email_unexpected_error", {
+    logger13.error("verification_email_unexpected_error", {
       email: email2,
       purpose,
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined
     });
-    return err18("Failed to send verification email", { error });
+    return err15("Failed to send verification email", { error });
   }
 }
 
@@ -3747,16 +3428,16 @@ var verifyFormSchema = object2({
   code: pipe2(string2(), minLength2(6, "Code must be 6 digits"))
 });
 async function verifyLoader({ request, context }) {
-  const csrfData = context.get(csrfContext);
+  const csrfData = context.get(csrfContext3);
   const sessionResult = await getAuthSession(request, context);
-  if (isError12(sessionResult)) {
-    logger15.warning("verify_loader_no_session");
-    return respondError3(err19("Failed to get session"));
+  if (isError10(sessionResult)) {
+    logger14.warning("verify_loader_no_session");
+    return respondError3(err16("Failed to get session"));
   }
   const session = sessionResult;
   if (!session || !session.user) {
-    const authConfig = getAuthConfig(context);
-    logger15.warning("verify_loader_no_user");
+    const authConfig = getAuthConfig8(context);
+    logger14.warning("verify_loader_no_user");
     throw redirect5(authConfig?.routes.signin || "/auth/signin");
   }
   return respondOk3({
@@ -3767,103 +3448,103 @@ async function verifyLoader({ request, context }) {
 }
 async function verifyAction({ request, context, emailConfig }) {
   const repository = getAuthRepository(context);
-  const authConfig = getAuthConfig(context);
+  const authConfig = getAuthConfig8(context);
   if (!authConfig) {
-    logger15.error("verify_action_no_config");
-    return respondError3(err19("Auth configuration not found"));
+    logger14.error("verify_action_no_config");
+    return respondError3(err16("Auth configuration not found"));
   }
   const formData = await request.formData();
   const purpose = formData.get("purpose")?.toString() || "signup";
   const sessionResult = await getAuthSession(request, context);
-  if (isError12(sessionResult)) {
-    logger15.warning("verify_action_no_session");
-    return respondError3(err19("Failed to get session"));
+  if (isError10(sessionResult)) {
+    logger14.warning("verify_action_no_session");
+    return respondError3(err16("Failed to get session"));
   }
   const session = sessionResult;
   if (!session || !session.user) {
-    logger15.warning("verify_action_no_user");
-    return respondError3(err19("No active session found"));
+    logger14.warning("verify_action_no_user");
+    return respondError3(err16("No active session found"));
   }
   const handlers = {
     resend: async () => {
-      logger15.info("verify_resend_requested", { email: session.user.email, purpose });
+      logger14.info("verify_resend_requested", { email: session.user.email, purpose });
       const sendResult = await sendVerificationEmail({
         email: session.user.email,
         purpose,
         context,
         emailConfig
       });
-      if (isError12(sendResult)) {
-        logger15.error("verify_resend_email_failed", {
+      if (isError10(sendResult)) {
+        logger14.error("verify_resend_email_failed", {
           email: session.user.email,
           purpose,
           error: flattenError4(sendResult)
         });
         return sendResult;
       }
-      logger15.info("verify_code_resent", { email: session.user.email, purpose });
+      logger14.info("verify_code_resent", { email: session.user.email, purpose });
       return ok10({ resent: true });
     },
     unverify: async () => {
-      logger15.info("verify_unverify_requested", { email: session.user.email });
+      logger14.info("verify_unverify_requested", { email: session.user.email });
       const updateResult = await repository.updateEmailVerified(session.user.id, false);
-      if (isError12(updateResult)) {
-        logger15.error("verify_unverify_failed", {
+      if (isError10(updateResult)) {
+        logger14.error("verify_unverify_failed", {
           userId: session.user.id,
           error: flattenError4(updateResult)
         });
         return updateResult;
       }
-      logger15.info("email_unverified", { email: session.user.email });
+      logger14.info("email_unverified", { email: session.user.email });
       return ok10({ unverified: true });
     },
     verify: async (formData2) => {
       const validationResult = await validateFormData3(verifyFormSchema, formData2);
-      if (isError12(validationResult)) {
-        logger15.warning("verify_validation_failed", {
+      if (isError10(validationResult)) {
+        logger14.warning("verify_validation_failed", {
           error: flattenError4(validationResult)
         });
         return validationResult;
       }
       const { email: email2, code } = validationResult;
       if (session.user.email !== email2) {
-        logger15.warning("verify_session_mismatch", {
+        logger14.warning("verify_session_mismatch", {
           sessionEmail: session.user.email,
           requestEmail: email2
         });
-        return err19("Session mismatch", { email: "Email does not match session" });
+        return err16("Session mismatch", { email: "Email does not match session" });
       }
       const verifyResult = await verifyCode(email2, code, purpose, context);
-      if (isError12(verifyResult)) {
-        logger15.warning("verify_code_invalid", {
+      if (isError10(verifyResult)) {
+        logger14.warning("verify_code_invalid", {
           email: email2,
           purpose,
           error: flattenError4(verifyResult)
         });
-        return err19(verifyResult.message, { code: verifyResult.message });
+        return err16(verifyResult.message, { code: verifyResult.message });
       }
       const verification = verifyResult;
       const userResult = await repository.getUserByEmail(email2);
-      if (isError12(userResult)) {
-        logger15.error("verify_user_not_found", { email: email2 });
-        return err19("User not found");
+      if (isError10(userResult)) {
+        logger14.error("verify_user_not_found", { email: email2 });
+        return err16("User not found");
       }
       const user = userResult;
       switch (purpose) {
         case "signup":
         case "email-change": {
           const updateResult = await repository.updateEmailVerified(user.id, true);
-          if (isError12(updateResult)) {
-            logger15.error("verify_update_failed", { userId: user.id, purpose });
-            return err19("Failed to update verification status");
+          if (isError10(updateResult)) {
+            logger14.error("verify_update_failed", { userId: user.id, purpose });
+            return err16("Failed to update verification status");
           }
-          logger15.info("email_verified", { email: email2, purpose });
+          logger14.info("email_verified", { email: email2, purpose });
           throw redirect5(authConfig.routes.signedin);
         }
         case "passkey-add":
         case "passkey-delete":
         case "account-delete": {
-          logger15.info("verification_completed", { email: email2, purpose });
+          logger14.info("verification_completed", { email: email2, purpose });
           return ok10({
             verified: true,
             purpose,
@@ -3871,15 +3552,15 @@ async function verifyAction({ request, context, emailConfig }) {
           });
         }
         default: {
-          logger15.warning("verify_unknown_purpose", { purpose });
-          return err19("Unknown verification purpose");
+          logger14.warning("verify_unknown_purpose", { purpose });
+          return err16("Unknown verification purpose");
         }
       }
     }
   };
   const result = await handleIntent3(formData, handlers);
-  if (isError12(result)) {
-    logger15.warning("verify_intent_failed", {
+  if (isError10(result)) {
+    logger14.warning("verify_intent_failed", {
       error: flattenError4(result),
       email: session.user.email
     });
@@ -3887,19 +3568,6 @@ async function verifyAction({ request, context, emailConfig }) {
   }
   return respondOk3(result);
 }
-// src/auth/services/webauthn.middleware.ts
-var webAuthnCSRFBypassMiddleware = async ({ request, context }, next) => {
-  if (request.method === "POST") {
-    const clonedRequest = request.clone();
-    const formData = await clonedRequest.formData();
-    const hasChallenge = formData.has("challenge");
-    const hasCredentialData = formData.has("credentialData");
-    if (hasChallenge && hasCredentialData) {
-      context.set(skipCSRFValidation, true);
-    }
-  }
-  return next();
-};
 // src/auth/services/webauthn-credential.ts
 import { decodeBase64url as decodeBase64url5 } from "@oslojs/encoding";
 function arrayBufferFromObject(obj) {
@@ -3964,7 +3632,6 @@ function convertWebAuthnCredentialToStorage(credential) {
   };
 }
 export {
-  webAuthnCSRFBypassMiddleware,
   verifyLoader,
   verifyCode,
   verifyChallengeUniqueness,
@@ -4011,4 +3678,4 @@ export {
   AuthRepository
 };
 
-//# debugId=1ABA8D8424C14BF364756E2164756E21
+//# debugId=A8A3341176B5DC5364756E2164756E21
