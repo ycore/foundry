@@ -2641,8 +2641,8 @@ async function signinAction({ request, context }) {
 // src/auth/services/auth-signout.ts
 import { logger as logger6 } from "@ycore/forge/logger";
 import { isError as isError7 } from "@ycore/forge/result";
-import { redirect as redirect3 } from "react-router";
 import { getAuthConfig as getAuthConfig5 } from "@ycore/foundry/auth";
+import { redirect as redirect3 } from "react-router";
 async function signoutAction({ request, context }) {
   const destroyResult = await destroyAuthSession(request, context);
   if (isError7(destroyResult)) {
@@ -2663,9 +2663,9 @@ import { handleIntent as handleIntent2 } from "@ycore/forge/intent/server";
 import { logger as logger7 } from "@ycore/forge/logger";
 import { err as err8, flattenError as flattenError2, isError as isError8, ok as ok7, respondError as respondError2, respondOk as respondOk2, transformError as transformError2, validateFormData as validateFormData2 } from "@ycore/forge/result";
 import { getKVStore as getKVStore3 } from "@ycore/forge/services";
-import { redirect as redirect4 } from "react-router";
-import { csrfContext as csrfContext2 } from "@ycore/foundry/secure";
 import { getAuthConfig as getAuthConfig6 } from "@ycore/foundry/auth";
+import { csrfContext as csrfContext2 } from "@ycore/foundry/secure";
+import { redirect as redirect4 } from "react-router";
 async function signupLoader({ context }) {
   const csrfData = context.get(csrfContext2);
   const challenge = generateChallenge();
@@ -3678,4 +3678,4 @@ export {
   AuthRepository
 };
 
-//# debugId=A8A3341176B5DC5364756E2164756E21
+//# debugId=811579F230F6E55164756E2164756E21
