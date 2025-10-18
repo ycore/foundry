@@ -4,7 +4,7 @@ import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, respondError, respondOk, transformError, validateFormData } from '@ycore/forge/result';
 import { getAuthConfig } from '@ycore/foundry/auth';
-import { csrfContext } from '@ycore/foundry/secure';
+import { csrfContext } from '@ycore/foundry/secure/services';
 import { redirect } from 'react-router';
 
 import type { SignInActionArgs, SignInLoaderArgs } from '../@types/auth.types';
