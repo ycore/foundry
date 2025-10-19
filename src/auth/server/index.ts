@@ -1,4 +1,5 @@
 export { authSessionMiddleware, protectedAuthMiddleware, unprotectedAuthMiddleware } from './auth.middleware';
+export { getAuthUser, isAuthenticated, requireAuthUser } from './auth-context';
 export { addPasskeyForUser, deletePasskey, generateAddPasskeyOptions, renamePasskey } from './auth-passkey-manager';
 export { getUserWithAuthenticators, profileLoader } from './auth-profile';
 export { signinAction, signinLoader } from './auth-signin';

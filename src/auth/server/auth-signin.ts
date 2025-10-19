@@ -1,9 +1,10 @@
 import { decodeBase64url } from '@oslojs/encoding';
+import { getContext } from '@ycore/forge/context';
 import type { IntentHandlers } from '@ycore/forge/intent/server';
 import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, respondError, respondOk, transformError, validateFormData } from '@ycore/forge/result';
-import { getAuthConfig } from '@ycore/foundry/auth';
+import { authConfigContext } from '@ycore/foundry/auth';
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import { redirect } from 'react-router';
 
@@ -32,7 +33,7 @@ export async function signinLoader({ context }: SignInLoaderArgs) {
 
 export async function signinAction({ request, context }: SignInActionArgs) {
   const repository = getAuthRepository(context);
-  const authConfig = getAuthConfig(context);
+  const authConfig = getContext(context, authConfigContext);
 
   if (!authConfig) {
     logger.warning('signin_action_no_config');

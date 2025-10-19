@@ -1,10 +1,11 @@
 import { decodeBase64url } from '@oslojs/encoding';
+import { getContext } from '@ycore/forge/context';
 import type { IntentHandlers } from '@ycore/forge/intent/server';
 import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, respondError, respondOk, transformError, validateFormData } from '@ycore/forge/result';
 import { getKVStore } from '@ycore/forge/services';
-import { getAuthConfig } from '@ycore/foundry/auth';
+import { authConfigContext } from '@ycore/foundry/auth';
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import { redirect } from 'react-router';
 
@@ -32,7 +33,7 @@ export async function signupLoader({ context }: SignUpLoaderArgs) {
 
 export async function signupAction({ request, context }: SignUpActionArgs) {
   const repository = getAuthRepository(context);
-  const authConfig = getAuthConfig(context);
+  const authConfig = getContext(context, authConfigContext);
 
   if (!authConfig) {
     return respondError(err('Auth configuration not found', { field: 'general' }));

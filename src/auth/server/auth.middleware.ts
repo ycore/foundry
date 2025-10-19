@@ -1,9 +1,11 @@
+import { setContext } from '@ycore/forge/context';
 import { isError, middlewarePassthrough } from '@ycore/forge/result';
-import { authUserContext, setAuthConfig } from '@ycore/foundry/auth';
 import { type MiddlewareFunction, redirect } from 'react-router';
 
 import type { AuthConfig } from '../@types/auth.config.types';
 import { defaultAuthConfig, defaultAuthRoutes } from '../auth.config';
+import { authConfigContext, authUserContext } from '../auth.context';
+import { getAuthUser } from './auth-context';
 import { createAuthSessionStorage, destroyAuthSession, getAuthSession } from './session';
 
 /**
@@ -12,12 +14,14 @@ import { createAuthSessionStorage, destroyAuthSession, getAuthSession } from './
 export function authSessionMiddleware(authConfig: AuthConfig): MiddlewareFunction<Response> {
   return async ({ request, context }, next) => {
     // Set auth config in context for services to use
-    setAuthConfig(context, authConfig);
+    setContext(context, authConfigContext, authConfig);
 
     // Load user from session
     const authSession = await getAuthSession(request, context);
-    if (!isError(authSession) && authSession?.user) {
-      context.set(authUserContext, authSession.user);
+
+    // If session loaded successfully and has a user, set it in context
+    if (!isError(authSession) && authSession !== null && authSession.user) {
+      setContext(context, authUserContext, authSession.user);
       return next();
     }
 
@@ -54,7 +58,7 @@ export function authSessionMiddleware(authConfig: AuthConfig): MiddlewareFunctio
  */
 function guardedAuthMiddleware(signedOutRoute: string): MiddlewareFunction<Response> {
   return async ({ context }, next) => {
-    const user = context.get(authUserContext);
+    const user = getAuthUser(context);
     if (!user) {
       throw redirect(signedOutRoute);
     }
@@ -69,7 +73,7 @@ function guardedAuthMiddleware(signedOutRoute: string): MiddlewareFunction<Respo
  */
 function unguardedAuthMiddleware(signedInRoute: string): MiddlewareFunction<Response> {
   return async ({ context }, next) => {
-    const user = context.get(authUserContext);
+    const user = getAuthUser(context);
     if (user) {
       throw redirect(signedInRoute);
     }

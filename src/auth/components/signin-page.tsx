@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import * as React from 'react';
 import { useActionData, useLoaderData, useNavigation, useSubmit } from 'react-router';
 import type { SignInFormProps, SignInPageProps } from '../@types/auth.component.types';
-import { createAuthenticationOptions } from '../services/webauthn';
+import { createAuthenticationOptions } from '../server/webauthn';
 import { isPlatformAuthenticatorAvailable, isWebAuthnSupported, startAuthentication } from './webauthn-client';
 
 export function SignInForm({ signupUrl }: SignInFormProps) {

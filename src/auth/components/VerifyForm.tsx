@@ -2,7 +2,7 @@ import { Button, Input, InputOtp } from '@ycore/componentry/vibrant';
 import { formErrors, isError } from '@ycore/forge/result';
 import { SecureForm } from '@ycore/foundry/secure';
 import { useEffect, useState } from 'react';
-import type { VerificationPurpose } from '../services/totp-service';
+import type { VerificationPurpose } from '../server/totp-service';
 
 export interface VerifyFormProps {
   email: string;

@@ -1,6 +1,7 @@
+import { getContext } from '@ycore/forge/context';
 import { logger } from '@ycore/forge/logger';
 import { isError } from '@ycore/forge/result';
-import { getAuthConfig } from '@ycore/foundry/auth';
+import { authConfigContext } from '@ycore/foundry/auth';
 import type { RouterContextProvider } from 'react-router';
 import { redirect } from 'react-router';
 
@@ -19,14 +20,14 @@ export async function signoutAction({ request, context }: SignOutActionArgs) {
     logger.error('Failed to destroy session:', destroyResult.message);
   }
 
-  const authConfig = getAuthConfig(context);
+  const authConfig = getContext(context, authConfigContext);
   const redirectTo = authConfig?.routes.signedout || defaultAuthRoutes.signedout;
 
   return redirect(redirectTo, { headers: { 'Set-Cookie': !isError(destroyResult) ? destroyResult : '' } });
 }
 
 export async function signoutLoader({ context }: { context: Readonly<RouterContextProvider> }) {
-  const authConfig = getAuthConfig(context);
+  const authConfig = getContext(context, authConfigContext);
   const redirectTo = authConfig?.routes.signedout || defaultAuthRoutes.signedout;
 
   return redirect(redirectTo);

@@ -1,8 +1,8 @@
+import { getContext } from '@ycore/forge/context';
 import { logger } from '@ycore/forge/logger';
 import { err, isError, ok, type Result } from '@ycore/forge/result';
-import { getAuthConfig } from '@ycore/foundry/auth';
+import { authConfigContext } from '@ycore/foundry/auth';
 import type { RouterContextProvider } from 'react-router';
-
 import { defaultAuthRoutes } from '../auth.config';
 import type { User } from '../schema';
 import { createAuthSession } from './session';
@@ -90,7 +90,7 @@ export async function createAuthenticatedSession(context: Readonly<RouterContext
  * ```
  */
 export function createAuthSuccessResponse(context: Readonly<RouterContextProvider>, cookie: string): { redirectTo: string; cookie: string } {
-  const authConfig = getAuthConfig(context);
+  const authConfig = getContext(context, authConfigContext);
   const redirectTo = authConfig?.routes.signedin || defaultAuthRoutes.signedin;
 
   return { redirectTo, cookie };

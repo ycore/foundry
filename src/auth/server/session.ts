@@ -1,10 +1,13 @@
 import { createWorkersKVSessionStorage } from '@react-router/cloudflare';
+import { getContext } from '@ycore/forge/context';
 import type { Result } from '@ycore/forge/result';
 import { err, ok } from '@ycore/forge/result';
 import { getBindings, getKVStore, isProduction, UNCONFIGURED } from '@ycore/forge/services';
-import { getAuthConfig } from '@ycore/foundry/auth';
+import { } from '@ycore/foundry/auth/server';
 import type { RouterContextProvider } from 'react-router';
+
 import type { SessionData, SessionFlashData } from '../@types/auth.types';
+import { authConfigContext } from '../auth.context';
 
 const challengeKvTemplate = (email: string): string => `challenge:${email}`;
 const challengeUniqueKvTemplate = (challenge: string): string => `challenge-unique:${challenge}`;
@@ -14,7 +17,7 @@ const challengeUniqueKvTemplate = (challenge: string): string => `challenge-uniq
  * Centralizes binding resolution with proper error handling
  */
 function resolveAuthBindings(context: Readonly<RouterContextProvider>): { secret: string; kv: KVNamespace } {
-  const authConfig = getAuthConfig(context);
+  const authConfig = getContext(context, authConfigContext);
   if (!authConfig) {
     throw new Error('Auth configuration not found in context. Ensure auth middleware is properly configured.');
   }
@@ -45,7 +48,7 @@ function resolveAuthBindings(context: Readonly<RouterContextProvider>): { secret
 }
 
 export function createAuthSessionStorage(context: Readonly<RouterContextProvider>) {
-  const authConfig = getAuthConfig(context);
+  const authConfig = getContext(context, authConfigContext);
   if (!authConfig) {
     throw new Error('Auth configuration not found in context. Ensure auth middleware is properly configured.');
   }

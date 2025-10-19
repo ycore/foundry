@@ -1,7 +1,8 @@
+import { getContext } from '@ycore/forge/context';
 import { logger } from '@ycore/forge/logger';
 import { err, isError, ok, type Result } from '@ycore/forge/result';
 import { getKVStore } from '@ycore/forge/services';
-import { getAuthConfig } from '@ycore/foundry/auth';
+import { authConfigContext } from '@ycore/foundry/auth';
 import type { RouterContextProvider } from 'react-router';
 
 import type { WebAuthnRegistrationData } from '../@types/auth.types';
@@ -26,7 +27,7 @@ const MIN_AUTHENTICATORS_PER_USER = 1;
  */
 export async function addPasskeyForUser(context: Readonly<RouterContextProvider>, userId: string, credential: WebAuthnRegistrationData, challenge: string, origin: string, request: Request): Promise<Result<Authenticator>> {
   const repo = getAuthRepository(context);
-  const authConfig = getAuthConfig(context);
+  const authConfig = getContext(context, authConfigContext);
 
   if (!authConfig) {
     return err('Auth configuration not found', { field: 'general' });
@@ -155,7 +156,12 @@ export async function deletePasskey(context: Readonly<RouterContextProvider>, us
 /**
  * Generate registration options for adding a new passkey
  */
-export async function generateAddPasskeyOptions(context: Readonly<RouterContextProvider>, request: Request, userId: string, rpName: string, rpId: string
+export async function generateAddPasskeyOptions(
+  context: Readonly<RouterContextProvider>,
+  request: Request,
+  userId: string,
+  rpName: string,
+  rpId: string
 ): Promise<Result<{ challenge: string; options: PublicKeyCredentialCreationOptions }>> {
   const repo = getAuthRepository(context);
   const authSession = await getAuthSession(request, context);

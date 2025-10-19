@@ -12,9 +12,9 @@
       "types": "./src/auth/index.ts",
       "import": "./src/auth/index.ts"
     },
-    "./auth/services": {
-      "types": "./src/auth/services/index.ts",
-      "import": "./src/auth/services/index.ts"
+    "./auth/server": {
+      "types": "./src/auth/server/index.ts",
+      "import": "./src/auth/server/index.ts"
     },
     "./auth/schema": {
       "types": "./src/auth/schema/index.ts",

@@ -1,8 +1,9 @@
+import { getContext } from '@ycore/forge/context';
 import type { IntentHandlers } from '@ycore/forge/intent/server';
 import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, respondError, respondOk, validateFormData } from '@ycore/forge/result';
-import { getAuthConfig } from '@ycore/foundry/auth';
+import { authConfigContext } from '@ycore/foundry/auth';
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import type { RouterContextProvider } from 'react-router';
 import { redirect } from 'react-router';
@@ -45,7 +46,7 @@ export async function verifyLoader({ request, context }: VerifyLoaderArgs) {
 
   const session = sessionResult;
   if (!session || !session.user) {
-    const authConfig = getAuthConfig(context);
+    const authConfig = getContext(context, authConfigContext);
     logger.warning('verify_loader_no_user');
     throw redirect(authConfig?.routes.signin || '/auth/signin');
   }
@@ -63,7 +64,7 @@ export async function verifyLoader({ request, context }: VerifyLoaderArgs) {
  */
 export async function verifyAction({ request, context, emailConfig }: VerifyActionArgs) {
   const repository = getAuthRepository(context);
-  const authConfig = getAuthConfig(context);
+  const authConfig = getContext(context, authConfigContext);
 
   if (!authConfig) {
     logger.error('verify_action_no_config');

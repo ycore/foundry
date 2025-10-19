@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Form } from 'react-router';
 
 import type { AuthenticatorsCardProps, ProfileCardProps, ProfilePageProps } from '../@types/auth.component.types';
-import { convertServerOptionsToWebAuthn } from '../services/webauthn-credential';
+import { convertServerOptionsToWebAuthn } from '../server/webauthn-credential';
 import { isWebAuthnSupported, startRegistration } from './webauthn-client';
 
 export function ProfileCard({ user, signoutUrl, verifyUrl }: ProfileCardProps) {

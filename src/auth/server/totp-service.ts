@@ -1,7 +1,8 @@
+import { getContext } from '@ycore/forge/context';
 import { logger } from '@ycore/forge/logger';
 import { err, ok, type Result } from '@ycore/forge/result';
 import { getBindings } from '@ycore/forge/services';
-import { getAuthConfig } from '@ycore/foundry/auth';
+import { authConfigContext } from '@ycore/foundry/auth';
 import type { RouterContextProvider } from 'react-router';
 
 export type VerificationPurpose = 'signup' | 'passkey-add' | 'passkey-delete' | 'email-change' | 'account-delete' | 'recovery';
@@ -159,7 +160,7 @@ const kvKeyTemplate = (purpose: VerificationPurpose, email: string) => `totp:${p
 
 export async function createVerificationCode(email: string, purpose: VerificationPurpose, context: Readonly<RouterContextProvider>, metadata?: Record<string, unknown>): Promise<Result<string>> {
   try {
-    const authConfig = getAuthConfig(context);
+    const authConfig = getContext(context, authConfigContext);
     if (!authConfig) {
       return err('Auth configuration not found');
     }
@@ -202,7 +203,7 @@ export async function createVerificationCode(email: string, purpose: Verificatio
 
 export async function verifyCode(email: string, code: string, purpose: VerificationPurpose, context: Readonly<RouterContextProvider>): Promise<Result<StoredVerification>> {
   try {
-    const authConfig = getAuthConfig(context);
+    const authConfig = getContext(context, authConfigContext);
     if (!authConfig) {
       return err('Auth configuration not found');
     }

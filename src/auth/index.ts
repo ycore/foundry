@@ -2,9 +2,8 @@ export type { AuthenticatorsCardProps, ProfileCardProps, ProfilePageProps, SignI
 export type { AuthConfig, AuthRoutes, SessionConfig, VerificationConfig, WebAuthnConfig } from './@types/auth.config.types';
 export type { SessionData, SessionFlashData, SignInActionArgs, SignInLoaderArgs, SignUpActionArgs, SignUpLoaderArgs, UserDetails, WebAuthnAuthenticationData, WebAuthnOptionsResponse, WebAuthnRegistrationData } from './@types/auth.types';
 export { defaultAuthConfig, defaultAuthRoutes } from './auth.config';
-export { authConfigContext, authUserContext, getAuthConfig, getUser, isAuthenticated, setAuthConfig } from './auth.context';
+export { authConfigContext, authUserContext } from './auth.context';
 export { AuthenticatorsCard, ProfileCard, ProfilePage } from './components/profile-page';
 export { SignInForm, SignInPage } from './components/signin-page';
 export { SignUpForm, SignUpPage } from './components/signup-page';
 export { VerifyForm } from './components/VerifyForm';
-export { authFormSchema, signinFormSchema, signupFormSchema } from './services/auth.validation';
