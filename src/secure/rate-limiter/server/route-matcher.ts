@@ -1,4 +1,4 @@
-import type { RateLimiterConfig, RateLimiterProviderConfig, RouteRateLimitConfig } from './@types/rate-limiter.types';
+import type { RateLimiterConfig, RateLimiterProviderConfig, RouteRateLimitConfig } from '../@types/rate-limiter.types';
 
 /**
  * Convert glob pattern to regex for route matching

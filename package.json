@@ -9,29 +9,29 @@
   },
   "exports": {
     "./auth": {
-      "types": "./dist/auth/index.d.ts",
-      "import": "./dist/auth/index.js"
+      "types": "./src/auth/index.ts",
+      "import": "./src/auth/index.ts"
     },
     "./auth/services": {
-      "types": "./dist/auth/services/index.d.ts",
-      "import": "./dist/auth/services/index.js"
+      "types": "./src/auth/services/index.ts",
+      "import": "./src/auth/services/index.ts"
     },
     "./auth/schema": {
-      "types": "./dist/auth/schema/index.d.ts",
-      "import": "./dist/auth/schema/index.js",
-      "require": "./dist/auth/schema/index.js"
+      "types": "./src/auth/schema/index.ts",
+      "import": "./src/auth/schema/index.ts",
+      "require": "./src/auth/schema/index.ts"
     },
     "./email": {
-      "types": "./dist/email/index.d.ts",
-      "import": "./dist/email/index.js"
+      "types": "./src/email/index.ts",
+      "import": "./src/email/index.ts"
     },
     "./secure": {
-      "types": "./dist/secure/index.d.ts",
-      "import": "./dist/secure/index.js"
+      "types": "./src/secure/index.ts",
+      "import": "./src/secure/index.ts"
     },
-    "./secure/services": {
-      "types": "./dist/secure/services/index.d.ts",
-      "import": "./dist/secure/services/index.js"
+    "./secure/server": {
+      "types": "./src/secure/server/index.ts",
+      "import": "./src/secure/server/index.ts"
     },
     "./package.json": "./package.json"
   },

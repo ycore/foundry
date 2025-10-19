@@ -5,7 +5,7 @@ import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, respondError, respondOk, transformError, validateFormData } from '@ycore/forge/result';
 import { getKVStore } from '@ycore/forge/services';
 import { getAuthConfig } from '@ycore/foundry/auth';
-import { requireCSRFToken } from '@ycore/foundry/secure/services';
+import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import { redirect } from 'react-router';
 
 import type { SignUpActionArgs, SignUpLoaderArgs } from '../@types/auth.types';

@@ -1,7 +1,7 @@
 import type { Result } from '@ycore/forge/result';
 import { err, isError } from '@ycore/forge/result';
 import type { RouterContextProvider } from 'react-router';
-import type { RateLimiterConfig, RateLimiterProvider, RateLimiterProviderConfig, RateLimitRequest, RateLimitResponse } from './@types/rate-limiter.types';
+import type { RateLimiterConfig, RateLimiterProvider, RateLimiterProviderConfig, RateLimitRequest, RateLimitResponse } from '../@types/rate-limiter.types';
 import { cloudflareRateLimiter } from './providers/cloudflare-rate-limiter';
 import { kvRateLimiter } from './providers/kv-rate-limiter';
 

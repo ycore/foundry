@@ -1,7 +1,7 @@
 import { logger } from '@ycore/forge/logger';
 import { getClientIP, isError } from '@ycore/forge/result';
 import { data, type MiddlewareFunction } from 'react-router';
-import type { KvProviderConfig, RateLimiterConfig } from './@types/rate-limiter.types';
+import type { KvProviderConfig, RateLimiterConfig } from '../@types/rate-limiter.types';
 import { checkRateLimit } from './rate-limiter.provider';
 import { getEffectiveRateLimitConfig } from './route-matcher';
 

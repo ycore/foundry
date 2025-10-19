@@ -2,7 +2,7 @@ import type { Result } from '@ycore/forge/result';
 import { err } from '@ycore/forge/result';
 import { getKVStore } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
-import type { KvProviderConfig, KvRateLimiterOptions, RateLimiterProvider, RateLimiterProviderConfig, RateLimitMetadata, RateLimitRequest, RateLimitResponse } from '../@types/rate-limiter.types';
+import type { KvProviderConfig, KvRateLimiterOptions, RateLimiterProvider, RateLimiterProviderConfig, RateLimitMetadata, RateLimitRequest, RateLimitResponse } from '../../@types/rate-limiter.types';
 
 const KV_MINIMUM_TTL = 60; // Cloudflare KV minimum TTL in seconds
 const DEFAULT_RETRY_ATTEMPTS = 3; // Default retries for optimistic locking

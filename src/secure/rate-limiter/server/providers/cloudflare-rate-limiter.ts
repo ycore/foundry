@@ -2,7 +2,7 @@ import type { Result } from '@ycore/forge/result';
 import { err } from '@ycore/forge/result';
 import { getBindings } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
-import type { CloudflareProviderConfig, CloudflareRateLimiterOptions, RateLimiterProvider, RateLimiterProviderConfig, RateLimitRequest, RateLimitResponse } from '../@types/rate-limiter.types';
+import type { CloudflareProviderConfig, CloudflareRateLimiterOptions, RateLimiterProvider, RateLimiterProviderConfig, RateLimitRequest, RateLimitResponse } from '../../@types/rate-limiter.types';
 
 const DEFAULT_WINDOW_MS = 60 * 1000;
 

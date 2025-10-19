@@ -3,7 +3,7 @@ import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, respondError, respondOk, validateFormData } from '@ycore/forge/result';
 import { getAuthConfig } from '@ycore/foundry/auth';
-import { requireCSRFToken } from '@ycore/foundry/secure/services';
+import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import type { RouterContextProvider } from 'react-router';
 import { redirect } from 'react-router';
 import { minLength, object, pipe, string } from 'valibot';
