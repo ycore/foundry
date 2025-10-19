@@ -1,7 +1,7 @@
 import { createCookie } from 'react-router';
 import { CSRF } from 'remix-utils/csrf/server';
 
-import type { CSRFConfig } from './@types/csrf.types';
+import type { CSRFConfig } from '../@types/csrf.types';
 
 /** Creates fresh CSRF instance with config (ensures request isolation) */
 export function createCSRF(secret: string, config: CSRFConfig): CSRF {
@@ -17,6 +17,6 @@ export function createCSRF(secret: string, config: CSRFConfig): CSRF {
   return new CSRF({
     cookie,
     secret,
-    formDataKey: config.formDataKey,
+    formDataKey: 'csrf_token', // Hardcoded to match SecureForm default
   });
 }

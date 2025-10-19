@@ -3,8 +3,7 @@ import type { FieldErrors } from '@ycore/forge/result';
 import clsx from 'clsx';
 import React from 'react';
 import { Form } from 'react-router';
-import { AuthenticityTokenInput } from 'remix-utils/csrf/react';
-import { useSecureContext } from './csrf.context';
+import { AuthenticityTokenInput, useAuthenticityToken } from 'remix-utils/csrf/react';
 
 // Types
 export interface SecureFormProps extends React.ComponentProps<typeof Form> {
@@ -38,15 +37,15 @@ const SecureFormContext = React.createContext<{ errors: FieldErrors | null }>({ 
 
 /** Form with CSRF protection and error handling */
 export function SecureForm({ children, csrf_name, errors, ...props }: SecureFormProps) {
-  const csrfData = useSecureContext();
+  const token = useAuthenticityToken();
 
-  // Use override if provided, otherwise use config value
-  const tokenFieldName = csrf_name ?? csrfData.formDataKey;
+  // Use override if provided, otherwise use default 'csrf_token'
+  const tokenFieldName = csrf_name ?? 'csrf_token';
   const contextValue = React.useMemo(() => ({ errors: errors || null }), [errors]);
 
   return (
     // if CSRF token is missing, avoid unsecured form
-    (!csrfData.token) ?
+    (!token) ?
       <div role="alert" className="rounded-lg border border-destructive bg-destructive/10 p-4">
         <SecureFormError error={CSRF_TOKER_ERROR} />
       </div>

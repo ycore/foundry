@@ -193,10 +193,10 @@ export function SignUpForm({ signinUrl }: SignUpFormProps) {
 }
 
 export function SignUpPage({ loaderData, children, title = 'Create Account', description = 'Sign up for a new account with your passkey' }: SignUpPageProps) {
-  const csrfData = isError(loaderData) ? null : (loaderData?.csrfData ?? null);
+  const token = isError(loaderData) ? '' : (loaderData?.token ?? '');
 
   return (
-    <SecureProvider csrfData={csrfData}>
+    <SecureProvider token={token}>
       <div className="mx-auto min-w-md max-w-lg px-4 py-8">
         <Card>
           <Card.Header>

@@ -3,7 +3,7 @@ import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, respondError, respondOk, validateFormData } from '@ycore/forge/result';
 import { getAuthConfig } from '@ycore/foundry/auth';
-import { csrfContext } from '@ycore/foundry/secure/services';
+import { requireCSRFToken } from '@ycore/foundry/secure/services';
 import type { RouterContextProvider } from 'react-router';
 import { redirect } from 'react-router';
 import { minLength, object, pipe, string } from 'valibot';
@@ -35,7 +35,7 @@ export interface VerifyActionArgs {
  * Returns user email and CSRF token
  */
 export async function verifyLoader({ request, context }: VerifyLoaderArgs) {
-  const csrfData = context.get(csrfContext);
+  const token = requireCSRFToken(context);
   const sessionResult = await getAuthSession(request, context);
 
   if (isError(sessionResult)) {
@@ -51,7 +51,7 @@ export async function verifyLoader({ request, context }: VerifyLoaderArgs) {
   }
 
   return respondOk({
-    csrfData,
+    token,
     email: session.user.email,
     emailVerified: session.user.emailVerified,
   });

@@ -7,8 +7,6 @@ import type { CSRFConfig } from './@types/csrf.types';
 export const defaultCSRFConfig: CSRFConfig = {
   secretKey: 'UNCONFIGURED',
   cookieName: '__csrf',
-  formDataKey: 'csrf_token',
-  headerName: 'x-csrf-token',
   cookie: {
     httpOnly: true,
     sameSite: 'lax',

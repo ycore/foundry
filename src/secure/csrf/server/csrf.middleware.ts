@@ -1,15 +1,10 @@
 import { logger } from '@ycore/forge/logger';
 import { middlewarePassthrough } from '@ycore/forge/result';
 import { getBindings, isDevelopment } from '@ycore/forge/services';
-import { createContext, type MiddlewareFunction } from 'react-router';
-import type { CSRFConfig, CSRFData } from './@types/csrf.types';
+import type { MiddlewareFunction } from 'react-router';
+import type { CSRFConfig } from '../@types/csrf.types';
 import { createCSRF } from './csrf';
-
-/** CSRF token context for form protection */
-export const csrfContext = createContext<CSRFData | null>(null);
-
-/** Context to skip CSRF validation for specific requests */
-export const skipCSRFValidation = createContext<boolean>(false);
+import { csrfContext, skipCSRFValidation } from './csrf.context';
 
 /** Creates CSRF commit middleware (GET requests only) */
 export function createCommitCSRFMiddleware(config: CSRFConfig): MiddlewareFunction<Response> {
@@ -46,8 +41,8 @@ export function createCommitCSRFMiddleware(config: CSRFConfig): MiddlewareFuncti
     const csrf = createCSRF(secret, runtimeConfig);
     const [token, cookieHeader] = await csrf.commitToken();
 
-    // Set both token and config in context
-    const csrfData = { token, formDataKey: config.formDataKey, headerName: config.headerName };
+    // Set token in context
+    const csrfData = { token };
     context.set(csrfContext, csrfData);
 
     const response = await next();

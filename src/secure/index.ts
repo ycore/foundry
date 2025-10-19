@@ -1,6 +1,5 @@
 export type { CSRFConfig, CSRFData } from './csrf/@types/csrf.types';
 export { defaultCSRFConfig } from './csrf/csrf.config';
-export { useSecureContext } from './csrf/csrf.context';
 export { FormError, FormField, useFormField } from './csrf/form';
 export type { SecureFetcherFormProps, SecureFetcherHandle, UseSecureFetcherOptions } from './csrf/SecureFetcher';
 export { useSecureFetcher } from './csrf/SecureFetcher';

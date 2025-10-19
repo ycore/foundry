@@ -5,7 +5,7 @@ import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, respondError, respondOk, transformError, validateFormData } from '@ycore/forge/result';
 import { getKVStore } from '@ycore/forge/services';
 import { getAuthConfig } from '@ycore/foundry/auth';
-import { csrfContext } from '@ycore/foundry/secure/services';
+import { requireCSRFToken } from '@ycore/foundry/secure/services';
 import { redirect } from 'react-router';
 
 import type { SignUpActionArgs, SignUpLoaderArgs } from '../@types/auth.types';
@@ -18,7 +18,7 @@ import { createAuthenticatedSession, createAuthSuccessResponse, parseWebAuthnCre
 import { validateWebAuthnRequest } from './webauthn-validation';
 
 export async function signupLoader({ context }: SignUpLoaderArgs) {
-  const csrfData = context.get(csrfContext);
+  const token = requireCSRFToken(context);
   const challenge = generateChallenge();
 
   const cookieResult = await createChallengeSession(context, challenge);
@@ -27,7 +27,7 @@ export async function signupLoader({ context }: SignUpLoaderArgs) {
     return respondError(cookieResult);
   }
 
-  return respondOk({ csrfData, challenge }, { headers: { 'Set-Cookie': cookieResult } });
+  return respondOk({ token, challenge }, { headers: { 'Set-Cookie': cookieResult } });
 }
 
 export async function signupAction({ request, context }: SignUpActionArgs) {

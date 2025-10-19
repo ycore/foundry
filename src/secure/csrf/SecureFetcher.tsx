@@ -3,8 +3,7 @@ import { extractFieldErrors, isError } from '@ycore/forge/result';
 import clsx from 'clsx';
 import React from 'react';
 import { type FetcherWithComponents, type SubmitOptions, useFetcher } from 'react-router';
-import { AuthenticityTokenInput } from 'remix-utils/csrf/react';
-import { useSecureContext } from './csrf.context';
+import { AuthenticityTokenInput, useAuthenticityToken } from 'remix-utils/csrf/react';
 
 // Types
 export interface SecureFetcherFormProps extends Omit<React.ComponentProps<'form'>, 'method' | 'action' | 'encType'> {
@@ -40,7 +39,7 @@ export interface SecureFetcherHandle<T = unknown> {
 /** Fetcher with built-in CSRF protection */
 export function useSecureFetcher<T = unknown>({ key }: UseSecureFetcherOptions = {}): SecureFetcherHandle<T> {
   const fetcher = useFetcher<T>({ key });
-  const csrfData = useSecureContext();
+  const token = useAuthenticityToken();
 
   // Extract errors from fetcher data if present
   const errors = React.useMemo(() => {
@@ -60,14 +59,14 @@ export function useSecureFetcher<T = unknown>({ key }: UseSecureFetcherOptions =
         secureData.append(key, value);
       });
 
-      // Add CSRF token if not already present using configured field name
-      if (!secureData.has(csrfData.formDataKey) && csrfData.token) {
-        secureData.append(csrfData.formDataKey, csrfData.token);
+      // Add CSRF token if not already present using default field name
+      if (!secureData.has('csrf_token') && token) {
+        secureData.append('csrf_token', token);
       }
 
       fetcher.submit(secureData, options);
     },
-    [fetcher, csrfData.token, csrfData.formDataKey]
+    [fetcher, token]
   );
 
   // SecureForm component bound to this fetcher
@@ -101,10 +100,8 @@ export function useSecureFetcher<T = unknown>({ key }: UseSecureFetcherOptions =
 
 /** Fetcher form with CSRF protection */
 export const SecureFetcherForm = React.forwardRef<HTMLFormElement, SecureFetcherFormProps>(({ children, csrf_name, errors, fetcher, className, ...props }, ref) => {
-  const csrfData = useSecureContext();
-
-  // Use override if provided, otherwise use config value
-  const tokenFieldName = csrf_name ?? csrfData.formDataKey;
+  // Use override if provided, otherwise use default 'csrf_token'
+  const tokenFieldName = csrf_name ?? 'csrf_token';
   const FetcherForm = fetcher.Form;
 
   return (
