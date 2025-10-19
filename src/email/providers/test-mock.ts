@@ -60,7 +60,21 @@ export class TestMockEmailProvider implements EmailProvider {
   }
 
   static getLastSentEmail(): SendEmailOptions | undefined {
-    return TestMockEmailProvider.sentEmails.length > 0 ? { ...TestMockEmailProvider.sentEmails[TestMockEmailProvider.sentEmails.length - 1] } : undefined;
+    const lastEmail = TestMockEmailProvider.sentEmails[TestMockEmailProvider.sentEmails.length - 1];
+    if (!lastEmail) {
+      return undefined;
+    }
+    // Return deep copy to prevent mutation
+    return {
+      apiKey: lastEmail.apiKey,
+      to: lastEmail.to,
+      from: lastEmail.from,
+      template: {
+        subject: lastEmail.template.subject,
+        html: lastEmail.template.html,
+        text: lastEmail.template.text,
+      },
+    };
   }
 
   static getEmailCount(): number {

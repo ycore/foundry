@@ -1,3 +1,4 @@
+import { setContext } from '@ycore/forge/context';
 import { logger } from '@ycore/forge/logger';
 import { middlewarePassthrough } from '@ycore/forge/result';
 import { getBindings, isDevelopment } from '@ycore/forge/services';
@@ -43,7 +44,7 @@ export function createCommitCSRFMiddleware(config: CSRFConfig): MiddlewareFuncti
 
     // Set token in context
     const csrfData = { token };
-    context.set(csrfContext, csrfData);
+    setContext(context, csrfContext, csrfData);
 
     const response = await next();
 
@@ -68,7 +69,7 @@ export function createValidateCSRFMiddleware(config: CSRFConfig): MiddlewareFunc
     // Check and skip CSRF validation for this request
     const skipCSRF = context.get(skipCSRFValidation);
     if (skipCSRF) {
-      context.set(skipCSRFValidation, false);
+      setContext(context, skipCSRFValidation, false);
       return next();
     }
 
