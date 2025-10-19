@@ -2,8 +2,9 @@ import { getContext } from '@ycore/forge/context';
 import { logger } from '@ycore/forge/logger';
 import { err, ok, type Result } from '@ycore/forge/result';
 import { getBindings } from '@ycore/forge/services';
-import { authConfigContext } from '@ycore/foundry/auth';
 import type { RouterContextProvider } from 'react-router';
+
+import { authConfigContext } from '../auth.context';
 
 export type VerificationPurpose = 'signup' | 'passkey-add' | 'passkey-delete' | 'email-change' | 'account-delete' | 'recovery';
 

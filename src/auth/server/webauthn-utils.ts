@@ -1,9 +1,10 @@
 import { getContext } from '@ycore/forge/context';
 import { logger } from '@ycore/forge/logger';
 import { err, isError, ok, type Result } from '@ycore/forge/result';
-import { authConfigContext } from '@ycore/foundry/auth';
 import type { RouterContextProvider } from 'react-router';
+
 import { defaultAuthRoutes } from '../auth.config';
+import { authConfigContext } from '../auth.context';
 import type { User } from '../schema';
 import { createAuthSession } from './session';
 

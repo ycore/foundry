@@ -3,13 +3,13 @@ import type { IntentHandlers } from '@ycore/forge/intent/server';
 import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, respondError, respondOk, validateFormData } from '@ycore/forge/result';
-import { authConfigContext } from '@ycore/foundry/auth';
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import type { RouterContextProvider } from 'react-router';
 import { redirect } from 'react-router';
 import { minLength, object, pipe, string } from 'valibot';
 
 import type { EmailConfig } from '../../email/@types/email.types';
+import { authConfigContext } from '../auth.context';
 import { getAuthRepository } from './repository';
 import { getAuthSession } from './session';
 import { type VerificationPurpose, verifyCode } from './totp-service';

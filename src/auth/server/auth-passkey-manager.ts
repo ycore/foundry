@@ -2,10 +2,10 @@ import { getContext } from '@ycore/forge/context';
 import { logger } from '@ycore/forge/logger';
 import { err, isError, ok, type Result } from '@ycore/forge/result';
 import { getKVStore } from '@ycore/forge/services';
-import { authConfigContext } from '@ycore/foundry/auth';
 import type { RouterContextProvider } from 'react-router';
 
 import type { WebAuthnRegistrationData } from '../@types/auth.types';
+import { authConfigContext } from '../auth.context';
 import type { Authenticator } from '../schema';
 import { getAuthRepository } from './repository';
 import { getAuthSession } from './session';
