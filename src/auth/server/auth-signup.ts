@@ -10,7 +10,7 @@ import { redirect } from 'react-router';
 
 import type { SignUpActionArgs, SignUpLoaderArgs } from '../@types/auth.types';
 import type { WebAuthnErrorCode } from '../auth.constants';
-import { authConfigContext } from '../auth.context';
+import { authConfigContext } from './auth.context';
 import { signupFormSchema } from './auth.validation';
 import { getAuthRepository } from './repository';
 import { createChallengeSession, destroyChallengeSession, getChallengeFromSession } from './session';

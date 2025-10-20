@@ -5,7 +5,7 @@ import type { RouterContextProvider } from 'react-router';
 import { redirect } from 'react-router';
 
 import { defaultAuthRoutes } from '../auth.config';
-import { authConfigContext } from '../auth.context';
+import { authConfigContext } from './auth.context';
 import { destroyAuthSession } from './session';
 
 export interface SignOutActionArgs {

@@ -4,8 +4,8 @@ import { err, isError, ok, type Result } from '@ycore/forge/result';
 import type { RouterContextProvider } from 'react-router';
 
 import { defaultAuthRoutes } from '../auth.config';
-import { authConfigContext } from '../auth.context';
 import type { User } from '../schema';
+import { authConfigContext } from './auth.context';
 import { createAuthSession } from './session';
 
 /**

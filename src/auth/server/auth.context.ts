@@ -1,8 +1,13 @@
 import { getContext, requireContext } from '@ycore/forge/context';
 import type { AppLoadContext } from 'react-router';
+import { createContext } from 'react-router';
 
-import { authUserContext } from '../auth.context';
+import type { AuthConfig } from '../@types/auth.config.types';
 import type { User } from '../schema';
+
+export const authConfigContext = createContext<AuthConfig | null>(null);
+
+export const authUserContext = createContext<User | null>(null);
 
 /**
  * Require authenticated user from context

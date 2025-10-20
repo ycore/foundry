@@ -4,8 +4,7 @@ import { type MiddlewareFunction, redirect } from 'react-router';
 
 import type { AuthConfig } from '../@types/auth.config.types';
 import { defaultAuthConfig, defaultAuthRoutes } from '../auth.config';
-import { authConfigContext, authUserContext } from '../auth.context';
-import { getAuthUser } from './auth-context';
+import { authConfigContext, authUserContext, getAuthUser } from './auth.context';
 import { createAuthSessionStorage, destroyAuthSession, getAuthSession } from './session';
 
 /**
@@ -53,10 +52,32 @@ export function authSessionMiddleware(authConfig: AuthConfig): MiddlewareFunctio
 }
 
 /**
+ * Combined middleware for auth routes that:
+ * 1. Sets up auth configuration
+ * 2. Loads user session
+ * 3. Redirects if already authenticated
+ */
+export function unguardedAuthMiddleware(authConfig: AuthConfig): MiddlewareFunction<Response>[] {
+  const signedInRoute = authConfig?.routes.signedin || defaultAuthRoutes.signedin;
+  return [authSessionMiddleware(authConfig), unprotectedAuthMiddleware(signedInRoute)];
+}
+
+/**
+ * Combined middleware for protected routes that:
+ * 1. Sets up auth configuration
+ * 2. Loads user session
+ * 3. Requires authentication
+ */
+export function guardedAuthMiddleware(authConfig: AuthConfig): MiddlewareFunction<Response>[] {
+  const signedOutRoute = authConfig?.routes.signedout || defaultAuthRoutes.signedout;
+  return [authSessionMiddleware(authConfig), protectedAuthMiddleware(signedOutRoute)];
+}
+
+/**
  * Middleware that requires authentication for protected routes.
  * Redirects to configured signedOutRoute if user is not authenticated.
  */
-function guardedAuthMiddleware(signedOutRoute: string): MiddlewareFunction<Response> {
+function protectedAuthMiddleware(signedOutRoute: string): MiddlewareFunction<Response> {
   return async ({ context }, next) => {
     const user = getAuthUser(context);
     if (!user) {
@@ -71,7 +92,7 @@ function guardedAuthMiddleware(signedOutRoute: string): MiddlewareFunction<Respo
  * Middleware for public routes that should redirect if user is already authenticated.
  * Useful for signin/signup pages.
  */
-function unguardedAuthMiddleware(signedInRoute: string): MiddlewareFunction<Response> {
+function unprotectedAuthMiddleware(signedInRoute: string): MiddlewareFunction<Response> {
   return async ({ context }, next) => {
     const user = getAuthUser(context);
     if (user) {
@@ -80,26 +101,4 @@ function unguardedAuthMiddleware(signedInRoute: string): MiddlewareFunction<Resp
 
     return next();
   };
-}
-
-/**
- * Combined middleware for auth routes that:
- * 1. Sets up auth configuration
- * 2. Loads user session
- * 3. Redirects if already authenticated
- */
-export function unprotectedAuthMiddleware(authConfig: AuthConfig): MiddlewareFunction<Response>[] {
-  const signedInRoute = authConfig?.routes.signedin || defaultAuthRoutes.signedin;
-  return [authSessionMiddleware(authConfig), unguardedAuthMiddleware(signedInRoute)];
-}
-
-/**
- * Combined middleware for protected routes that:
- * 1. Sets up auth configuration
- * 2. Loads user session
- * 3. Requires authentication
- */
-export function protectedAuthMiddleware(authConfig: AuthConfig): MiddlewareFunction<Response>[] {
-  const signedOutRoute = authConfig?.routes.signedout || defaultAuthRoutes.signedout;
-  return [authSessionMiddleware(authConfig), guardedAuthMiddleware(signedOutRoute)];
 }

@@ -1,11 +1,11 @@
-export { authSessionMiddleware, protectedAuthMiddleware, unprotectedAuthMiddleware } from './auth.middleware';
-export { getAuthUser, isAuthenticated, requireAuthUser } from './auth-context';
-export { addPasskeyForUser, deletePasskey, generateAddPasskeyOptions, renamePasskey } from './auth-passkey-manager';
+export { authConfigContext, authUserContext, getAuthUser, isAuthenticated, requireAuthUser } from './auth.context';
+export { authSessionMiddleware, guardedAuthMiddleware, unguardedAuthMiddleware } from './auth.middleware';
 export { getUserWithAuthenticators, profileLoader } from './auth-profile';
 export { signinAction, signinLoader } from './auth-signin';
 export { signoutAction, signoutLoader } from './auth-signout';
 export { signupAction, signupLoader } from './auth-signup';
 export { verifyAction, verifyLoader } from './auth-verify';
+export { addPasskeyForUser, deletePasskey, generateAddPasskeyOptions, renamePasskey } from './passkey-manager';
 export { AuthRepository, getAuthRepository } from './repository';
 export { cleanupChallengeSession, createAuthSession, createAuthSessionStorage, createChallengeSession, destroyAuthSession, destroyChallengeSession, getAuthSession, getChallengeFromSession, verifyChallengeUniqueness } from './session';
 export { createVerificationCode, type VerificationPurpose, verifyCode } from './totp-service';

@@ -5,8 +5,8 @@ import { getKVStore } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
 import type { WebAuthnRegistrationData } from '../@types/auth.types';
-import { authConfigContext } from '../auth.context';
 import type { Authenticator } from '../schema';
+import { authConfigContext } from './auth.context';
 import { getAuthRepository } from './repository';
 import { getAuthSession } from './session';
 import { createRegistrationOptions, generateChallenge, verifyRegistration } from './webauthn';

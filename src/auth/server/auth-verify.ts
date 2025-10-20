@@ -9,7 +9,7 @@ import { redirect } from 'react-router';
 import { minLength, object, pipe, string } from 'valibot';
 
 import type { EmailConfig } from '../../email/@types/email.types';
-import { authConfigContext } from '../auth.context';
+import { authConfigContext } from './auth.context';
 import { getAuthRepository } from './repository';
 import { getAuthSession } from './session';
 import { type VerificationPurpose, verifyCode } from './totp-service';

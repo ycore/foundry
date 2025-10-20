@@ -7,7 +7,7 @@ import { } from '@ycore/foundry/auth/server';
 import type { RouterContextProvider } from 'react-router';
 
 import type { SessionData, SessionFlashData } from '../@types/auth.types';
-import { authConfigContext } from '../auth.context';
+import { authConfigContext } from './auth.context';
 
 const challengeKvTemplate = (email: string): string => `challenge:${email}`;
 const challengeUniqueKvTemplate = (challenge: string): string => `challenge-unique:${challenge}`;

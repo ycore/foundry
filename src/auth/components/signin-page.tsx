@@ -1,5 +1,5 @@
 import { Button, Card, Input, Link, Spinner, SvgIcon } from '@ycore/componentry/vibrant';
-import { isError } from '@ycore/forge/result';
+import { formErrors, isError } from '@ycore/forge/result';
 import { FormError, FormField, SecureForm, SecureProvider } from '@ycore/foundry/secure';
 import clsx from 'clsx';
 import * as React from 'react';
@@ -14,7 +14,7 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
   const loaderData = useLoaderData<any>();
   const submit = useSubmit();
   const isSubmitting = navigation.state === 'submitting';
-  const errors = actionData?.success === false ? actionData.error?.details || {} : {};
+  const errors = isError(actionData) ? formErrors(actionData) : {};
   const [webAuthnSupported, setWebAuthnSupported] = React.useState(false);
   const [webAuthnError, setWebAuthnError] = React.useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = React.useState(false);
@@ -44,6 +44,14 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
       }
     };
   }, []);
+
+  // Reset authentication state on error
+  React.useEffect(() => {
+    if (isError(actionData)) {
+      setIsAuthenticating(false);
+      setWebAuthnError(null);
+    }
+  }, [actionData]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
