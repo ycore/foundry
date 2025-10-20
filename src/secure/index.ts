@@ -2,7 +2,7 @@ export type { CSRFConfig, CSRFData } from './csrf/@types/csrf.types';
 export { defaultCSRFConfig } from './csrf/csrf.config';
 export { FormError, FormField, useFormField } from './csrf/form';
 export type { SecureFetcherFormProps, SecureFetcherHandle, UseSecureFetcherOptions } from './csrf/SecureFetcher';
-export { useSecureFetcher } from './csrf/SecureFetcher';
+export { createFetcherFieldProps, SecureFetcherError, useSecureFetcher } from './csrf/SecureFetcher';
 export { SecureProvider } from './csrf/SecureProvider';
 export type { RateLimiterConfig } from './rate-limiter/@types/rate-limiter.types';
 export { defaultRateLimiterConfig } from './rate-limiter/rate-limiter.config';

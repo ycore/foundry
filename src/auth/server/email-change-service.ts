@@ -1,0 +1,281 @@
+import { logger } from '@ycore/forge/logger';
+import { err, flattenError, isError, ok, type Result } from '@ycore/forge/result';
+import { getBindings, getKVStore, type KVBindings } from '@ycore/forge/services';
+import type { RouterContextProvider } from 'react-router';
+
+import type { EmailConfig } from '../../email/@types/email.types';
+import { createEmailProvider, getProviderConfig } from '../../email/email-provider';
+import { createEmailChangeNotificationTemplate } from '../../email/templates/email-change-notification';
+import { sendVerificationEmail } from './verification-service';
+
+/**
+ * Pending email change request structure
+ */
+export interface PendingEmailChange {
+  userId: string;
+  oldEmail: string;
+  newEmail: string;
+  requestedAt: number;
+}
+
+/**
+ * Email change service configuration
+ */
+interface EmailChangeServiceConfig {
+  kvBinding: string;
+  expirationTtl: number; // In seconds
+}
+
+/**
+ * Get KV key for pending email change
+ */
+function getEmailChangeKey(userId: string): string {
+  return `email_change:${userId}`;
+}
+
+/**
+ * Create a pending email change request
+ * Stores the request in KV with TTL matching verification code expiry
+ */
+export async function createEmailChangeRequest(
+  userId: string,
+  oldEmail: string,
+  newEmail: string,
+  context: Readonly<RouterContextProvider>,
+  kvBinding: string,
+  expirationTtl: number = 480 // 8 minutes (matches TOTP expiry)
+): Promise<Result<void>> {
+  try {
+    const kv = getKVStore(context, kvBinding as KVBindings);
+
+    if (!kv) {
+      logger.error('email_change_request_kv_not_found', { userId, kvBinding });
+      return err('KV storage not configured');
+    }
+
+    const pendingChange: PendingEmailChange = {
+      userId,
+      oldEmail,
+      newEmail,
+      requestedAt: Date.now(),
+    };
+
+    await kv.put(getEmailChangeKey(userId), JSON.stringify(pendingChange), {
+      expirationTtl,
+    });
+
+    logger.info('email_change_request_created', {
+      userId,
+      oldEmail,
+      newEmail,
+      expirationTtl,
+    });
+
+    return ok(undefined);
+  } catch (error) {
+    logger.error('email_change_request_creation_failed', {
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return err('Failed to create email change request', { error });
+  }
+}
+
+/**
+ * Get pending email change request for a user
+ * Returns null if no pending request exists
+ */
+export async function getEmailChangeRequest(userId: string, context: Readonly<RouterContextProvider>, kvBinding: string): Promise<Result<PendingEmailChange | null>> {
+  try {
+    const kv = getKVStore(context, kvBinding as KVBindings);
+
+    if (!kv) {
+      logger.error('email_change_request_kv_not_found', { userId, kvBinding });
+      return err('KV storage not configured');
+    }
+
+    const value = await kv.get(getEmailChangeKey(userId), 'text');
+
+    if (!value) {
+      return ok(null);
+    }
+
+    const pendingChange = JSON.parse(value) as PendingEmailChange;
+
+    logger.debug('email_change_request_retrieved', {
+      userId,
+      newEmail: pendingChange.newEmail,
+    });
+
+    return ok(pendingChange);
+  } catch (error) {
+    logger.error('email_change_request_retrieval_failed', {
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return err('Failed to retrieve email change request', { error });
+  }
+}
+
+/**
+ * Delete pending email change request
+ * Used after successful completion or cancellation
+ */
+export async function deleteEmailChangeRequest(userId: string, context: Readonly<RouterContextProvider>, kvBinding: string): Promise<Result<void>> {
+  try {
+    const kv = getKVStore(context, kvBinding as KVBindings);
+
+    if (!kv) {
+      logger.error('email_change_request_kv_not_found', { userId, kvBinding });
+      return err('KV storage not configured');
+    }
+
+    await kv.delete(getEmailChangeKey(userId));
+
+    logger.info('email_change_request_deleted', { userId });
+
+    return ok(undefined);
+  } catch (error) {
+    logger.error('email_change_request_deletion_failed', {
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return err('Failed to delete email change request', { error });
+  }
+}
+
+/**
+ * Send notification to old email address about email change request
+ * Does NOT include a verification code - just informational
+ */
+export async function sendEmailChangeNotification(
+  oldEmail: string,
+  newEmail: string,
+  context: Readonly<RouterContextProvider>,
+  emailConfig: EmailConfig
+): Promise<Result<void>> {
+  try {
+    // Create email content
+    const emailContent = createEmailChangeNotificationTemplate({ oldEmail, newEmail });
+
+    // Get active email provider
+    const activeProvider = emailConfig.active;
+
+    if (!activeProvider) {
+      logger.error('email_change_notification_no_provider', { oldEmail, newEmail });
+      return err('No active email provider configured');
+    }
+
+    const providerConfig = getProviderConfig(emailConfig, activeProvider);
+    if (!providerConfig) {
+      logger.error('email_change_notification_provider_config_missing', {
+        oldEmail,
+        newEmail,
+        provider: activeProvider,
+      });
+      return err(`Provider configuration not found for: ${activeProvider}`);
+    }
+
+    // Create email provider instance
+    const emailProviderResult = createEmailProvider(activeProvider);
+    if (isError(emailProviderResult)) {
+      logger.error('email_change_notification_provider_creation_failed', {
+        oldEmail,
+        newEmail,
+        provider: activeProvider,
+        error: flattenError(emailProviderResult),
+      });
+      return emailProviderResult;
+    }
+
+    // Get API key from environment
+    const bindings = getBindings(context);
+    const apiKey = providerConfig.apiKey ? (bindings[providerConfig.apiKey as keyof typeof bindings] as string | undefined) : undefined;
+
+    // Send email
+    const sendResult = await emailProviderResult.sendEmail({
+      apiKey: apiKey || '',
+      to: oldEmail,
+      from: providerConfig.sendFrom,
+      template: {
+        subject: emailContent.subject,
+        text: emailContent.text,
+        html: emailContent.html,
+      },
+    });
+
+    if (isError(sendResult)) {
+      logger.error('email_change_notification_send_failed', {
+        oldEmail,
+        newEmail,
+        error: flattenError(sendResult),
+      });
+      return sendResult;
+    }
+
+    logger.info('email_change_notification_sent', { oldEmail, newEmail });
+    return ok(undefined);
+  } catch (error) {
+    logger.error('email_change_notification_unexpected_error', {
+      oldEmail,
+      newEmail,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return err('Failed to send email change notification', { error });
+  }
+}
+
+/**
+ * Orchestrate complete email change request flow
+ * 1. Create pending change in KV
+ * 2. Send verification code to new email
+ * 3. Send notification to old email
+ */
+export async function requestEmailChange(
+  userId: string,
+  oldEmail: string,
+  newEmail: string,
+  context: Readonly<RouterContextProvider>,
+  emailConfig: EmailConfig,
+  kvBinding: string
+): Promise<Result<void>> {
+  // Create pending change request
+  const createResult = await createEmailChangeRequest(userId, oldEmail, newEmail, context, kvBinding);
+
+  if (isError(createResult)) {
+    return createResult;
+  }
+
+  // Send verification code to new email
+  const verificationResult = await sendVerificationEmail({
+    email: newEmail,
+    purpose: 'email-change',
+    metadata: { userId, oldEmail, newEmail },
+    context,
+    emailConfig,
+  });
+
+  if (isError(verificationResult)) {
+    // Clean up pending request if verification email fails
+    await deleteEmailChangeRequest(userId, context, kvBinding);
+    return verificationResult;
+  }
+
+  // Send notification to old email (non-blocking - don't fail if this fails)
+  const notificationResult = await sendEmailChangeNotification(oldEmail, newEmail, context, emailConfig);
+
+  if (isError(notificationResult)) {
+    // Log warning but don't fail the request
+    logger.warning('email_change_old_email_notification_failed', {
+      userId,
+      oldEmail,
+      newEmail,
+      error: flattenError(notificationResult),
+    });
+  }
+
+  logger.info('email_change_request_completed', { userId, oldEmail, newEmail });
+
+  return ok(undefined);
+}

@@ -3,8 +3,7 @@ import { getContext } from '@ycore/forge/context';
 import type { Result } from '@ycore/forge/result';
 import { err, ok } from '@ycore/forge/result';
 import { getBindings, getKVStore, isProduction, UNCONFIGURED } from '@ycore/forge/services';
-import { } from '@ycore/foundry/auth/server';
-import type { RouterContextProvider } from 'react-router';
+import type { RouterContextProvider, Session } from 'react-router';
 
 import type { SessionData, SessionFlashData } from '../@types/auth.types';
 import { authConfigContext } from './auth.context';
@@ -177,7 +176,7 @@ export async function createChallengeSession(context: Readonly<RouterContextProv
  * const { challenge, challengeCreatedAt, session } = result;
  * ```
  */
-export async function getChallengeFromSession(request: Request, context: Readonly<RouterContextProvider>): Promise<Result<{ challenge: string; challengeCreatedAt: number; session: any }>> {
+export async function getChallengeFromSession(request: Request, context: Readonly<RouterContextProvider>): Promise<Result<{ challenge: string; challengeCreatedAt: number; session: Session<SessionData, SessionFlashData> }>> {
   try {
     const sessionStorage = createAuthSessionStorage(context);
     const session = await sessionStorage.getSession(request.headers.get('Cookie'));
@@ -209,7 +208,7 @@ export async function getChallengeFromSession(request: Request, context: Readonl
  * }
  * ```
  */
-export async function destroyChallengeSession(session: any, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
+export async function destroyChallengeSession(session: Session<SessionData, SessionFlashData>, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
   try {
     const sessionStorage = createAuthSessionStorage(context);
     await sessionStorage.destroySession(session);
@@ -237,6 +236,33 @@ export async function createAuthSession(context: Readonly<RouterContextProvider>
     return ok(cookie);
   } catch (error) {
     return err('Failed to create session', { error });
+  }
+}
+
+/**
+ * Update existing session with new user data
+ * Used when user data changes (e.g., email change, profile updates)
+ */
+export async function updateAuthSession(request: Request, context: Readonly<RouterContextProvider>, sessionData: Partial<SessionData>): Promise<Result<string>> {
+  try {
+    const sessionStorage = createAuthSessionStorage(context);
+    const session = await sessionStorage.getSession(request.headers.get('Cookie'));
+
+    // Update user data if provided
+    if (sessionData.user) {
+      session.set('user', sessionData.user);
+    }
+
+    // Keep the original authenticatedAt timestamp
+    // Only update if specifically provided
+    if (sessionData.challenge !== undefined) {
+      session.set('challenge', sessionData.challenge);
+    }
+
+    const cookie = await sessionStorage.commitSession(session);
+    return ok(cookie);
+  } catch (error) {
+    return err('Failed to update session', { error });
   }
 }
 

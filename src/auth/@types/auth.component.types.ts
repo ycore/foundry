@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import type { Authenticator, User } from '../schema';
+import type { PendingEmailChange } from '../server/email-change-service';
 
 // Profile Page Component Types
 export interface ProfileCardProps {
   user: User | null | undefined;
   signoutUrl: string;
   verifyUrl: string;
+  pendingEmailChange?: PendingEmailChange | null;
 }
 
 export interface AuthenticatorsCardProps {
@@ -22,7 +24,6 @@ export interface SignInFormProps {
 }
 
 export interface SignInPageProps {
-  loaderData: any;
   children?: ReactNode;
   title?: string;
   description?: string;
@@ -34,7 +35,6 @@ export interface SignUpFormProps {
 }
 
 export interface SignUpPageProps {
-  loaderData: any;
   children?: ReactNode;
   title?: string;
   description?: string;

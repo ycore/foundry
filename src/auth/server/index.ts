@@ -1,13 +1,15 @@
 export { authConfigContext, authUserContext, getAuthUser, isAuthenticated, requireAuthUser } from './auth.context';
 export { authSessionMiddleware, guardedAuthMiddleware, unguardedAuthMiddleware } from './auth.middleware';
+export { authFormSchema, changeEmailSchema, signinFormSchema, signupFormSchema } from './auth.validation';
 export { getUserWithAuthenticators, profileLoader } from './auth-profile';
 export { signinAction, signinLoader } from './auth-signin';
 export { signoutAction, signoutLoader } from './auth-signout';
 export { signupAction, signupLoader } from './auth-signup';
 export { verifyAction, verifyLoader } from './auth-verify';
+export { createEmailChangeRequest, deleteEmailChangeRequest, getEmailChangeRequest, type PendingEmailChange, requestEmailChange, sendEmailChangeNotification } from './email-change-service';
 export { addPasskeyForUser, deletePasskey, generateAddPasskeyOptions, renamePasskey } from './passkey-manager';
-export { AuthRepository, getAuthRepository } from './repository';
-export { cleanupChallengeSession, createAuthSession, createAuthSessionStorage, createChallengeSession, destroyAuthSession, destroyChallengeSession, getAuthSession, getChallengeFromSession, verifyChallengeUniqueness } from './session';
+export { createAuthRepository, getAuthRepository } from './repository';
+export { cleanupChallengeSession, createAuthSession, createAuthSessionStorage, createChallengeSession, destroyAuthSession, destroyChallengeSession, getAuthSession, getChallengeFromSession, updateAuthSession, verifyChallengeUniqueness } from './session';
 export { createVerificationCode, type VerificationPurpose, verifyCode } from './totp-service';
 export { sendVerificationEmail } from './verification-service';
 export { getWebAuthnErrorMessage } from './webauthn';

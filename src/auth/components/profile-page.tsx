@@ -1,6 +1,6 @@
 import { DateFormat } from '@ycore/componentry/impetus/intl';
 import { AlertDialog, Badge, Button, Card, Input, Label, Link, Separator, Spinner } from '@ycore/componentry/vibrant';
-import { useSecureFetcher } from '@ycore/foundry/secure';
+import { createFetcherFieldProps, SecureFetcherError, useSecureFetcher } from '@ycore/foundry/secure';
 import clsx from 'clsx';
 import { useEffect, useRef, useState } from 'react';
 import { Form } from 'react-router';
@@ -9,7 +9,49 @@ import type { AuthenticatorsCardProps, ProfileCardProps, ProfilePageProps } from
 import { convertServerOptionsToWebAuthn } from '../server/webauthn-credential';
 import { isWebAuthnSupported, startRegistration } from './webauthn-client';
 
-export function ProfileCard({ user, signoutUrl, verifyUrl }: ProfileCardProps) {
+export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }: ProfileCardProps) {
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const emailFetcher = useSecureFetcher();
+  const cancelFetcher = useSecureFetcher();
+
+  const isChangingEmail = emailFetcher.state === 'submitting';
+  const isCancelling = cancelFetcher.state === 'submitting';
+
+  const handleChangeEmail = () => {
+    const formData = new FormData();
+    formData.append('intent', 'request-email-change');
+    formData.append('newEmail', newEmail.trim());
+    emailFetcher.submitSecure(formData, { method: 'post' });
+  };
+
+  const handleCancelChange = () => {
+    const formData = new FormData();
+    formData.append('intent', 'cancel-email-change');
+    cancelFetcher.submitSecure(formData, { method: 'post' });
+  };
+
+  // Reset form after successful submission
+  useEffect(() => {
+    if (emailFetcher.state === 'idle' && emailFetcher.data) {
+      const data = emailFetcher.data as { success?: boolean };
+      if (data.success) {
+        setIsEditingEmail(false);
+        setNewEmail('');
+      }
+    }
+  }, [emailFetcher.state, emailFetcher.data]);
+
+  // Reset editing state after successful cancellation
+  useEffect(() => {
+    if (cancelFetcher.state === 'idle' && cancelFetcher.data) {
+      const data = cancelFetcher.data as { success?: boolean };
+      if (data.success) {
+        setIsEditingEmail(false);
+      }
+    }
+  }, [cancelFetcher.state, cancelFetcher.data]);
+
   return (
     <Card>
       <Card.Header>
@@ -23,7 +65,73 @@ export function ProfileCard({ user, signoutUrl, verifyUrl }: ProfileCardProps) {
       </Card.Header>
 
       <Card.Content className="space-y-6">
+        {/* Pending Email Change Banner */}
+        {pendingEmailChange && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="font-medium text-blue-900 text-sm">Email Change Pending</p>
+                <p className="mt-1 text-blue-700 text-xs">
+                  Verification code sent to:<span className="font-medium">{pendingEmailChange.newEmail}</span>
+                </p>
+                <p className="mt-2 text-blue-600 text-xs">Check your email and enter the code on the verification page to complete the change.</p>
+              </div>
+              <div className="flex gap-2">
+                <Button asChild variant="default" size="sm">
+                  <Link href={verifyUrl}>Verify Now</Link>
+                </Button>
+                <Button onClick={handleCancelChange} disabled={isCancelling} variant="ghost" size="sm">
+                  {isCancelling ? 'Cancelling...' : 'Cancel'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-4">
+          {/* Email Section */}
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-sm">Email Address</Label>
+            {!isEditingEmail ? (
+              <div className="flex items-center justify-between">
+                <p className="text-sm">{user?.email}</p>
+                {!pendingEmailChange && (
+                  <Button onClick={() => setIsEditingEmail(true)} variant="ghost" size="sm">
+                    Change
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Input
+                  value={newEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewEmail(e.target.value)}
+                  placeholder="Enter new email address"
+                  type="email"
+                  className="h-9"
+                  {...createFetcherFieldProps('newEmail', emailFetcher.errors)}
+                />
+                <SecureFetcherError error={emailFetcher.errors?.newEmail} />
+                {emailFetcher.errors?.form && <SecureFetcherError error={emailFetcher.errors.form} />}
+                <div className="flex gap-2">
+                  <Button onClick={handleChangeEmail} disabled={isChangingEmail || !newEmail.trim()} size="sm">
+                    {isChangingEmail ? 'Sending...' : 'Send Verification'}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsEditingEmail(false);
+                      setNewEmail('');
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {user?.createdAt && (
             <div className="space-y-2">
               <Label className="text-muted-foreground text-sm">Since</Label>
@@ -202,15 +310,12 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
       setIsRegistering(false);
     }
 
-    // Check for errors
-    if (addFetcher.state === 'idle' && addFetcher.data) {
-      const data = addFetcher.data as { success?: boolean; error?: { message?: string } };
-      if (data.success === false) {
-        setWebAuthnError(data.error?.message || 'Failed to add passkey');
-        setIsRegistering(false);
-      }
+    // Check for errors from fetcher
+    if (addFetcher.state === 'idle' && addFetcher.errors?.form) {
+      setWebAuthnError(addFetcher.errors.form);
+      setIsRegistering(false);
     }
-  }, [addFetcher.data, addFetcher.state]);
+  }, [addFetcher.data, addFetcher.state, addFetcher.errors]);
 
   const handleAddPasskey = () => {
     // Clear any previous errors
@@ -287,7 +392,21 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
         {webAuthnError && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
             <p className="font-medium text-red-800 text-sm">Registration Failed</p>
-            <p className="mt-1 text-red-600 text-xs">{webAuthnError}</p>
+            <SecureFetcherError error={webAuthnError} className="mt-1 text-red-600 text-xs" />
+          </div>
+        )}
+
+        {/* Add passkey errors from server */}
+        {addFetcher.errors?.form && !webAuthnError && (
+          <div className="mb-4">
+            <SecureFetcherError error={addFetcher.errors.form} />
+          </div>
+        )}
+
+        {/* Delete passkey errors */}
+        {deleteFetcher.errors?.form && (
+          <div className="mb-4">
+            <SecureFetcherError error={deleteFetcher.errors.form} />
           </div>
         )}
 
@@ -315,14 +434,23 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {editingId === auth.id ? (
-                        <div className="flex items-center gap-2">
-                          <Input value={editingName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingName(e.target.value)} className="h-8 w-48" placeholder="Enter passkey name" />
-                          <Button size="sm" onClick={handleSaveEdit} disabled={isRenamingPasskey}>
-                            {isRenamingPasskey ? 'Saving...' : 'Save'}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                            Cancel
-                          </Button>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editingName}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingName(e.target.value)}
+                              className="h-8 w-48"
+                              placeholder="Enter passkey name"
+                              {...createFetcherFieldProps('name', renameFetcher.errors)}
+                            />
+                            <Button size="sm" onClick={handleSaveEdit} disabled={isRenamingPasskey}>
+                              {isRenamingPasskey ? 'Saving...' : 'Save'}
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                              Cancel
+                            </Button>
+                          </div>
+                          <SecureFetcherError error={renameFetcher.errors?.name} className="text-xs" />
                         </div>
                       ) : (
                         <>

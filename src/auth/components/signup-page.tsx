@@ -10,9 +10,9 @@ import { isPlatformAuthenticatorAvailable, isWebAuthnSupported, startRegistratio
 
 export function SignUpForm({ signinUrl }: SignUpFormProps) {
   const navigation = useNavigation();
+  const submit = useSubmit();
   const actionData = useActionData<any>();
   const loaderData = useLoaderData<any>();
-  const submit = useSubmit();
   const isSubmitting = navigation.state === 'submitting';
   const errors = isError(actionData) ? formErrors(actionData) : {};
   const [webAuthnSupported, setWebAuthnSupported] = React.useState(false);
@@ -200,7 +200,8 @@ export function SignUpForm({ signinUrl }: SignUpFormProps) {
   );
 }
 
-export function SignUpPage({ loaderData, children, title = 'Create Account', description = 'Sign up for a new account with your passkey' }: SignUpPageProps) {
+export function SignUpPage({ children, title = 'Create Account', description = 'Sign up for a new account with your passkey' }: SignUpPageProps) {
+  const loaderData = useLoaderData<any>();
   const token = isError(loaderData) ? '' : (loaderData?.token ?? '');
 
   return (

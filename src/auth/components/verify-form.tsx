@@ -58,7 +58,7 @@ export function VerifyForm({ email, purpose = 'signup', resendCooldown: initialC
       <div className="space-y-2 text-center">
         <h1 className="font-bold text-3xl tracking-tight">{purposeLabels[purpose]}</h1>
         <p className="text-muted-foreground">
-          Please enter the {digits}-digit verification code sent to <strong className="text-nowrap">{email}</strong>
+          {digits}-digit verification code for <strong className="text-nowrap">{email}</strong>
         </p>
       </div>
 
@@ -79,12 +79,12 @@ export function VerifyForm({ email, purpose = 'signup', resendCooldown: initialC
 
         <div className="space-y-3">
           <div className="flex justify-around">
-            <Button type="submit" name="intent" value="verify" disabled={code.length !== digits}>
-              Verify Code
+            <Button type="submit" name="intent" value="resend" variant={code.length !== digits ? 'default' : 'outline'} disabled={resendCooldown > 0} formNoValidate>
+              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Send Code'}
             </Button>
 
-            <Button type="submit" name="intent" value="resend" variant="outline" disabled={resendCooldown > 0} formNoValidate>
-              {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}
+            <Button type="submit" name="intent" value="verify" variant={code.length !== digits ? 'outline' : 'default'} disabled={code.length !== digits}>
+              Verify Code
             </Button>
           </div>
           <div className="flex justify-center">

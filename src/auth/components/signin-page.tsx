@@ -10,9 +10,9 @@ import { isPlatformAuthenticatorAvailable, isWebAuthnSupported, startAuthenticat
 
 export function SignInForm({ signupUrl }: SignInFormProps) {
   const navigation = useNavigation();
+  const submit = useSubmit();
   const actionData = useActionData<any>();
   const loaderData = useLoaderData<any>();
-  const submit = useSubmit();
   const isSubmitting = navigation.state === 'submitting';
   const errors = isError(actionData) ? formErrors(actionData) : {};
   const [webAuthnSupported, setWebAuthnSupported] = React.useState(false);
@@ -192,7 +192,8 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
   );
 }
 
-export function SignInPage({ loaderData, children, title = 'Sign In', description = 'Sign in to your account with your passkey' }: SignInPageProps) {
+export function SignInPage({ children, title = 'Sign In', description = 'Sign in to your account with your passkey' }: SignInPageProps) {
+  const loaderData = useLoaderData<any>();
   const token = isError(loaderData) ? '' : (loaderData?.token ?? '');
 
   return (
