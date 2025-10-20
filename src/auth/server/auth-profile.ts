@@ -3,7 +3,7 @@ import { isError, ok } from '@ycore/forge/result';
 import type { RouterContextProvider } from 'react-router';
 
 import type { Authenticator, User } from '../schema';
-import { requireAuthUser } from './auth-context';
+import { requireAuthUser } from './auth.context';
 import { getAuthRepository } from './repository';
 
 export interface ProfileLoaderArgs {
