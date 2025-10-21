@@ -214,11 +214,7 @@ export function createAuthRepository(db: DrizzleD1Database<Record<string, unknow
     /** Update user email */
     updateUserEmail: async (id: string, newEmail: string) => {
       try {
-        const result = await db
-          .update(users)
-          .set({ email: newEmail, emailVerified: false })
-          .where(eq(users.id, id))
-          .returning();
+        const result = await db.update(users).set({ email: newEmail, emailVerified: false }).where(eq(users.id, id)).returning();
 
         if (result.length === 0) {
           return notFoundError('User', id);
@@ -246,11 +242,7 @@ export function createAuthRepository(db: DrizzleD1Database<Record<string, unknow
     /** Update user email verified status */
     updateEmailVerified: async (id: string, verified: boolean) => {
       try {
-        const result = await db
-          .update(users)
-          .set({ emailVerified: verified })
-          .where(eq(users.id, id))
-          .returning();
+        const result = await db.update(users).set({ emailVerified: verified }).where(eq(users.id, id)).returning();
 
         if (result.length === 0) {
           return notFoundError('User', id);
@@ -271,8 +263,7 @@ export function createAuthRepository(db: DrizzleD1Database<Record<string, unknow
     deleteUser: async (id: string) => {
       try {
         // Use a transaction to ensure consistency
-        const deleteAuthenticatorsResult = await db.delete(authenticators).where(eq(authenticators.userId, id));
-
+        const _deleteAuthenticatorsResult = await db.delete(authenticators).where(eq(authenticators.userId, id));
         const deleteUserResult = await db.delete(users).where(eq(users.id, id)).returning();
 
         if (deleteUserResult.length === 0) {

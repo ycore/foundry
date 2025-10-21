@@ -129,14 +129,14 @@ export function createEmailChangeNotificationTemplate(data: EmailChangeNotificat
               <div class="value">${newEmail}</div>
             </div>
 
-            <p>A verification code has been sent to the new email address. Your account email will only be changed if that verification code is entered successfully.</p>
+            <p>To complete this change, you will need to verify the new email address. Visit the verification page and request a code to be sent to your new email. Your account email will only be changed after successful verification.</p>
           </div>
 
           <div class="action-section">
             <h2>🔒 If You Made This Request</h2>
             <ul>
               <li>No action is needed from your side</li>
-              <li>Complete the verification process using the code sent to your new email</li>
+              <li>Visit the verification page and request a code to verify your new email address</li>
               <li>This request will expire in <strong>8 minutes</strong></li>
             </ul>
           </div>
@@ -174,13 +174,13 @@ ${oldEmail}
 REQUESTED NEW EMAIL:
 ${newEmail}
 
-A verification code has been sent to the new email address. Your account email will only be changed if that verification code is entered successfully.
+To complete this change, you will need to verify the new email address. Visit the verification page and request a code to be sent to your new email. Your account email will only be changed after successful verification.
 
 ---
 
 🔒 IF YOU MADE THIS REQUEST:
 - No action is needed from your side
-- Complete the verification process using the code sent to your new email
+- Visit the verification page and request a code to verify your new email address
 - This request will expire in 8 minutes
 
 🚨 IF YOU DID NOT MAKE THIS REQUEST:

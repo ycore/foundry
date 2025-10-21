@@ -13,12 +13,14 @@ export const authUserContext = createContext<User | null>(null);
  * Require authenticated user from context
  * Throws Response(401) if user is not authenticated
  *
- * Use this in protected routes where authentication is mandatory
+ * Note: Context only contains VERIFIED users (passkey + email verified).
+ * Unverified users exist in session but NOT in context.
+ * "Authenticated" always means "fully verified" in this system.
  *
  * @example
  * export const loader = async ({ context }) => {
  *   const user = requireAuthUser(context);
- *   return { user };
+ *   return { user }; // user is guaranteed to be verified
  * };
  */
 export function requireAuthUser(context: AppLoadContext): User {
@@ -34,12 +36,14 @@ export function requireAuthUser(context: AppLoadContext): User {
  * Get authenticated user from context (optional)
  * Returns null if user is not authenticated
  *
- * Use this when authentication is optional
+ * Note: Context only contains VERIFIED users (passkey + email verified).
+ * Returns null for both guests AND unverified users.
+ * "Authenticated" always means "fully verified" in this system.
  *
  * @example
  * export const loader = async ({ context }) => {
  *   const user = getAuthUser(context);
- *   return { user, isGuest: !user };
+ *   return { user, isGuest: !user }; // user is verified or null
  * };
  */
 export function getAuthUser(context: AppLoadContext): User | null {
@@ -50,12 +54,14 @@ export function getAuthUser(context: AppLoadContext): User | null {
  * Check if a user is currently authenticated
  * Returns true if a user is present in context, false otherwise
  *
- * Use this for conditional logic based on auth state
+ * Note: "Authenticated" means FULLY VERIFIED (passkey + email).
+ * Returns false for both guests AND unverified users.
+ * Context only contains verified users; unverified users exist in session only.
  *
  * @example
  * export const loader = async ({ context }) => {
  *   const authenticated = isAuthenticated(context);
- *   return { isAuthenticated: authenticated };
+ *   return { isAuthenticated: authenticated }; // true = verified
  * };
  */
 export function isAuthenticated(context: AppLoadContext): boolean {

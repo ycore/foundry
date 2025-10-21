@@ -1,6 +1,17 @@
 export type { AuthenticatorsCardProps, ProfileCardProps, ProfilePageProps, SignInFormProps, SignInPageProps, SignUpFormProps, SignUpPageProps, WebAuthnCredentialResponse } from './@types/auth.component.types';
 export type { AuthConfig, AuthRoutes, SessionConfig, VerificationConfig, WebAuthnConfig } from './@types/auth.config.types';
-export type { SessionData, SessionFlashData, SignInActionArgs, SignInLoaderArgs, SignUpActionArgs, SignUpLoaderArgs, UserDetails, WebAuthnAuthenticationData, WebAuthnOptionsResponse, WebAuthnRegistrationData } from './@types/auth.types';
+export type {
+  SessionData,
+  SessionFlashData,
+  SignInActionArgs,
+  SignInLoaderArgs,
+  SignUpActionArgs,
+  SignUpLoaderArgs,
+  UserDetails,
+  WebAuthnAuthenticationData,
+  WebAuthnOptionsResponse,
+  WebAuthnRegistrationData,
+} from './@types/auth.types';
 export { defaultAuthConfig, defaultAuthRoutes } from './auth.config';
 export { AuthenticatorsCard, ProfileCard, ProfilePage } from './components/profile-page';
 export { SignInForm, SignInPage } from './components/signin-page';

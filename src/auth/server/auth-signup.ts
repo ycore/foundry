@@ -159,7 +159,7 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
         }
 
         // Return success - redirect will be handled by route
-        return ok(createAuthSuccessResponse(context, authSessionResult));
+        return ok(createAuthSuccessResponse(context, authSessionResult, user));
       } catch (error) {
         if (error instanceof Response) {
           throw error;

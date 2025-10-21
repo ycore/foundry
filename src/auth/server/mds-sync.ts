@@ -20,17 +20,17 @@ export interface MDSEntry {
   }>;
   statusReports: Array<{
     status:
-    | 'FIDO_CERTIFIED'
-    | 'NOT_FIDO_CERTIFIED'
-    | 'FIDO_CERTIFIED_L1'
-    | 'FIDO_CERTIFIED_L2'
-    | 'UPDATE_AVAILABLE'
-    | 'REVOKED'
-    | 'SELF_ASSERTION_SUBMITTED'
-    | 'FIDO_CERTIFIED_L1_PLUS'
-    | 'FIDO_CERTIFIED_L2_PLUS'
-    | 'FIDO_CERTIFIED_L3'
-    | 'FIDO_CERTIFIED_L3_PLUS';
+      | 'FIDO_CERTIFIED'
+      | 'NOT_FIDO_CERTIFIED'
+      | 'FIDO_CERTIFIED_L1'
+      | 'FIDO_CERTIFIED_L2'
+      | 'UPDATE_AVAILABLE'
+      | 'REVOKED'
+      | 'SELF_ASSERTION_SUBMITTED'
+      | 'FIDO_CERTIFIED_L1_PLUS'
+      | 'FIDO_CERTIFIED_L2_PLUS'
+      | 'FIDO_CERTIFIED_L3'
+      | 'FIDO_CERTIFIED_L3_PLUS';
     effectiveDate?: string;
     authenticatorVersion?: number;
     certificate?: string;

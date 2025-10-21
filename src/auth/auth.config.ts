@@ -33,7 +33,6 @@ export const defaultAuthConfig: AuthConfig = {
     period: 60 * 8, // 8 minutes in seconds
     maxAttempts: 3,
     window: 1, // ±30 seconds
-    requireEmailVerification: false,
     resendCooldown: 60, // seconds
   },
 };

@@ -43,7 +43,7 @@ export async function createEmailChangeRequest(
   newEmail: string,
   context: Readonly<RouterContextProvider>,
   kvBinding: string,
-  expirationTtl: number = 480 // 8 minutes (matches TOTP expiry)
+  expirationTtl = 480 // 8 minutes (matches TOTP expiry)
 ): Promise<Result<void>> {
   try {
     const kv = getKVStore(context, kvBinding as KVBindings);
@@ -148,12 +148,7 @@ export async function deleteEmailChangeRequest(userId: string, context: Readonly
  * Send notification to old email address about email change request
  * Does NOT include a verification code - just informational
  */
-export async function sendEmailChangeNotification(
-  oldEmail: string,
-  newEmail: string,
-  context: Readonly<RouterContextProvider>,
-  emailConfig: EmailConfig
-): Promise<Result<void>> {
+export async function sendEmailChangeNotification(oldEmail: string, newEmail: string, context: Readonly<RouterContextProvider>, emailConfig: EmailConfig): Promise<Result<void>> {
   try {
     // Create email content
     const emailContent = createEmailChangeNotificationTemplate({ oldEmail, newEmail });
@@ -232,14 +227,7 @@ export async function sendEmailChangeNotification(
  * 2. Send verification code to new email
  * 3. Send notification to old email
  */
-export async function requestEmailChange(
-  userId: string,
-  oldEmail: string,
-  newEmail: string,
-  context: Readonly<RouterContextProvider>,
-  emailConfig: EmailConfig,
-  kvBinding: string
-): Promise<Result<void>> {
+export async function requestEmailChange(userId: string, oldEmail: string, newEmail: string, context: Readonly<RouterContextProvider>, emailConfig: EmailConfig, kvBinding: string): Promise<Result<void>> {
   // Create pending change request
   const createResult = await createEmailChangeRequest(userId, oldEmail, newEmail, context, kvBinding);
 

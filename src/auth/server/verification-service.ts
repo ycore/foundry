@@ -73,9 +73,7 @@ export async function sendVerificationEmail(options: SendVerificationOptions): P
 
     // Get API key from environment using the configured secret key
     const bindings = getBindings(context);
-    const apiKey = providerConfig.apiKey
-      ? bindings[providerConfig.apiKey as keyof typeof bindings] as string | undefined
-      : undefined;
+    const apiKey = providerConfig.apiKey ? (bindings[providerConfig.apiKey as keyof typeof bindings] as string | undefined) : undefined;
 
     // Send email
     const sendResult = await emailProviderResult.sendEmail({

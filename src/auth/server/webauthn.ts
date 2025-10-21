@@ -6,7 +6,18 @@ import { logger } from '@ycore/forge/logger';
 import { err, type Result } from '@ycore/forge/result';
 
 import type { DeviceInfo, EnhancedDeviceInfo, WebAuthnAuthenticationData, WebAuthnRegistrationData } from '../@types/auth.types';
-import { ATTESTATION_FORMAT_HANDLERS, ATTESTATION_TYPES, AUTHENTICATOR_FLAGS, convertAAGUIDToUUID, DEFAULT_DEVICE_INFO, isAAGUIDAllZeros, WEBAUTHN_ALGORITHMS, WEBAUTHN_CONFIG, WEBAUTHN_ERROR_MESSAGES, WebAuthnErrorCode } from '../auth.constants';
+import {
+  ATTESTATION_FORMAT_HANDLERS,
+  ATTESTATION_TYPES,
+  AUTHENTICATOR_FLAGS,
+  convertAAGUIDToUUID,
+  DEFAULT_DEVICE_INFO,
+  isAAGUIDAllZeros,
+  WEBAUTHN_ALGORITHMS,
+  WEBAUTHN_CONFIG,
+  WEBAUTHN_ERROR_MESSAGES,
+  WebAuthnErrorCode,
+} from '../auth.constants';
 import type { Authenticator as AuthenticatorModel } from '../schema';
 
 /**
@@ -193,11 +204,11 @@ export function createAuthenticationOptions(rpId: string, challenge: string, all
     allowCredentials:
       allowCredentials.length > 0
         ? allowCredentials.map(cred => ({
-          id: toArrayBuffer(decodeBase64url(cred.id)),
-          type: 'public-key' as PublicKeyCredentialType,
-          // Use actual transports if available, otherwise omit (let browser decide)
-          ...(cred.transports && cred.transports.length > 0 ? { transports: cred.transports } : {}),
-        }))
+            id: toArrayBuffer(decodeBase64url(cred.id)),
+            type: 'public-key' as PublicKeyCredentialType,
+            // Use actual transports if available, otherwise omit (let browser decide)
+            ...(cred.transports && cred.transports.length > 0 ? { transports: cred.transports } : {}),
+          }))
         : [],
   };
 }
@@ -587,7 +598,6 @@ export async function verifyAuthentication(
           code: WebAuthnErrorCode.SIGNATURE_FAILED,
         });
       }
-
     } catch (error) {
       logger.error('webauthn_authentication_signature_verification_error', {
         error: error instanceof Error ? error.message : 'Unknown error',

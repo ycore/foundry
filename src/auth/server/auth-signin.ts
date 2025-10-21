@@ -97,10 +97,10 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         }
 
         // Verify the authenticator belongs to this user (defense in depth)
-        if (authenticator.userId !== user!.id) {
+        if (authenticator.userId !== user?.id) {
           logger.critical('signin_authenticator_user_mismatch', {
             authenticatorUserId: authenticator.userId,
-            requestUserId: user!.id,
+            requestUserId: user?.id,
             email,
             credentialId: credential.rawId,
           });
@@ -178,7 +178,7 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         }
 
         // Return success - redirect will be handled by route
-        return ok(createAuthSuccessResponse(context, authSessionResult));
+        return ok(createAuthSuccessResponse(context, authSessionResult, user!));
       } catch (error) {
         if (error instanceof Response) {
           throw error;

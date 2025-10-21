@@ -79,20 +79,32 @@ export async function createAuthenticatedSession(context: Readonly<RouterContext
 
 /**
  * Create auth success response with redirect
+ * Always checks email verification status - redirects to verify if not verified
  *
  * @param context - Router context provider
  * @param cookie - The Set-Cookie header value
+ * @param user - The authenticated user (optional, used to check verification status)
  * @returns Object with redirectTo and cookie for redirect response
  *
  * @example
  * ```ts
- * const response = createAuthSuccessResponse(context, cookie);
+ * const response = createAuthSuccessResponse(context, cookie, user);
  * return ok(response);
  * ```
  */
-export function createAuthSuccessResponse(context: Readonly<RouterContextProvider>, cookie: string): { redirectTo: string; cookie: string } {
+export function createAuthSuccessResponse(context: Readonly<RouterContextProvider>, cookie: string, user?: User): { redirectTo: string; cookie: string } {
   const authConfig = getContext(context, authConfigContext);
-  const redirectTo = authConfig?.routes.signedin || defaultAuthRoutes.signedin;
 
+  // Always check verification status - email verification is mandatory
+  if (user && !user.emailVerified) {
+    logger.info('user_not_verified_redirect_to_verify', {
+      userId: user.id,
+      email: user.email,
+    });
+    const redirectTo = authConfig?.routes.verify || defaultAuthRoutes.verify;
+    return { redirectTo, cookie };
+  }
+
+  const redirectTo = authConfig?.routes.signedin || defaultAuthRoutes.signedin;
   return { redirectTo, cookie };
 }
