@@ -72,9 +72,9 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
               <div className="flex-1">
                 <p className="font-medium text-blue-900 text-sm">Email Change Pending</p>
                 <p className="mt-1 text-blue-700 text-xs">
-                  Verification code sent to:<span className="font-medium">{pendingEmailChange.newEmail}</span>
+                  Pending verification for: <span className="font-medium">{pendingEmailChange.newEmail}</span>
                 </p>
-                <p className="mt-2 text-blue-600 text-xs">Check your email and enter the code on the verification page to complete the change.</p>
+                <p className="mt-2 text-blue-600 text-xs">Visit the verification page and request a code to be sent to your new email address.</p>
               </div>
               <div className="flex gap-2">
                 <Button asChild variant="default" size="sm">

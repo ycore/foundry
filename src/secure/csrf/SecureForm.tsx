@@ -45,11 +45,11 @@ export function SecureForm({ children, csrf_name, errors, ...props }: SecureForm
 
   return (
     // if CSRF token is missing, avoid unsecured form
-    (!token) ?
+    !token ? (
       <div role="alert" className="rounded-lg border border-destructive bg-destructive/10 p-4">
         <SecureFormError error={CSRF_TOKER_ERROR} />
       </div>
-      :
+    ) : (
       <SecureFormContext.Provider value={contextValue}>
         <Form role="form" {...props}>
           <AuthenticityTokenInput name={tokenFieldName} />
@@ -63,6 +63,7 @@ export function SecureForm({ children, csrf_name, errors, ...props }: SecureForm
           {children}
         </Form>
       </SecureFormContext.Provider>
+    )
   );
 }
 

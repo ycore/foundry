@@ -52,7 +52,7 @@ function findRouteConfig(path: string, routes: RouteRateLimitConfig[]): RouteRat
  *
  * Rate limiting is applied to configured routes, null otherwise.
  */
-export function getEffectiveRateLimitConfig(config: RateLimiterConfig, path: string, method: string): { providerConfig: RateLimiterProviderConfig; providerId: string; } | null {
+export function getEffectiveRateLimitConfig(config: RateLimiterConfig, path: string, method: string): { providerConfig: RateLimiterProviderConfig; providerId: string } | null {
   // Check if path should be skipped entirely
   if (config.conditions?.skipPaths?.some(skipPath => matchesRoute(path, skipPath))) {
     return null;

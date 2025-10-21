@@ -238,7 +238,7 @@ export const kvRateLimiter: RateLimiterProvider = {
 
     try {
       // Find all rate limit keys for this identifier using KV list operations
-      let deletedCount = 0;
+      let _deletedCount = 0;
       let cursor: string | undefined;
       let listComplete = false;
 
@@ -252,7 +252,7 @@ export const kvRateLimiter: RateLimiterProvider = {
         // Delete matching keys in batch
         await Promise.all(keysToDelete.map((key: string) => kv.delete(key)));
 
-        deletedCount += keysToDelete.length;
+        _deletedCount += keysToDelete.length;
 
         // Check if pagination is complete
         listComplete = listResult.list_complete;

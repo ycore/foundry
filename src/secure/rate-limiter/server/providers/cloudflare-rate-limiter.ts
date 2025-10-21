@@ -101,7 +101,7 @@ export const cloudflareRateLimiter: RateLimiterProvider = {
    * Cloudflare's native Rate Limiting API does not provide a reset method
    * Rate limits automatically expire based on the configured period
    */
-  async resetLimit(identifier: string, config: RateLimiterProviderConfig, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
+  async resetLimit(identifier: string, config: RateLimiterProviderConfig, _context: Readonly<RouterContextProvider>): Promise<Result<void>> {
     return err('Cloudflare rate limiter does not support manual reset', {
       providerId: config.id,
       identifier,

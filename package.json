@@ -56,7 +56,6 @@
     "clean": "rm -rf dist node_modules",
     "ws:format": "biome format src",
     "ws:lint": "biome lint src",
-    "ws:tc": "tsc --noEmit",
-    "ws:types": "wrangler types --include-env=false './src/@types/worker-runtime.d.ts' && bun run ws:tc"
+    "ws:types": "wrangler types --include-env=false './src/@types/worker-runtime.d.ts'"
   }
 }

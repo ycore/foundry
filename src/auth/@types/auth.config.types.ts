@@ -41,6 +41,5 @@ export type VerificationConfig = {
   period: number;
   maxAttempts: number;
   window: number;
-  requireEmailVerification: boolean;
   resendCooldown: number;
 };

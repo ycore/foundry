@@ -137,7 +137,7 @@ export async function isPlatformAuthenticatorAvailable(): Promise<boolean> {
 /**
  * Get browser capabilities for WebAuthn
  */
-export async function getBrowserCapabilities(): Promise<{ webauthnSupported: boolean; platformAuthenticatorAvailable: boolean; conditionalMediationSupported: boolean; }> {
+export async function getBrowserCapabilities(): Promise<{ webauthnSupported: boolean; platformAuthenticatorAvailable: boolean; conditionalMediationSupported: boolean }> {
   const webauthnSupported = isWebAuthnSupported();
   const platformAuthenticatorAvailable = webauthnSupported ? await isPlatformAuthenticatorAvailable() : false;
 
