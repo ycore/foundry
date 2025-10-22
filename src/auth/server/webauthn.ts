@@ -204,11 +204,11 @@ export function createAuthenticationOptions(rpId: string, challenge: string, all
     allowCredentials:
       allowCredentials.length > 0
         ? allowCredentials.map(cred => ({
-            id: toArrayBuffer(decodeBase64url(cred.id)),
-            type: 'public-key' as PublicKeyCredentialType,
-            // Use actual transports if available, otherwise omit (let browser decide)
-            ...(cred.transports && cred.transports.length > 0 ? { transports: cred.transports } : {}),
-          }))
+          id: toArrayBuffer(decodeBase64url(cred.id)),
+          type: 'public-key' as PublicKeyCredentialType,
+          // Use actual transports if available, otherwise omit (let browser decide)
+          ...(cred.transports && cred.transports.length > 0 ? { transports: cred.transports } : {}),
+        }))
         : [],
   };
 }
@@ -367,7 +367,7 @@ export async function verifyRegistration(
     logger.error('webauthn_registration_error', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-    return err('Registration verification failed', { field: 'general' });
+    return err('Registration verification failed', { field: 'general' }, { status: 500 });
   }
 }
 
@@ -460,7 +460,7 @@ export async function verifyAuthentication(
         return err('Invalid stored public key', {
           field: 'publicKey',
           code: WebAuthnErrorCode.INVALID_KEY_FORMAT,
-        });
+        }, { status: 500 }); // System error - corrupted data in DB
       }
     } catch (error) {
       logger.error('webauthn_authentication_key_parse_error', {
@@ -469,7 +469,7 @@ export async function verifyAuthentication(
       return err('Failed to parse stored public key', {
         field: 'publicKey',
         code: WebAuthnErrorCode.INVALID_KEY_FORMAT,
-      });
+      }, { status: 500 }); // System error - corrupted data in DB
     }
 
     // Verify the signature using ECDSA with P-256
@@ -606,7 +606,7 @@ export async function verifyAuthentication(
       return err('Signature verification failed', {
         field: 'signature',
         code: WebAuthnErrorCode.SIGNATURE_FAILED,
-      });
+      }, { status: 500 }); // System error - crypto operation failed
     }
 
     return {
@@ -617,6 +617,6 @@ export async function verifyAuthentication(
     logger.error('webauthn_authentication_error', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-    return err('Authentication verification failed', { field: 'general' });
+    return err('Authentication verification failed', { field: 'general' }, { status: 500 });
   }
 }

@@ -3,9 +3,8 @@ import { getContext } from '@ycore/forge/context';
 import type { IntentHandlers } from '@ycore/forge/intent/server';
 import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
-import { err, flattenError, isError, ok, respondError, respondOk, transformError, validateFormData } from '@ycore/forge/result';
+import { err, flattenError, isError, isSystemError, ok, respondError, respondOk, respondRedirect, throwSystemError, transformError, validateFormData } from '@ycore/forge/result';
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
-import { redirect } from 'react-router';
 
 import type { SignInActionArgs, SignInLoaderArgs } from '../@types/auth.types';
 import type { WebAuthnErrorCode } from '../auth.constants';
@@ -15,7 +14,7 @@ import { signinFormSchema } from './auth.validation';
 import { getAuthRepository } from './repository';
 import { createChallengeSession, destroyChallengeSession, getChallengeFromSession } from './session';
 import { generateChallenge, getWebAuthnErrorMessage, verifyAuthentication } from './webauthn';
-import { createAuthenticatedSession, createAuthSuccessResponse, parseWebAuthnCredential } from './webauthn-utils';
+import { createAuthenticatedSession, parseWebAuthnCredential } from './webauthn-utils';
 import { validateWebAuthnRequest } from './webauthn-validation';
 
 export async function signinLoader({ context }: SignInLoaderArgs) {
@@ -36,8 +35,8 @@ export async function signinAction({ request, context }: SignInActionArgs) {
   const authConfig = getContext(context, authConfigContext);
 
   if (!authConfig) {
-    logger.warning('signin_action_no_config');
-    return respondError(err('Auth configuration not found', { field: 'general' }));
+    logger.error('signin_config_missing');
+    throwSystemError('Auth configuration not found');
   }
 
   const formData = await request.formData();
@@ -47,8 +46,7 @@ export async function signinAction({ request, context }: SignInActionArgs) {
       try {
         const validationResult = await validateFormData(signinFormSchema, formData);
         if (isError(validationResult)) {
-          logger.warning('signin_validation_failed', { error: flattenError(validationResult) });
-          return validationResult;
+          return validationResult; // User error - no logging needed
         }
 
         const email = validationResult.email;
@@ -64,8 +62,7 @@ export async function signinAction({ request, context }: SignInActionArgs) {
 
         // Timing-safe fail after all lookups complete
         if (!userExists || !hasAuthenticators) {
-          logger.warning('signin_invalid_credentials', { email });
-          return err('The credentials are incorrect', { email: 'The credentials are incorrect' });
+          return err('The credentials are incorrect', { email: 'The credentials are incorrect' }); // User error - no logging needed
         }
 
         // At this point we know authenticatorsResult is an array of Authenticator
@@ -74,8 +71,7 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         // Get stored challenge from session
         const sessionResult = await getChallengeFromSession(request, context);
         if (isError(sessionResult)) {
-          logger.warning('signin_invalid_session', { email, error: flattenError(sessionResult) });
-          return sessionResult;
+          return sessionResult; // User error - session expired
         }
 
         const { challenge: storedChallenge, challengeCreatedAt, session } = sessionResult;
@@ -92,8 +88,7 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         const authenticator = authenticators.find((auth: Authenticator) => auth.id === credential.rawId);
 
         if (!authenticator) {
-          logger.warning('signin_authenticator_not_found', { email, credentialId: credential.rawId });
-          return err('The credentials are incorrect', { email: 'The credentials are incorrect' });
+          return err('The credentials are incorrect', { email: 'The credentials are incorrect' }); // User error
         }
 
         // Verify the authenticator belongs to this user (defense in depth)
@@ -121,8 +116,7 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         );
 
         if (isError(webauthnValidationResult)) {
-          logger.warning('signin_webauthn_validation_failed', { email, error: flattenError(webauthnValidationResult) });
-          return webauthnValidationResult;
+          return webauthnValidationResult; // User error
         }
 
         const { challenge, origin, rpId } = webauthnValidationResult;
@@ -144,12 +138,10 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         const verificationResult = await verifyAuthentication(authenticationData, challenge, origin, rpId, authenticator);
 
         if (isError(verificationResult)) {
-          logger.error('signin_verification_failed', {
-            email,
-            error: verificationResult.message,
-            code: verificationResult.code,
-            details: verificationResult.details,
-          });
+          // System error - unexpected WebAuthn failure
+          if (isSystemError(verificationResult)) {
+            logger.error('signin_verification_system_error', { email, error: flattenError(verificationResult), code: verificationResult.code });
+          }
 
           // Provide user-friendly error messages based on error code
           const errorMessage = getWebAuthnErrorMessage(verificationResult.code as WebAuthnErrorCode, 'authentication');
@@ -208,18 +200,30 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         // Clear challenge from session
         const cleanupResult = await destroyChallengeSession(session, context);
         if (isError(cleanupResult)) {
-          logger.warning('signin_challenge_cleanup_failed', { error: cleanupResult.message });
-          // Continue with signin even if cleanup fails
+          // Log but continue - not critical
+          logger.warning('signin_challenge_cleanup_failed', { error: flattenError(cleanupResult) });
         }
 
         // Create authenticated session
         const authSessionResult = await createAuthenticatedSession(context, user!, email, 'signin');
         if (isError(authSessionResult)) {
+          // System error - session creation failed
+          if (isSystemError(authSessionResult)) {
+            logger.error('signin_session_creation_failed', { email, error: flattenError(authSessionResult) });
+          }
           return authSessionResult;
         }
 
-        // Return success - redirect will be handled by route
-        return ok(createAuthSuccessResponse(context, authSessionResult, user!));
+        // Determine redirect path based on user status
+        const redirectTo = user!.status === 'active'
+          ? (authConfig?.routes.signedin || '/dashboard')
+          : (authConfig?.routes.verify || '/auth/verify');
+
+        // Return session cookie and redirect info
+        return ok({
+          sessionCookie: authSessionResult,
+          redirectTo
+        });
       } catch (error) {
         if (error instanceof Response) {
           throw error;
@@ -234,11 +238,23 @@ export async function signinAction({ request, context }: SignInActionArgs) {
   const result = await handleIntent(formData, handlers);
 
   if (isError(result)) {
-    logger.warning('signin_action_failed', { error: flattenError(result) });
+    // System error
+    if (isSystemError(result)) {
+      logger.error('signin_system_error', { error: flattenError(result) });
+      throwSystemError(result.message, result.status as 503);
+    }
+
+    // User error - show in form
     return respondError(result);
   }
 
-  // Handle successful signin with redirect
-  const successData = result as { redirectTo: string; cookie: string };
-  throw redirect(successData.redirectTo, { headers: { 'Set-Cookie': successData.cookie } });
+  // Success - redirect with session cookie
+  const { redirectTo, sessionCookie } = result as {
+    redirectTo: string;
+    sessionCookie: string;
+  };
+
+  throw respondRedirect(redirectTo, {
+    headers: { 'Set-Cookie': sessionCookie }
+  });
 }

@@ -3,10 +3,9 @@ import { getContext } from '@ycore/forge/context';
 import type { IntentHandlers } from '@ycore/forge/intent/server';
 import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
-import { err, flattenError, isError, ok, respondError, respondOk, transformError, validateFormData } from '@ycore/forge/result';
+import { err, flattenError, isError, isSystemError, ok, respondError, respondOk, respondRedirect, throwSystemError, transformError, validateFormData } from '@ycore/forge/result';
 import { getKVStore } from '@ycore/forge/services';
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
-import { redirect } from 'react-router';
 
 import type { SignUpActionArgs, SignUpLoaderArgs } from '../@types/auth.types';
 import type { WebAuthnErrorCode } from '../auth.constants';
@@ -15,7 +14,7 @@ import { signupFormSchema } from './auth.validation';
 import { getAuthRepository } from './repository';
 import { createChallengeSession, destroyChallengeSession, getChallengeFromSession } from './session';
 import { generateChallenge, getWebAuthnErrorMessage, verifyRegistration } from './webauthn';
-import { createAuthenticatedSession, createAuthSuccessResponse, parseWebAuthnCredential } from './webauthn-utils';
+import { createAuthenticatedSession, parseWebAuthnCredential } from './webauthn-utils';
 import { validateWebAuthnRequest } from './webauthn-validation';
 
 export async function signupLoader({ context }: SignUpLoaderArgs) {
@@ -36,7 +35,8 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
   const authConfig = getContext(context, authConfigContext);
 
   if (!authConfig) {
-    return respondError(err('Auth configuration not found', { field: 'general' }));
+    logger.error('signup_config_missing');
+    throwSystemError('Auth configuration not found');
   }
 
   const formData = await request.formData();
@@ -47,7 +47,7 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
         // Validate form data
         const validationResult = await validateFormData(signupFormSchema, formData);
         if (isError(validationResult)) {
-          return validationResult;
+          return validationResult; // User error - no logging needed
         }
 
         const { email, displayName } = validationResult;
@@ -67,8 +67,7 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
         // Get stored challenge from session
         const sessionResult = await getChallengeFromSession(request, context);
         if (isError(sessionResult)) {
-          logger.warning('signup_invalid_session', { email, error: flattenError(sessionResult) });
-          return sessionResult;
+          return sessionResult; // User error - session expired
         }
 
         const { challenge: storedChallenge, challengeCreatedAt, session } = sessionResult;
@@ -120,12 +119,10 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
         const verificationResult = await verifyRegistration(registrationData, challenge, origin, rpId, metadataKV);
 
         if (isError(verificationResult)) {
-          logger.error('signup_verification_failed', {
-            email,
-            error: verificationResult.message,
-            code: verificationResult.code,
-            details: verificationResult.details,
-          });
+          // System error - unexpected WebAuthn failure
+          if (isSystemError(verificationResult)) {
+            logger.error('signup_verification_system_error', { email, error: flattenError(verificationResult), code: verificationResult.code });
+          }
 
           // Provide user-friendly error messages based on error code
           const errorMessage = getWebAuthnErrorMessage(verificationResult.code as WebAuthnErrorCode, 'registration');
@@ -142,8 +139,9 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
           // Create new user for normal signup
           const createUserResult = await repository.createUser(email, displayName);
           if (isError(createUserResult)) {
-            logger.error('signup_create_user_failed', { email, error: createUserResult.message });
-            return err('Failed to create account', { field: 'general' });
+            // System error - database failure
+            logger.error('signup_create_user_failed', { email, error: flattenError(createUserResult) });
+            return err('Failed to create account', { field: 'general' }, { status: 503 });
           }
           user = createUserResult;
         }
@@ -152,12 +150,13 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
         const createAuthResult = await repository.createAuthenticator({ ...verificationResult, userId: user.id });
 
         if (isError(createAuthResult)) {
-          logger.error('signup_create_authenticator_failed', { email, userId: user.id, error: createAuthResult.message });
+          // System error - database failure
+          logger.error('signup_create_authenticator_failed', { email, userId: user.id, error: flattenError(createAuthResult) });
           // Attempt cleanup only if we created a new user
           if (!isRecoveryMode) {
             await repository.deleteUser(user.id);
           }
-          return err('Failed to register authenticator', { field: 'general' });
+          return err('Failed to register authenticator', { field: 'general' }, { status: 503 });
         }
 
         // Handle recovery mode: set pending recovery timestamp and update status
@@ -193,18 +192,30 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
         // Clear challenge from session
         const cleanupResult = await destroyChallengeSession(session, context);
         if (isError(cleanupResult)) {
-          logger.warning('signup_challenge_cleanup_failed', { error: cleanupResult.message });
-          // Continue with signup even if cleanup fails
+          // Log but continue - not critical
+          logger.warning('signup_challenge_cleanup_failed', { error: flattenError(cleanupResult) });
         }
 
         // Create authenticated session
         const authSessionResult = await createAuthenticatedSession(context, user, email, 'signup');
         if (isError(authSessionResult)) {
+          // System error - session creation failed
+          if (isSystemError(authSessionResult)) {
+            logger.error('signup_session_creation_failed', { email, error: flattenError(authSessionResult) });
+          }
           return authSessionResult;
         }
 
-        // Return success - redirect will be handled by route
-        return ok(createAuthSuccessResponse(context, authSessionResult, user));
+        // Determine redirect path based on user status
+        const redirectTo = user.status === 'active'
+          ? (authConfig?.routes.signedin || '/dashboard')
+          : (authConfig?.routes.verify || '/auth/verify');
+
+        // Return session cookie and redirect info
+        return ok({
+          sessionCookie: authSessionResult,
+          redirectTo
+        });
       } catch (error) {
         if (error instanceof Response) {
           throw error;
@@ -219,11 +230,23 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
   const result = await handleIntent(formData, handlers);
 
   if (isError(result)) {
-    logger.warning('signup_action_failed', { error: flattenError(result) });
+    // System error
+    if (isSystemError(result)) {
+      logger.error('signup_system_error', { error: flattenError(result) });
+      throwSystemError(result.message, result.status as 503);
+    }
+
+    // User error - show in form
     return respondError(result);
   }
 
-  // Handle successful signup with redirect
-  const successResult = result as { redirectTo: string; cookie: string };
-  throw redirect(successResult.redirectTo, { headers: { 'Set-Cookie': successResult.cookie } });
+  // Success - redirect with session cookie
+  const { redirectTo, sessionCookie } = result as {
+    redirectTo: string;
+    sessionCookie: string;
+  };
+
+  throw respondRedirect(redirectTo, {
+    headers: { 'Set-Cookie': sessionCookie }
+  });
 }

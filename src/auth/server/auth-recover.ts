@@ -1,10 +1,9 @@
 import type { IntentHandlers } from '@ycore/forge/intent/server';
 import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
-import { err, flattenError, isError, ok, respondError, respondOk, validateFormData } from '@ycore/forge/result';
+import { err, flattenError, isError, isSystemError, ok, respondError, respondOk, respondRedirect, throwSystemError, validateFormData } from '@ycore/forge/result';
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import type { RouterContextProvider } from 'react-router';
-import { redirect } from 'react-router';
 import { email, minLength, object, pipe, string } from 'valibot';
 
 import type { EmailConfig } from '../../email/@types/email.types';
@@ -53,49 +52,38 @@ export async function recoverAction({ request, context, emailConfig }: RecoverAc
       // Validate form data
       const validationResult = await validateFormData(recoverFormSchema, formData);
       if (isError(validationResult)) {
-        logger.warning('recover_validation_failed', {
-          error: flattenError(validationResult),
-        });
-        return validationResult;
+        return validationResult; // User error - no logging needed
       }
 
       const { email } = validationResult;
-
-      logger.info('recover_request_initiated', { email });
 
       // Request account recovery (returns user if email exists, null otherwise)
       const result = await requestAccountRecovery(email, context, emailConfig);
 
       if (isError(result)) {
-        logger.error('recover_request_failed', {
-          email,
-          error: flattenError(result),
-        });
+        // System error - email service failure
+        if (isSystemError(result)) {
+          logger.error('recover_email_system_error', { email, error: flattenError(result) });
+        }
         return result;
       }
 
       const user = result;
-
-      logger.info('recover_request_completed', { email, userExists: user !== null });
 
       // If user exists, create session and redirect to verify
       if (user) {
         const sessionResult = await createAuthSession(context, { user });
 
         if (isError(sessionResult)) {
-          logger.error('recover_session_creation_failed', {
-            userId: user.id,
-            email,
-            error: flattenError(sessionResult),
-          });
+          // System error - session creation failed
+          if (isSystemError(sessionResult)) {
+            logger.error('recover_session_system_error', { userId: user.id, email, error: flattenError(sessionResult) });
+          }
           return err('Failed to create recovery session');
         }
 
-        logger.info('recovery_session_created', { userId: user.id, email });
-
         // Return success with session cookie and redirect info
         return ok({
-          success: true,
           message: 'If this email exists, a verification code has been sent.',
           redirectTo: '/auth/verify',
           sessionCookie: sessionResult,
@@ -104,7 +92,6 @@ export async function recoverAction({ request, context, emailConfig }: RecoverAc
 
       // Email doesn't exist - return generic message (prevent enumeration)
       return ok({
-        success: true,
         message: 'If this email exists, a verification code has been sent.',
       });
     },
@@ -114,17 +101,21 @@ export async function recoverAction({ request, context, emailConfig }: RecoverAc
   const result = await handleIntent(formData, handlers);
 
   if (isError(result)) {
-    logger.warning('recover_intent_failed', {
-      error: flattenError(result),
-    });
+    // System error - throw to boundary
+    if (isSystemError(result)) {
+      logger.error('recover_system_error', { error: flattenError(result) });
+      throwSystemError(result.message, result.status as 503);
+    }
+
+    // User error - show in form
     return respondError(result);
   }
 
-  const resultData = result as any;
+  const resultData = result as { message?: string; redirectTo?: string; sessionCookie?: string };
 
   // If we have a redirect with session cookie, use it
   if (resultData.redirectTo && resultData.sessionCookie) {
-    throw redirect(resultData.redirectTo, {
+    throw respondRedirect(resultData.redirectTo, {
       headers: { 'Set-Cookie': resultData.sessionCookie },
     });
   }

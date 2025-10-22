@@ -70,6 +70,7 @@ export function VerifyForm({ email, purpose = 'signup', resendCooldown: initialC
           <InputOtp value={code} onValueChange={setCode} autoComplete="one-time-code" validationType="numeric" disabled={false}>
             <InputOtp.Group>
               {Array.from({ length: digits }).map((_, index) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: acceptable
                 <InputOtp.Slot key={index} index={index} />
               ))}
             </InputOtp.Group>
@@ -80,7 +81,7 @@ export function VerifyForm({ email, purpose = 'signup', resendCooldown: initialC
         <div className="space-y-3">
           <div className="flex justify-around">
             <Button type="submit" name="intent" value="resend" variant={code.length !== digits ? 'default' : 'outline'} disabled={resendCooldown > 0} formNoValidate>
-              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Send Code'}
+              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
             </Button>
 
             <Button type="submit" name="intent" value="verify" variant={code.length !== digits ? 'outline' : 'default'} disabled={code.length !== digits}>

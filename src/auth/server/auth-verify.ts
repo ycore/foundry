@@ -2,10 +2,9 @@ import { getContext } from '@ycore/forge/context';
 import type { IntentHandlers } from '@ycore/forge/intent/server';
 import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
-import { err, flattenError, isError, ok, respondError, respondOk, validateFormData } from '@ycore/forge/result';
+import { err, flattenError, isError, isSystemError, ok, respondError, respondOk, respondRedirect, throwSystemError, validateFormData } from '@ycore/forge/result';
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import type { RouterContextProvider } from 'react-router';
-import { redirect } from 'react-router';
 import { minLength, object, pipe, string } from 'valibot';
 
 import type { EmailConfig } from '../../email/@types/email.types';
@@ -40,19 +39,21 @@ export async function verifyLoader({ request, context }: VerifyLoaderArgs) {
   const sessionResult = await getAuthSession(request, context);
 
   if (isError(sessionResult)) {
-    logger.warning('verify_loader_no_session');
+    // System error - session service failure
+    if (isSystemError(sessionResult)) {
+      logger.error('verify_loader_session_error', { error: flattenError(sessionResult) });
+      throwSystemError(sessionResult.message, sessionResult.status as 503);
+    }
     return respondError(err('Failed to get session'));
   }
 
   const session = sessionResult;
   if (!session || !session.user) {
     const authConfig = getContext(context, authConfigContext);
-    logger.warning('verify_loader_no_user');
-    throw redirect(authConfig?.routes.signin || '/auth/signin');
+    throw respondRedirect(authConfig?.routes.signin || '/auth/signin');
   }
 
   // Check for pending email change (from database pending field)
-  const authConfig = getContext(context, authConfigContext);
   let emailToVerify = session.user.email;
   let purpose: VerificationPurpose = 'signup';
 
@@ -61,11 +62,7 @@ export async function verifyLoader({ request, context }: VerifyLoaderArgs) {
     emailToVerify = session.user.pending.email;
     purpose = 'email-change';
 
-    logger.info('verify_loader_email_change_detected', {
-      userId: session.user.id,
-      oldEmail: session.user.email,
-      newEmail: emailToVerify,
-    });
+    logger.info('verify_loader_email_change_detected', { userId: session.user.id, oldEmail: session.user.email, newEmail: emailToVerify });
   }
 
   return respondOk({
@@ -85,8 +82,8 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
   const authConfig = getContext(context, authConfigContext);
 
   if (!authConfig) {
-    logger.error('verify_action_no_config');
-    return respondError(err('Auth configuration not found'));
+    logger.error('verify_config_missing');
+    throwSystemError('Auth configuration not found');
   }
 
   const formData = await request.formData();
@@ -96,13 +93,16 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
   const sessionResult = await getAuthSession(request, context);
 
   if (isError(sessionResult)) {
-    logger.warning('verify_action_no_session');
+    // System error - session service failure
+    if (isSystemError(sessionResult)) {
+      logger.error('verify_action_session_error', { error: flattenError(sessionResult) });
+      throwSystemError(sessionResult.message, sessionResult.status as 503);
+    }
     return respondError(err('Failed to get session'));
   }
 
   const session = sessionResult;
   if (!session || !session.user) {
-    logger.warning('verify_action_no_user');
     return respondError(err('No active session found'));
   }
 
@@ -125,8 +125,6 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
         });
       }
 
-      logger.info('verify_resend_requested', { email: emailToSendTo, purpose });
-
       // Send the verification email (this handles code generation internally)
       const sendResult = await sendVerificationEmail({
         email: emailToSendTo,
@@ -136,15 +134,12 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
       });
 
       if (isError(sendResult)) {
-        logger.error('verify_resend_email_failed', {
-          email: emailToSendTo,
-          purpose,
-          error: flattenError(sendResult),
-        });
+        // System error - email service failure
+        if (isSystemError(sendResult)) {
+          logger.error('verify_resend_email_system_error', { email: emailToSendTo, purpose, error: flattenError(sendResult) });
+        }
         return sendResult;
       }
-
-      logger.info('verify_code_resent', { email: emailToSendTo, purpose });
 
       // Return success to trigger cooldown in UI
       return ok({ resent: true });
@@ -154,20 +149,16 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
      * Unverify user (set status to unverified)
      */
     unverify: async () => {
-      logger.info('verify_unverify_requested', { email: session.user.email });
-
       // Update user status to unverified
       const updateResult = await repository.updateUserStatus(session.user.id, 'unverified');
 
       if (isError(updateResult)) {
-        logger.error('verify_unverify_failed', {
-          userId: session.user.id,
-          error: flattenError(updateResult),
-        });
+        // System error - database failure
+        if (isSystemError(updateResult)) {
+          logger.error('verify_unverify_system_error', { userId: session.user.id, error: flattenError(updateResult) });
+        }
         return updateResult;
       }
-
-      logger.info('user_unverified', { email: session.user.email, status: 'unverified' });
 
       return ok({ unverified: true });
     },
@@ -179,10 +170,7 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
       // Validate form data
       const validationResult = await validateFormData(verifyFormSchema, formData);
       if (isError(validationResult)) {
-        logger.warning('verify_validation_failed', {
-          error: flattenError(validationResult),
-        });
-        return validationResult;
+        return validationResult; // User error - no logging needed
       }
 
       const { email, code } = validationResult;
@@ -192,11 +180,6 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
       if (purpose !== 'email-change') {
         // Check session email matches for non-email-change purposes
         if (session.user.email !== email) {
-          logger.warning('verify_session_mismatch', {
-            sessionEmail: session.user.email,
-            requestEmail: email,
-            purpose,
-          });
           return err('Session mismatch', { email: 'Email does not match session' });
         }
       }
@@ -205,12 +188,7 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
       const verifyResult = await verifyCode(email, code, purpose, context);
 
       if (isError(verifyResult)) {
-        logger.warning('verify_code_invalid', {
-          email,
-          purpose,
-          error: flattenError(verifyResult),
-        });
-        return err(verifyResult.message, { code: verifyResult.message });
+        return err(verifyResult.message, { code: verifyResult.message }); // User error
       }
 
       const verification = verifyResult;
@@ -226,8 +204,9 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
       }
 
       if (isError(userResult)) {
-        logger.error('verify_user_not_found', { email, purpose, userId: session.user.id });
-        return err('User not found');
+        // System error or data inconsistency
+        logger.error('verify_user_not_found', { email, purpose, userId: session.user.id, error: flattenError(userResult) });
+        return err('User not found', undefined, { status: 500 });
       }
 
       const user = userResult;
@@ -239,8 +218,11 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
           const updateResult = await repository.updateUserStatus(user.id, 'active');
 
           if (isError(updateResult)) {
-            logger.error('verify_update_failed', { userId: user.id, purpose });
-            return err('Failed to update verification status');
+            // System error - database failure
+            if (isSystemError(updateResult)) {
+              logger.error('verify_update_system_error', { userId: user.id, purpose, error: flattenError(updateResult) });
+            }
+            return updateResult;
           }
 
           // Update session with active status (important for auth context)
@@ -252,24 +234,15 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
           const sessionUpdateResult = await updateAuthSession(request, context, { user: updatedUser });
 
           if (isError(sessionUpdateResult)) {
-            logger.error('verify_session_update_failed', {
-              userId: user.id,
-              error: flattenError(sessionUpdateResult),
-            });
-            // Continue anyway - status was updated in DB
+            // Log but continue - status was updated in DB
+            logger.warning('verify_session_update_failed', { userId: user.id, error: flattenError(sessionUpdateResult) });
           }
 
-          logger.info('email_verified', { email, purpose, status: 'active' });
-
-          // Redirect with updated session cookie
-          if (!isError(sessionUpdateResult)) {
-            throw redirect(authConfig.routes.signedin, {
-              headers: { 'Set-Cookie': sessionUpdateResult },
-            });
-          }
-
-          // Fallback if session update failed
-          throw redirect(authConfig.routes.signedin);
+          // Return redirect info
+          return ok({
+            sessionCookie: isError(sessionUpdateResult) ? undefined : sessionUpdateResult,
+            redirectTo: authConfig.routes.signedin,
+          });
         }
 
         case 'email-change': {
@@ -296,27 +269,26 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
           const updateResult = await repository.updateUserEmail(user.id, newEmail);
 
           if (isError(updateResult)) {
-            logger.error('verify_email_change_update_failed', { userId: user.id, error: flattenError(updateResult) });
-            return err('Failed to update email address');
+            // System error - database failure
+            if (isSystemError(updateResult)) {
+              logger.error('verify_email_change_update_system_error', { userId: user.id, error: flattenError(updateResult) });
+            }
+            return updateResult;
           }
 
           // Set status to 'active' since we just verified the new email
           const verifyResult = await repository.updateUserStatus(user.id, 'active');
 
           if (isError(verifyResult)) {
-            logger.error('verify_email_change_verify_failed', { userId: user.id, error: flattenError(verifyResult) });
-            // Don't fail - email was already updated, just log the warning
-            logger.warning('email_changed_but_not_verified', {
-              userId: user.id,
-              newEmail,
-            });
+            // Log but don't fail - email was already updated
+            logger.warning('verify_email_change_status_update_failed', { userId: user.id, error: flattenError(verifyResult) });
           }
 
           // Clear pending field
           const pendingClearResult = await repository.updateUserPending(user.id, null);
 
           if (isError(pendingClearResult)) {
-            // Log warning but don't fail - email was already updated
+            // Log but don't fail
             logger.warning('verify_email_change_pending_clear_failed', {
               userId: user.id,
               error: flattenError(pendingClearResult),
@@ -334,49 +306,37 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
           const sessionUpdateResult = await updateAuthSession(request, context, { user: updatedUser });
 
           if (isError(sessionUpdateResult)) {
-            logger.error('verify_email_change_session_update_failed', {
-              userId: user.id,
-              error: flattenError(sessionUpdateResult),
-            });
-            // Don't fail - email was already updated in DB
-            logger.warning('email_changed_session_not_updated', {
-              userId: user.id,
-              newEmail,
-            });
+            // Log but don't fail - email was already updated in DB
+            logger.warning('verify_email_change_session_update_failed', { userId: user.id, error: flattenError(sessionUpdateResult) });
           }
 
           logger.info('email_changed_successfully', {
             userId: user.id,
             oldEmail,
             newEmail,
-            sessionUpdated: !isError(sessionUpdateResult),
           });
 
-          // Return success with session cookie for action handler to process
+          // Return redirect info
           return ok({
-            success: true,
+            sessionCookie: isError(sessionUpdateResult) ? undefined : sessionUpdateResult,
             redirectTo: authConfig.routes.signedin,
-            sessionCookie: !isError(sessionUpdateResult) ? sessionUpdateResult : undefined,
           });
         }
 
         case 'recovery': {
           // User has verified their email for recovery
-          // Status should already be 'unrecovered' from recovery request
-          // Just redirect to signup page where they can register a new passkey
-          logger.info('recovery_email_verified', { userId: user.id, email, status: user.status });
-
           // Redirect to signup page for passkey registration
-          // The signup handler will detect unrecovered status and handle accordingly
-          throw redirect(authConfig.routes.signup);
+          logger.info('recovery_email_verified', { userId: user.id, email });
+
+          return ok({
+            redirectTo: authConfig.routes.signup,
+          });
         }
 
         case 'passkey-add':
         case 'passkey-delete':
         case 'account-delete': {
           // These will be handled by their respective action handlers
-          // Return success with metadata for further processing
-          logger.info('verification_completed', { email, purpose });
           return ok({
             verified: true,
             purpose,
@@ -385,7 +345,6 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
         }
 
         default: {
-          logger.warning('verify_unknown_purpose', { purpose });
           return err('Unknown verification purpose');
         }
       }
@@ -396,23 +355,25 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
   const result = await handleIntent(formData, handlers);
 
   if (isError(result)) {
-    logger.warning('verify_intent_failed', {
-      error: flattenError(result),
-      email: session.user.email,
-    });
+    // System error
+    if (isSystemError(result)) {
+      logger.error('verify_system_error', { error: flattenError(result), email: session.user.email });
+      throwSystemError(result.message, result.status as 503);
+    }
+
+    // User error
     return respondError(result);
   }
 
-  // Check if result contains redirect metadata (for email-change)
+  // Check if result contains redirect info
   const resultData = result as any;
-  if (resultData.redirectTo && resultData.sessionCookie) {
-    // Handle redirect with session cookie
-    throw redirect(resultData.redirectTo, {
-      headers: {
-        'Set-Cookie': resultData.sessionCookie,
-      },
+  if (resultData.redirectTo) {
+    // Redirect with optional session cookie
+    throw respondRedirect(resultData.redirectTo, {
+      headers: resultData.sessionCookie ? { 'Set-Cookie': resultData.sessionCookie } : undefined,
     });
   }
 
+  // Return data (for resend, unverify operations)
   return respondOk(result);
 }
