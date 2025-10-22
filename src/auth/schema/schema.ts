@@ -1,11 +1,35 @@
 import { createdAt, cuid, updatedAt } from '@ycore/forge/utils';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+/**
+ * Pending data types stored in users.pending field
+ */
+export type PendingEmailChange = {
+  type: 'email-change';
+  email: string;
+};
+
+export type PendingRecovery = {
+  type: 'recovery';
+  timestamp: number;
+};
+
+export type PendingData = PendingEmailChange | PendingRecovery;
+
+/**
+ * User account status values
+ */
+export type UserStatus = 'active' | 'unverified' | 'unrecovered' | 'deleted';
+
 export const users = sqliteTable('users', {
   id: cuid('id').primaryKey().notNull(),
   email: text('email').notNull().unique(),
   displayName: text('display_name').notNull(),
-  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
+  status: text('status', { enum: ['active', 'unverified', 'unrecovered', 'deleted'] as const })
+    .notNull()
+    .default('unverified')
+    .$type<UserStatus>(),
+  pending: text('pending', { mode: 'json' }).$type<PendingData | null>(),
   createdAt,
   updatedAt,
 });

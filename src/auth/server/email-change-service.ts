@@ -6,6 +6,8 @@ import type { RouterContextProvider } from 'react-router';
 import type { EmailConfig } from '../../email/@types/email.types';
 import { createEmailProvider, getProviderConfig } from '../../email/email-provider';
 import { createEmailChangeNotificationTemplate } from '../../email/templates/email-change-notification';
+import { createEmailChangeVerificationTemplate } from '../../email/templates/email-change-verification';
+import { createVerificationCode } from './totp-service';
 import { sendVerificationEmail } from './verification-service';
 
 /**
@@ -222,12 +224,79 @@ export async function sendEmailChangeNotification(oldEmail: string, newEmail: st
 }
 
 /**
+ * Send email change verification email with custom template
+ * Generates TOTP code and creates custom email template with email change context
+ */
+async function sendEmailChangeVerification(
+  newEmail: string,
+  oldEmail: string,
+  context: Readonly<RouterContextProvider>,
+  emailConfig: EmailConfig,
+  verificationUrl?: string
+): Promise<Result<void>> {
+  try {
+    // Generate TOTP code
+    const codeResult = await createVerificationCode(newEmail, 'email-change', context, { oldEmail, newEmail });
+
+    if (isError(codeResult)) {
+      logger.error('email_change_verification_code_generation_failed', {
+        newEmail,
+        oldEmail,
+        error: flattenError(codeResult),
+      });
+      return codeResult;
+    }
+
+    const code = codeResult;
+
+    // Create custom email template with code and email change context
+    const customTemplate = createEmailChangeVerificationTemplate({
+      code,
+      oldEmail,
+      newEmail,
+      verificationUrl,
+    });
+
+    // Send verification email with custom template
+    const sendResult = await sendVerificationEmail({
+      email: newEmail,
+      purpose: 'email-change',
+      metadata: { oldEmail, newEmail },
+      context,
+      emailConfig,
+      customTemplate,
+      verificationUrl,
+    });
+
+    if (isError(sendResult)) {
+      logger.error('email_change_verification_send_failed', {
+        newEmail,
+        oldEmail,
+        error: flattenError(sendResult),
+      });
+      return sendResult;
+    }
+
+    logger.info('email_change_verification_sent', { newEmail, oldEmail });
+    return ok(undefined);
+  } catch (error) {
+    logger.error('email_change_verification_unexpected_error', {
+      newEmail,
+      oldEmail,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return err('Failed to send email change verification', { error });
+  }
+}
+
+/**
  * Orchestrate complete email change request flow
  * 1. Create pending change in KV
  * 2. Send verification code to new email
  * 3. Send notification to old email
  */
-export async function requestEmailChange(userId: string, oldEmail: string, newEmail: string, context: Readonly<RouterContextProvider>, emailConfig: EmailConfig, kvBinding: string): Promise<Result<void>> {
+export async function requestEmailChange(userId: string, oldEmail: string, newEmail: string, context: Readonly<RouterContextProvider>, emailConfig: EmailConfig, kvBinding: string, verificationUrl?: string): Promise<Result<void>> {
   // Create pending change request
   const createResult = await createEmailChangeRequest(userId, oldEmail, newEmail, context, kvBinding);
 
@@ -235,14 +304,14 @@ export async function requestEmailChange(userId: string, oldEmail: string, newEm
     return createResult;
   }
 
-  // Send verification code to new email
-  const verificationResult = await sendVerificationEmail({
-    email: newEmail,
-    purpose: 'email-change',
-    metadata: { userId, oldEmail, newEmail },
+  // Send verification code to new email with custom template
+  const verificationResult = await sendEmailChangeVerification(
+    newEmail,
+    oldEmail,
     context,
     emailConfig,
-  });
+    verificationUrl
+  );
 
   if (isError(verificationResult)) {
     // Clean up pending request if verification email fails

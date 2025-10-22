@@ -6,6 +6,7 @@ export const defaultAuthRoutes: AuthRoutes = {
   signout: '/auth/signout',
   signedin: '/',
   signedout: '/',
+  recover: '/auth/recover',
   verify: '/auth/verify',
 };
 

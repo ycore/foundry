@@ -3,7 +3,7 @@ import { err, flattenError, isError, ok, type Result } from '@ycore/forge/result
 import { getBindings } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
-import type { EmailConfig } from '../../email/@types/email.types';
+import type { EmailConfig, EmailTemplate } from '../../email/@types/email.types';
 import { createEmailProvider, getProviderConfig } from '../../email/email-provider';
 import { createTotpTemplate } from '../../email/templates/auth-totp';
 import { createVerificationCode, type VerificationPurpose } from './totp-service';
@@ -14,6 +14,8 @@ export interface SendVerificationOptions {
   metadata?: Record<string, unknown>;
   context: Readonly<RouterContextProvider>;
   emailConfig: EmailConfig;
+  customTemplate?: EmailTemplate;
+  verificationUrl?: string;
 }
 
 /**
@@ -21,7 +23,7 @@ export interface SendVerificationOptions {
  * Orchestrates code generation and email sending
  */
 export async function sendVerificationEmail(options: SendVerificationOptions): Promise<Result<void>> {
-  const { email, purpose, metadata, context, emailConfig } = options;
+  const { email, purpose, metadata, context, emailConfig, customTemplate, verificationUrl } = options;
 
   try {
     // Generate TOTP code
@@ -38,8 +40,8 @@ export async function sendVerificationEmail(options: SendVerificationOptions): P
 
     const code = codeResult;
 
-    // Create email content
-    const emailContent = createTotpTemplate({ code, purpose });
+    // Create email content - use custom template if provided, otherwise use default TOTP template
+    const emailContent = customTemplate || createTotpTemplate({ code, purpose });
 
     // Get active email provider
     const activeProvider = emailConfig.active;

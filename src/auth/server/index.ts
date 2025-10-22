@@ -2,12 +2,14 @@ export { authConfigContext, authUserContext, getAuthUser, isAuthenticated, requi
 export { authSessionMiddleware, guardedAuthMiddleware, unguardedAuthMiddleware, verifyRouteMiddleware } from './auth.middleware';
 export { authFormSchema, changeEmailSchema, signinFormSchema, signupFormSchema } from './auth.validation';
 export { getUserWithAuthenticators, profileLoader } from './auth-profile';
+export { recoverAction, recoverLoader } from './auth-recover';
 export { signinAction, signinLoader } from './auth-signin';
 export { signoutAction, signoutLoader } from './auth-signout';
 export { signupAction, signupLoader } from './auth-signup';
 export { verifyAction, verifyLoader } from './auth-verify';
 export { createEmailChangeRequest, deleteEmailChangeRequest, getEmailChangeRequest, type PendingEmailChange, requestEmailChange, sendEmailChangeNotification } from './email-change-service';
 export { addPasskeyForUser, deletePasskey, generateAddPasskeyOptions, renamePasskey } from './passkey-manager';
+export { requestAccountRecovery } from './recovery-service';
 export { createAuthRepository, getAuthRepository } from './repository';
 export {
   cleanupChallengeSession,

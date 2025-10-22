@@ -20,6 +20,7 @@ export interface ProfilePageProps {
 
 // Sign In Page Component Types
 export interface SignInFormProps {
+  recoverUrl: string;
   signupUrl: string;
 }
 
@@ -31,11 +32,23 @@ export interface SignInPageProps {
 
 // Sign Up Page Component Types
 export interface SignUpFormProps {
+  recoverUrl: string;
   signinUrl: string;
 }
 
 export interface SignUpPageProps {
   children?: ReactNode;
+  title?: string;
+  description?: string;
+}
+
+// Account Recovery Component Types
+export interface RecoverFormProps {
+  signinUrl: string;
+}
+
+export interface RecoverPageProps {
+  children: ReactNode;
   title?: string;
   description?: string;
 }

@@ -164,6 +164,47 @@ export async function signinAction({ request, context }: SignInActionArgs) {
           // Continue with signin even if update fails
         }
 
+        // Check for pending recovery and cleanup old authenticators
+        if (user!.pending?.type === 'recovery') {
+          const recoveryTimestamp = user!.pending.timestamp;
+
+          logger.info('recovery_cleanup_detected', {
+            userId: user!.id,
+            email,
+            recoveryTimestamp,
+          });
+
+          // Delete all authenticators older than recovery timestamp
+          const deleteResult = await repository.deleteAuthenticatorsByTimestamp(user!.id, recoveryTimestamp);
+
+          if (isError(deleteResult)) {
+            logger.warning('recovery_cleanup_delete_failed', {
+              userId: user!.id,
+              email,
+              error: flattenError(deleteResult),
+            });
+            // Continue with signin even if cleanup fails
+          } else {
+            logger.info('recovery_cleanup_completed', {
+              userId: user!.id,
+              email,
+              deletedCount: deleteResult,
+            });
+          }
+
+          // Clear pending recovery data
+          const pendingUpdateResult = await repository.updateUserPending(user!.id, null);
+
+          if (isError(pendingUpdateResult)) {
+            logger.warning('recovery_cleanup_pending_clear_failed', {
+              userId: user!.id,
+              email,
+              error: flattenError(pendingUpdateResult),
+            });
+            // Continue with signin even if pending clear fails
+          }
+        }
+
         // Clear challenge from session
         const cleanupResult = await destroyChallengeSession(session, context);
         if (isError(cleanupResult)) {

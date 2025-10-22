@@ -13,6 +13,7 @@ export type AuthRoutes = {
   signout: string;
   signedin: string;
   signedout: string;
+  recover: string;
   verify: string;
 };
 

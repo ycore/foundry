@@ -54,9 +54,15 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
 
         // Check if user already exists
         const existingUserResult = await repository.getUserByEmail(email);
-        if (!isError(existingUserResult)) {
+
+        // Allow recovery mode if user exists with status='unrecovered'
+        const isRecoveryMode = !isError(existingUserResult) && existingUserResult.status === 'unrecovered';
+
+        if (!isError(existingUserResult) && !isRecoveryMode) {
           return err('An account already exists with this email', { email: 'An account already exists with this email' });
         }
+
+        logger.info('signup_mode_detected', { email, isRecoveryMode });
 
         // Get stored challenge from session
         const sessionResult = await getChallengeFromSession(request, context);
@@ -126,23 +132,62 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
           return err(errorMessage, { field: 'general', code: verificationResult.code });
         }
 
-        // Create new user
-        const createUserResult = await repository.createUser(email, displayName);
-        if (isError(createUserResult)) {
-          logger.error('signup_create_user_failed', { email, error: createUserResult.message });
-          return err('Failed to create account', { field: 'general' });
+        // Get or create user based on mode
+        let user;
+        if (isRecoveryMode) {
+          // Use existing user for recovery
+          user = existingUserResult;
+          logger.info('recovery_mode_using_existing_user', { userId: user.id, email });
+        } else {
+          // Create new user for normal signup
+          const createUserResult = await repository.createUser(email, displayName);
+          if (isError(createUserResult)) {
+            logger.error('signup_create_user_failed', { email, error: createUserResult.message });
+            return err('Failed to create account', { field: 'general' });
+          }
+          user = createUserResult;
         }
-
-        const user = createUserResult;
 
         // Create authenticator for the user
         const createAuthResult = await repository.createAuthenticator({ ...verificationResult, userId: user.id });
 
         if (isError(createAuthResult)) {
           logger.error('signup_create_authenticator_failed', { email, userId: user.id, error: createAuthResult.message });
-          // Attempt to clean up the created user
-          await repository.deleteUser(user.id);
+          // Attempt cleanup only if we created a new user
+          if (!isRecoveryMode) {
+            await repository.deleteUser(user.id);
+          }
           return err('Failed to register authenticator', { field: 'general' });
+        }
+
+        // Handle recovery mode: set pending recovery timestamp and update status
+        if (isRecoveryMode) {
+          const recoveryTimestamp = Date.now();
+
+          // Store recovery timestamp for cleanup
+          const pendingUpdateResult = await repository.updateUserPending(user.id, {
+            type: 'recovery',
+            timestamp: recoveryTimestamp,
+          });
+
+          if (isError(pendingUpdateResult)) {
+            logger.error('recovery_pending_update_failed', { userId: user.id, error: flattenError(pendingUpdateResult) });
+            // Continue anyway - passkey is registered, we'll just miss cleanup
+          }
+
+          // Update user status to active
+          const statusUpdateResult = await repository.updateUserStatus(user.id, 'active');
+
+          if (isError(statusUpdateResult)) {
+            logger.error('recovery_status_update_failed', { userId: user.id, error: flattenError(statusUpdateResult) });
+            // Continue anyway - user can still sign in
+          }
+
+          logger.info('recovery_passkey_registered', {
+            userId: user.id,
+            email,
+            recoveryTimestamp,
+          });
         }
 
         // Clear challenge from session

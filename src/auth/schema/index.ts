@@ -1,4 +1,5 @@
 export type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
+export type { PendingData, PendingEmailChange, PendingRecovery, UserStatus } from './schema';
 export { authenticators, users } from './schema';
 
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';

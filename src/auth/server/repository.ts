@@ -1,10 +1,10 @@
 import type { Result } from '@ycore/forge/result';
 import { err, notFoundError, serverError, tryCatch } from '@ycore/forge/result';
 import { getDatabase } from '@ycore/forge/services';
-import { eq } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { RouterContextProvider } from 'react-router';
-import type { Authenticator, NewAuthenticator, NewUser, User } from '../schema';
+import type { Authenticator, NewAuthenticator, NewUser, PendingData, User, UserStatus } from '../schema';
 import { authenticators, users } from '../schema';
 
 export interface AuthRepository {
@@ -20,8 +20,10 @@ export interface AuthRepository {
   deleteAuthenticator: (id: string) => Promise<Result<boolean>>;
   authenticatorBelongsToUser: (id: string, userId: string) => Promise<Result<boolean>>;
   countAuthenticatorsByUserId: (userId: string) => Promise<Result<number>>;
+  deleteAuthenticatorsByTimestamp: (userId: string, beforeTimestamp: number) => Promise<Result<number>>;
   updateUserEmail: (id: string, newEmail: string) => Promise<Result<User>>;
-  updateEmailVerified: (id: string, verified: boolean) => Promise<Result<User>>;
+  updateUserStatus: (id: string, status: UserStatus) => Promise<Result<User>>;
+  updateUserPending: (id: string, pending: PendingData | null) => Promise<Result<User>>;
   deleteUser: (id: string) => Promise<Result<boolean>>;
 }
 
@@ -211,10 +213,10 @@ export function createAuthRepository(db: DrizzleD1Database<Record<string, unknow
       }, `Failed to count authenticators for user: ${userId}`);
     },
 
-    /** Update user email */
+    /** Update user email and set status to unverified */
     updateUserEmail: async (id: string, newEmail: string) => {
       try {
-        const result = await db.update(users).set({ email: newEmail, emailVerified: false }).where(eq(users.id, id)).returning();
+        const result = await db.update(users).set({ email: newEmail, status: 'unverified' }).where(eq(users.id, id)).returning();
 
         if (result.length === 0) {
           return notFoundError('User', id);
@@ -239,10 +241,10 @@ export function createAuthRepository(db: DrizzleD1Database<Record<string, unknow
       }
     },
 
-    /** Update user email verified status */
-    updateEmailVerified: async (id: string, verified: boolean) => {
+    /** Update user status */
+    updateUserStatus: async (id: string, status: UserStatus) => {
       try {
-        const result = await db.update(users).set({ emailVerified: verified }).where(eq(users.id, id)).returning();
+        const result = await db.update(users).set({ status }).where(eq(users.id, id)).returning();
 
         if (result.length === 0) {
           return notFoundError('User', id);
@@ -255,7 +257,48 @@ export function createAuthRepository(db: DrizzleD1Database<Record<string, unknow
 
         return updatedUser;
       } catch (error) {
-        return serverError('Failed to update email verified status', error as Error);
+        return serverError('Failed to update user status', error as Error);
+      }
+    },
+
+    /** Update user pending data */
+    updateUserPending: async (id: string, pending: PendingData | null) => {
+      try {
+        const result = await db
+          .update(users)
+          .set({ pending })
+          .where(eq(users.id, id))
+          .returning();
+
+        if (result.length === 0) {
+          return notFoundError('User', id);
+        }
+
+        const updatedUser = result[0];
+        if (!updatedUser) {
+          return serverError('Failed to retrieve updated user', new Error('Update returned empty result'));
+        }
+
+        return updatedUser;
+      } catch (error) {
+        return serverError('Failed to update user pending data', error as Error);
+      }
+    },
+
+    /** Delete all authenticators created before a specific timestamp */
+    deleteAuthenticatorsByTimestamp: async (userId: string, beforeTimestamp: number) => {
+      try {
+        // Convert timestamp to Date for comparison
+        const beforeDate = new Date(beforeTimestamp);
+
+        const result = await db
+          .delete(authenticators)
+          .where(and(eq(authenticators.userId, userId), lt(authenticators.updatedAt, beforeDate)))
+          .returning();
+
+        return result.length;
+      } catch (error) {
+        return serverError('Failed to delete authenticators by timestamp', error as Error);
       }
     },
 

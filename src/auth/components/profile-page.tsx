@@ -147,7 +147,7 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
 
       <Card.Footer className="flex justify-between pt-6">
         <div className="flex gap-2">
-          {user?.emailVerified ? (
+          {user?.status === 'active' ? (
             <Badge variant="secondary">Verified Account</Badge>
           ) : (
             <Button asChild variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700">

@@ -95,11 +95,12 @@ export async function createAuthenticatedSession(context: Readonly<RouterContext
 export function createAuthSuccessResponse(context: Readonly<RouterContextProvider>, cookie: string, user?: User): { redirectTo: string; cookie: string } {
   const authConfig = getContext(context, authConfigContext);
 
-  // Always check verification status - email verification is mandatory
-  if (user && !user.emailVerified) {
+  // Always check verification status - active status is mandatory
+  if (user && user.status !== 'active') {
     logger.info('user_not_verified_redirect_to_verify', {
       userId: user.id,
       email: user.email,
+      status: user.status,
     });
     const redirectTo = authConfig?.routes.verify || defaultAuthRoutes.verify;
     return { redirectTo, cookie };

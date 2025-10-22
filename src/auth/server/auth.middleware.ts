@@ -20,10 +20,10 @@ export function authSessionMiddleware(authConfig: AuthConfig): MiddlewareFunctio
     // Load user from session
     const authSession = await getAuthSession(request, context);
 
-    // If session loaded successfully and has a verified user, set it in context
-    // Unverified users remain in session but NOT in context
+    // If session loaded successfully and has an active user, set it in context
+    // Unverified/unrecovered users remain in session but NOT in context
     if (!isError(authSession) && authSession !== null && authSession.user) {
-      if (authSession.user.emailVerified) {
+      if (authSession.user.status === 'active') {
         setContext(context, authUserContext, authSession.user);
       }
       return next();
@@ -144,12 +144,13 @@ function unprotectedAuthMiddleware(authConfig: AuthConfig): MiddlewareFunction<R
       throw redirect(authConfig?.routes.signedin || defaultAuthRoutes.signedin);
     }
 
-    // Check if has unverified session (user in session but not context)
+    // Check if has unverified session (user in session but not active status)
     const sessionResult = await getAuthSession(request, context);
-    if (!isError(sessionResult) && sessionResult?.user && !sessionResult.user.emailVerified) {
+    if (!isError(sessionResult) && sessionResult?.user && sessionResult.user.status !== 'active') {
       logger.info('unverified_user_redirecting_to_verify', {
         userId: sessionResult.user.id,
         email: sessionResult.user.email,
+        status: sessionResult.user.status,
       });
       throw redirect(authConfig?.routes.verify || defaultAuthRoutes.verify);
     }

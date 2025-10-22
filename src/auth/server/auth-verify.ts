@@ -10,7 +10,6 @@ import { minLength, object, pipe, string } from 'valibot';
 
 import type { EmailConfig } from '../../email/@types/email.types';
 import { authConfigContext } from './auth.context';
-import { deleteEmailChangeRequest, getEmailChangeRequest } from './email-change-service';
 import { getAuthRepository } from './repository';
 import { getAuthSession, updateAuthSession } from './session';
 import { type VerificationPurpose, verifyCode } from './totp-service';
@@ -52,31 +51,27 @@ export async function verifyLoader({ request, context }: VerifyLoaderArgs) {
     throw redirect(authConfig?.routes.signin || '/auth/signin');
   }
 
-  // Check for pending email change
+  // Check for pending email change (from database pending field)
   const authConfig = getContext(context, authConfigContext);
   let emailToVerify = session.user.email;
   let purpose: VerificationPurpose = 'signup';
 
-  if (authConfig?.session?.kvBinding) {
-    const pendingChangeResult = await getEmailChangeRequest(session.user.id, context, authConfig.session.kvBinding);
+  // Check if user has pending email change
+  if (session.user.pending?.type === 'email-change') {
+    emailToVerify = session.user.pending.email;
+    purpose = 'email-change';
 
-    // If there's a pending email change, verify the NEW email instead
-    if (!isError(pendingChangeResult) && pendingChangeResult) {
-      emailToVerify = pendingChangeResult.newEmail;
-      purpose = 'email-change';
-
-      logger.info('verify_loader_email_change_detected', {
-        userId: session.user.id,
-        oldEmail: session.user.email,
-        newEmail: emailToVerify,
-      });
-    }
+    logger.info('verify_loader_email_change_detected', {
+      userId: session.user.id,
+      oldEmail: session.user.email,
+      newEmail: emailToVerify,
+    });
   }
 
   return respondOk({
     token,
     email: emailToVerify,
-    emailVerified: session.user.emailVerified,
+    status: session.user.status,
     purpose,
   });
 }
@@ -121,17 +116,13 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
       let emailToSendTo = session.user.email;
 
       // For email-change, send to the NEW email from pending change
-      if (purpose === 'email-change' && authConfig.session?.kvBinding) {
-        const pendingChangeResult = await getEmailChangeRequest(session.user.id, context, authConfig.session.kvBinding);
-
-        if (!isError(pendingChangeResult) && pendingChangeResult) {
-          emailToSendTo = pendingChangeResult.newEmail;
-          logger.info('verify_resend_email_change', {
-            userId: session.user.id,
-            oldEmail: session.user.email,
-            newEmail: emailToSendTo,
-          });
-        }
+      if (purpose === 'email-change' && session.user.pending?.type === 'email-change') {
+        emailToSendTo = session.user.pending.email;
+        logger.info('verify_resend_email_change', {
+          userId: session.user.id,
+          oldEmail: session.user.email,
+          newEmail: emailToSendTo,
+        });
       }
 
       logger.info('verify_resend_requested', { email: emailToSendTo, purpose });
@@ -160,13 +151,13 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
     },
 
     /**
-     * Unverify email (set emailVerified to false)
+     * Unverify user (set status to unverified)
      */
     unverify: async () => {
       logger.info('verify_unverify_requested', { email: session.user.email });
 
-      // Update email verified status to false
-      const updateResult = await repository.updateEmailVerified(session.user.id, false);
+      // Update user status to unverified
+      const updateResult = await repository.updateUserStatus(session.user.id, 'unverified');
 
       if (isError(updateResult)) {
         logger.error('verify_unverify_failed', {
@@ -176,7 +167,7 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
         return updateResult;
       }
 
-      logger.info('email_unverified', { email: session.user.email });
+      logger.info('user_unverified', { email: session.user.email, status: 'unverified' });
 
       return ok({ unverified: true });
     },
@@ -244,85 +235,100 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
       // Handle different verification purposes
       switch (purpose) {
         case 'signup': {
-          // Update email verified status
-          const updateResult = await repository.updateEmailVerified(user.id, true);
+          // Update user status to active
+          const updateResult = await repository.updateUserStatus(user.id, 'active');
 
           if (isError(updateResult)) {
             logger.error('verify_update_failed', { userId: user.id, purpose });
             return err('Failed to update verification status');
           }
 
-          logger.info('email_verified', { email, purpose });
+          // Update session with active status (important for auth context)
+          const updatedUser = {
+            ...user,
+            status: 'active' as const,
+          };
+
+          const sessionUpdateResult = await updateAuthSession(request, context, { user: updatedUser });
+
+          if (isError(sessionUpdateResult)) {
+            logger.error('verify_session_update_failed', {
+              userId: user.id,
+              error: flattenError(sessionUpdateResult),
+            });
+            // Continue anyway - status was updated in DB
+          }
+
+          logger.info('email_verified', { email, purpose, status: 'active' });
+
+          // Redirect with updated session cookie
+          if (!isError(sessionUpdateResult)) {
+            throw redirect(authConfig.routes.signedin, {
+              headers: { 'Set-Cookie': sessionUpdateResult },
+            });
+          }
+
+          // Fallback if session update failed
           throw redirect(authConfig.routes.signedin);
         }
 
         case 'email-change': {
-          // Get pending email change request
-          if (!authConfig.session?.kvBinding) {
-            logger.error('verify_email_change_no_kv_binding');
-            return err('Email change service not configured');
-          }
-
-          const pendingChangeResult = await getEmailChangeRequest(user.id, context, authConfig.session.kvBinding);
-
-          if (isError(pendingChangeResult)) {
+          // Get pending email change from user.pending field
+          if (!user.pending || user.pending.type !== 'email-change') {
             logger.error('verify_email_change_no_pending_request', { userId: user.id, email });
             return err('No pending email change request found. Request may have expired.');
           }
 
-          const pendingChange = pendingChangeResult;
+          const newEmail = user.pending.email;
+          const oldEmail = user.email;
 
-          if (!pendingChange) {
-            logger.error('verify_email_change_missing_request', { userId: user.id, email });
-            return err('No pending email change request found. Request may have expired.');
-          }
-
-          // Verify the email matches the new email in the pending request
-          if (email !== pendingChange.newEmail) {
+          // Verify the email matches the new email in the pending field
+          if (email !== newEmail) {
             logger.error('verify_email_change_email_mismatch', {
               userId: user.id,
-              expectedEmail: pendingChange.newEmail,
+              expectedEmail: newEmail,
               actualEmail: email,
             });
             return err('Email mismatch. Please try again.');
           }
 
-          // Update user email (repository sets emailVerified to false by default)
-          const updateResult = await repository.updateUserEmail(user.id, pendingChange.newEmail);
+          // Update user email (repository sets status to 'unverified' by default)
+          const updateResult = await repository.updateUserEmail(user.id, newEmail);
 
           if (isError(updateResult)) {
             logger.error('verify_email_change_update_failed', { userId: user.id, error: flattenError(updateResult) });
             return err('Failed to update email address');
           }
 
-          // Now set emailVerified to true since we just verified the new email
-          const verifyResult = await repository.updateEmailVerified(user.id, true);
+          // Set status to 'active' since we just verified the new email
+          const verifyResult = await repository.updateUserStatus(user.id, 'active');
 
           if (isError(verifyResult)) {
             logger.error('verify_email_change_verify_failed', { userId: user.id, error: flattenError(verifyResult) });
             // Don't fail - email was already updated, just log the warning
             logger.warning('email_changed_but_not_verified', {
               userId: user.id,
-              newEmail: pendingChange.newEmail,
+              newEmail,
             });
           }
 
-          // Delete pending request
-          const deleteResult = await deleteEmailChangeRequest(user.id, context, authConfig.session.kvBinding);
+          // Clear pending field
+          const pendingClearResult = await repository.updateUserPending(user.id, null);
 
-          if (isError(deleteResult)) {
+          if (isError(pendingClearResult)) {
             // Log warning but don't fail - email was already updated
-            logger.warning('verify_email_change_cleanup_failed', {
+            logger.warning('verify_email_change_pending_clear_failed', {
               userId: user.id,
-              error: flattenError(deleteResult),
+              error: flattenError(pendingClearResult),
             });
           }
 
-          // Update session with new email (important for auth context)
+          // Update session with new email and status (important for auth context)
           const updatedUser = {
             ...user,
-            email: pendingChange.newEmail,
-            emailVerified: true,
+            email: newEmail,
+            status: 'active' as const,
+            pending: null,
           };
 
           const sessionUpdateResult = await updateAuthSession(request, context, { user: updatedUser });
@@ -335,14 +341,14 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
             // Don't fail - email was already updated in DB
             logger.warning('email_changed_session_not_updated', {
               userId: user.id,
-              newEmail: pendingChange.newEmail,
+              newEmail,
             });
           }
 
           logger.info('email_changed_successfully', {
             userId: user.id,
-            oldEmail: pendingChange.oldEmail,
-            newEmail: pendingChange.newEmail,
+            oldEmail,
+            newEmail,
             sessionUpdated: !isError(sessionUpdateResult),
           });
 
@@ -352,6 +358,17 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
             redirectTo: authConfig.routes.signedin,
             sessionCookie: !isError(sessionUpdateResult) ? sessionUpdateResult : undefined,
           });
+        }
+
+        case 'recovery': {
+          // User has verified their email for recovery
+          // Status should already be 'unrecovered' from recovery request
+          // Just redirect to signup page where they can register a new passkey
+          logger.info('recovery_email_verified', { userId: user.id, email, status: user.status });
+
+          // Redirect to signup page for passkey registration
+          // The signup handler will detect unrecovered status and handle accordingly
+          throw redirect(authConfig.routes.signup);
         }
 
         case 'passkey-add':

@@ -8,7 +8,7 @@ import type { SignInFormProps, SignInPageProps } from '../@types/auth.component.
 import { createAuthenticationOptions } from '../server/webauthn';
 import { isPlatformAuthenticatorAvailable, isWebAuthnSupported, startAuthentication } from './webauthn-client';
 
-export function SignInForm({ signupUrl }: SignInFormProps) {
+export function SignInForm({ signupUrl, recoverUrl }: SignInFormProps) {
   const navigation = useNavigation();
   const submit = useSubmit();
   const actionData = useActionData<any>();
@@ -150,23 +150,6 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
 
       {(errors.form || webAuthnError) && <FormError error={errors.form || webAuthnError} />}
 
-      {/* WebAuthn status indicator */}
-      {webAuthnSupported && (
-        <div className="text-muted-foreground text-sm">
-          {platformAuthAvailable ? (
-            <span className="flex items-center gap-2">
-              <SvgIcon iconId="CircleCheck" className="h-4 w-4 text-green-500" />
-              Platform authenticator available
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <SvgIcon iconId="CircleAlert" className="h-4 w-4 text-yellow-500" />
-              External security key may be required
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Authentication in progress indicator */}
       {isAuthenticating && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-700 text-sm">
@@ -181,13 +164,34 @@ export function SignInForm({ signupUrl }: SignInFormProps) {
       <div className="flex justify-between gap-x-2">
         <Button type="submit" name="intent" value="signin" disabled={isSubmitting || isAuthenticating || !webAuthnSupported} className="flex-1">
           <Spinner className={clsx('size-5', !(isSubmitting || isAuthenticating) && 'hidden')} />
-          {isSubmitting || isAuthenticating ? 'Authenticating...' : !webAuthnSupported ? 'WebAuthn not supported' : 'Sign in with Passkey'}
+          {isSubmitting || isAuthenticating ? 'Authenticating...' : !webAuthnSupported ? 'WebAuthn unsupported' : 'Passkey Sign in'}
         </Button>
 
         <Button type="button" variant="outline" asChild disabled={isSubmitting || isAuthenticating}>
           <Link href={signupUrl}>Sign Up</Link>
         </Button>
       </div>
+
+      {/* WebAuthn status indicator */}
+      {webAuthnSupported && (
+        <div className='flex justify-between text-muted-foreground text-xs'>
+          {platformAuthAvailable ? (
+            <span className="flex items-center gap-2">
+              <SvgIcon iconId="CircleCheck" className="h-4 w-4 text-green-500" />
+              Platform authenticator available
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <SvgIcon iconId="CircleAlert" className="h-4 w-4 text-yellow-500" />
+              External security key required
+            </span>
+          )}
+          <Button variant="outline" asChild>
+            <Link href={recoverUrl}>Recover access</Link>
+          </Button>
+        </div>
+      )}
+
     </SecureForm>
   );
 }
