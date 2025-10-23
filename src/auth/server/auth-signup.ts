@@ -8,6 +8,7 @@ import { getKVStore } from '@ycore/forge/services';
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
 
 import type { SignUpActionArgs, SignUpLoaderArgs } from '../@types/auth.types';
+import { defaultAuthRoutes } from '../auth.config';
 import type { WebAuthnErrorCode } from '../auth.constants';
 import { authConfigContext } from './auth.context';
 import { signupFormSchema } from './auth.validation';
@@ -33,12 +34,6 @@ export async function signupLoader({ context }: SignUpLoaderArgs) {
 export async function signupAction({ request, context }: SignUpActionArgs) {
   const repository = getAuthRepository(context);
   const authConfig = getContext(context, authConfigContext);
-
-  if (!authConfig) {
-    logger.error('signup_config_missing');
-    throwSystemError('Auth configuration not found');
-  }
-
   const formData = await request.formData();
 
   const handlers: IntentHandlers = {
@@ -208,8 +203,8 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
 
         // Determine redirect path based on user status
         const redirectTo = user.status === 'active'
-          ? (authConfig?.routes.signedin || '/dashboard')
-          : (authConfig?.routes.verify || '/auth/verify');
+          ? (authConfig?.routes.signedin || defaultAuthRoutes.signedin)
+          : (authConfig?.routes.verify || defaultAuthRoutes.verify);
 
         // Return session cookie and redirect info
         return ok({

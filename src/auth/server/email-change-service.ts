@@ -1,10 +1,9 @@
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, type Result } from '@ycore/forge/result';
-import { getBindings, getKVStore, type KVBindings } from '@ycore/forge/services';
+import { getKVStore, type KVBindings } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
-import type { EmailConfig } from '../../email/@types/email.types';
-import { createEmailProvider, getProviderConfig } from '../../email/email-provider';
+import { sendMail } from '../../email/server';
 import { createEmailChangeNotificationTemplate } from '../../email/templates/email-change-notification';
 import { createEmailChangeVerificationTemplate } from '../../email/templates/email-change-verification';
 import { createVerificationCode } from './totp-service';
@@ -18,14 +17,6 @@ export interface PendingEmailChange {
   oldEmail: string;
   newEmail: string;
   requestedAt: number;
-}
-
-/**
- * Email change service configuration
- */
-interface EmailChangeServiceConfig {
-  kvBinding: string;
-  expirationTtl: number; // In seconds
 }
 
 /**
@@ -150,55 +141,19 @@ export async function deleteEmailChangeRequest(userId: string, context: Readonly
  * Send notification to old email address about email change request
  * Does NOT include a verification code - just informational
  */
-export async function sendEmailChangeNotification(oldEmail: string, newEmail: string, context: Readonly<RouterContextProvider>, emailConfig: EmailConfig): Promise<Result<void>> {
+export async function sendEmailChangeNotification(
+  oldEmail: string,
+  newEmail: string,
+  context: Readonly<RouterContextProvider>,
+): Promise<Result<void>> {
   try {
     // Create email content
     const emailContent = createEmailChangeNotificationTemplate({ oldEmail, newEmail });
 
-    // Get active email provider
-    const activeProvider = emailConfig.active;
-
-    if (!activeProvider) {
-      logger.error('email_change_notification_no_provider', { oldEmail, newEmail });
-      return err('No active email provider configured');
-    }
-
-    const providerConfig = getProviderConfig(emailConfig, activeProvider);
-    if (!providerConfig) {
-      logger.error('email_change_notification_provider_config_missing', {
-        oldEmail,
-        newEmail,
-        provider: activeProvider,
-      });
-      return err(`Provider configuration not found for: ${activeProvider}`);
-    }
-
-    // Create email provider instance
-    const emailProviderResult = createEmailProvider(activeProvider);
-    if (isError(emailProviderResult)) {
-      logger.error('email_change_notification_provider_creation_failed', {
-        oldEmail,
-        newEmail,
-        provider: activeProvider,
-        error: flattenError(emailProviderResult),
-      });
-      return emailProviderResult;
-    }
-
-    // Get API key from environment
-    const bindings = getBindings(context);
-    const apiKey = providerConfig.apiKey ? (bindings[providerConfig.apiKey as keyof typeof bindings] as string | undefined) : undefined;
-
-    // Send email
-    const sendResult = await emailProviderResult.sendEmail({
-      apiKey: apiKey || '',
+    // Send email using centralized service (handles provider setup automatically)
+    const sendResult = await sendMail(context, {
       to: oldEmail,
-      from: providerConfig.sendFrom,
-      template: {
-        subject: emailContent.subject,
-        text: emailContent.text,
-        html: emailContent.html,
-      },
+      template: emailContent,
     });
 
     if (isError(sendResult)) {
@@ -231,8 +186,7 @@ async function sendEmailChangeVerification(
   newEmail: string,
   oldEmail: string,
   context: Readonly<RouterContextProvider>,
-  emailConfig: EmailConfig,
-  verificationUrl?: string
+  verificationUrl?: string,
 ): Promise<Result<void>> {
   try {
     // Generate TOTP code
@@ -263,7 +217,6 @@ async function sendEmailChangeVerification(
       purpose: 'email-change',
       metadata: { oldEmail, newEmail },
       context,
-      emailConfig,
       customTemplate,
       verificationUrl,
     });
@@ -296,7 +249,14 @@ async function sendEmailChangeVerification(
  * 2. Send verification code to new email
  * 3. Send notification to old email
  */
-export async function requestEmailChange(userId: string, oldEmail: string, newEmail: string, context: Readonly<RouterContextProvider>, emailConfig: EmailConfig, kvBinding: string, verificationUrl?: string): Promise<Result<void>> {
+export async function requestEmailChange(
+  userId: string,
+  oldEmail: string,
+  newEmail: string,
+  context: Readonly<RouterContextProvider>,
+  kvBinding: string,
+  verificationUrl?: string,
+): Promise<Result<void>> {
   // Create pending change request
   const createResult = await createEmailChangeRequest(userId, oldEmail, newEmail, context, kvBinding);
 
@@ -305,13 +265,7 @@ export async function requestEmailChange(userId: string, oldEmail: string, newEm
   }
 
   // Send verification code to new email with custom template
-  const verificationResult = await sendEmailChangeVerification(
-    newEmail,
-    oldEmail,
-    context,
-    emailConfig,
-    verificationUrl
-  );
+  const verificationResult = await sendEmailChangeVerification(newEmail, oldEmail, context, verificationUrl);
 
   if (isError(verificationResult)) {
     // Clean up pending request if verification email fails
@@ -320,7 +274,7 @@ export async function requestEmailChange(userId: string, oldEmail: string, newEm
   }
 
   // Send notification to old email (non-blocking - don't fail if this fails)
-  const notificationResult = await sendEmailChangeNotification(oldEmail, newEmail, context, emailConfig);
+  const notificationResult = await sendEmailChangeNotification(oldEmail, newEmail, context);
 
   if (isError(notificationResult)) {
     // Log warning but don't fail the request

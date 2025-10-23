@@ -1,3 +1,4 @@
+import { getContext } from '@ycore/forge/context';
 import type { IntentHandlers } from '@ycore/forge/intent/server';
 import { handleIntent } from '@ycore/forge/intent/server';
 import { logger } from '@ycore/forge/logger';
@@ -5,8 +6,8 @@ import { err, flattenError, isError, isSystemError, ok, respondError, respondOk,
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import type { RouterContextProvider } from 'react-router';
 import { email, minLength, object, pipe, string } from 'valibot';
-
-import type { EmailConfig } from '../../email/@types/email.types';
+import { defaultAuthRoutes } from '../auth.config';
+import { authConfigContext } from './auth.context';
 import { requestAccountRecovery } from './recovery-service';
 import { createAuthSession } from './session';
 
@@ -21,7 +22,6 @@ export interface RecoverLoaderArgs {
 export interface RecoverActionArgs {
   request: Request;
   context: Readonly<RouterContextProvider>;
-  emailConfig: EmailConfig;
 }
 
 /**
@@ -40,8 +40,9 @@ export async function recoverLoader({ context }: RecoverLoaderArgs) {
  * Recover page action
  * Handles account recovery request using intent-based routing
  */
-export async function recoverAction({ request, context, emailConfig }: RecoverActionArgs) {
+export async function recoverAction({ request, context }: RecoverActionArgs) {
   const formData = await request.formData();
+  const authConfig = getContext(context, authConfigContext);
 
   // Define intent handlers
   const handlers: IntentHandlers = {
@@ -58,7 +59,7 @@ export async function recoverAction({ request, context, emailConfig }: RecoverAc
       const { email } = validationResult;
 
       // Request account recovery (returns user if email exists, null otherwise)
-      const result = await requestAccountRecovery(email, context, emailConfig);
+      const result = await requestAccountRecovery(email, context);
 
       if (isError(result)) {
         // System error - email service failure
@@ -85,7 +86,7 @@ export async function recoverAction({ request, context, emailConfig }: RecoverAc
         // Return success with session cookie and redirect info
         return ok({
           message: 'If this email exists, a verification code has been sent.',
-          redirectTo: '/auth/verify',
+          redirectTo: authConfig?.routes.verify || defaultAuthRoutes.verify,
           sessionCookie: sessionResult,
         });
       }

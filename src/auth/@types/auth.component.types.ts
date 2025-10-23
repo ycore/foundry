@@ -12,6 +12,7 @@ export interface ProfileCardProps {
 
 export interface AuthenticatorsCardProps {
   authenticators: Authenticator[];
+  profileUrl: string;
 }
 
 export interface ProfilePageProps {

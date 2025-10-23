@@ -15,6 +15,7 @@ export type AuthRoutes = {
   signedout: string;
   recover: string;
   verify: string;
+  profile: string;
 };
 
 export type SessionConfig = {

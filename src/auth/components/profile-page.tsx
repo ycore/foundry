@@ -14,9 +14,13 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
   const [newEmail, setNewEmail] = useState('');
   const emailFetcher = useSecureFetcher();
   const cancelFetcher = useSecureFetcher();
+  const deleteFetcher = useSecureFetcher();
+  const cancelDeleteFetcher = useSecureFetcher();
 
   const isChangingEmail = emailFetcher.state === 'submitting';
   const isCancelling = cancelFetcher.state === 'submitting';
+  const isDeletingAccount = deleteFetcher.state === 'submitting';
+  const isCancellingDelete = cancelDeleteFetcher.state === 'submitting';
 
   const handleChangeEmail = () => {
     const formData = new FormData();
@@ -29,6 +33,18 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
     const formData = new FormData();
     formData.append('intent', 'cancel-email-change');
     cancelFetcher.submitSecure(formData, { method: 'post' });
+  };
+
+  const handleRequestAccountDelete = () => {
+    const formData = new FormData();
+    formData.append('intent', 'request-account-delete');
+    deleteFetcher.submitSecure(formData, { method: 'post' });
+  };
+
+  const handleCancelAccountDelete = () => {
+    const formData = new FormData();
+    formData.append('intent', 'cancel-account-delete');
+    cancelDeleteFetcher.submitSecure(formData, { method: 'post' });
   };
 
   // Reset form after successful submission
@@ -55,12 +71,9 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
   return (
     <Card>
       <Card.Header>
-        <Card.Title className="flex items-center gap-2">
+        <Card.Title className="flex items-end gap-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">{user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}</div>
-          <div>
-            <h3 className="font-semibold text-lg">{user?.displayName || 'Profile'}</h3>
-            <p className="text-muted-foreground text-sm">{user?.email}</p>
-          </div>
+          <h3 className="font-semibold text-lg">{user?.displayName || 'Profile'}</h3>
         </Card.Title>
       </Card.Header>
 
@@ -82,6 +95,27 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
                 </Button>
                 <Button onClick={handleCancelChange} disabled={isCancelling} variant="ghost" size="sm">
                   {isCancelling ? 'Cancelling...' : 'Cancel'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pending Account Delete Banner */}
+        {user?.pending?.type === 'account-delete' && (
+          <div className="rounded-lg border border-destructive/50 p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="font-medium text-destructive text-sm">Account Deletion Pending</p>
+                <p className="mt-1 text-destructive text-xs">Your account deletion request is pending verification.</p>
+                <p className="mt-2 text-destructive text-xs">Visit the verification page and enter the code sent to your email to confirm deletion.</p>
+              </div>
+              <div className="flex gap-2">
+                <Button asChild variant="destructive" size="sm">
+                  <Link href={verifyUrl}>Verify Deletion</Link>
+                </Button>
+                <Button onClick={handleCancelAccountDelete} disabled={isCancellingDelete} variant="ghost" size="sm">
+                  {isCancellingDelete ? 'Cancelling...' : 'Cancel'}
                 </Button>
               </div>
             </div>
@@ -117,13 +151,11 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
                   <Button onClick={handleChangeEmail} disabled={isChangingEmail || !newEmail.trim()} size="sm">
                     {isChangingEmail ? 'Sending...' : 'Send Verification'}
                   </Button>
-                  <Button
+                  <Button variant="outline" size="sm"
                     onClick={() => {
                       setIsEditingEmail(false);
                       setNewEmail('');
                     }}
-                    variant="outline"
-                    size="sm"
                   >
                     Cancel
                   </Button>
@@ -132,40 +164,88 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
             )}
           </div>
 
-          {user?.createdAt && (
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-sm">Since</Label>
-              <p className="text-sm">
-                <DateFormat.Long date={user.createdAt} />
-              </p>
-            </div>
-          )}
+          <div className="flex justify-between pt-6">
+            {user?.createdAt && (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm">Since</Label>
+                <p className="text-sm">
+                  <DateFormat.Long date={user.createdAt} />
+                </p>
+              </div>
+            )}
+
+            {user?.status === 'active' ? (
+              <Badge variant="outline" className="h-8 px-4 text-primary">
+                Verified Account
+              </Badge>
+            ) : (
+              <Button asChild variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700">
+                <Link href={verifyUrl}>Verify Email</Link>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Form method="post" action={signoutUrl}>
+            <Button type="submit" variant="secondary" size="sm">
+              Sign Out
+            </Button>
+          </Form>
         </div>
       </Card.Content>
 
       <Separator />
 
-      <Card.Footer className="flex justify-between pt-6">
-        <div className="flex gap-2">
-          {user?.status === 'active' ? (
-            <Badge variant="secondary">Verified Account</Badge>
-          ) : (
-            <Button asChild variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700">
-              <Link href={verifyUrl}>Verify Email</Link>
-            </Button>
-          )}
-        </div>
-        <Form method="post" action={signoutUrl}>
-          <Button type="submit" variant="destructive" size="sm">
-            Sign Out
-          </Button>
-        </Form>
+      <Card.Footer>
+        {/* Danger Zone - Only show if no pending operations */}
+        {!pendingEmailChange && user?.pending?.type !== 'account-delete' && (
+          <div className="rounded-lg border border-destructive/50 p-4">
+            <div className="space-y-3">
+              <div className="flex justify-start">
+                <AlertDialog>
+                  <AlertDialog.Trigger asChild>
+                    <Button variant="destructive" size="sm" disabled={isDeletingAccount}>
+                      {isDeletingAccount ? 'Processing...' : 'Delete Account'}
+                    </Button>
+                  </AlertDialog.Trigger>
+                  <AlertDialog.Content>
+                    <AlertDialog.Header>
+                      <AlertDialog.Title>Delete Account</AlertDialog.Title>
+                      <AlertDialog.Description asChild>
+                        <div className="space-y-3">
+                          <p className="font-semibold text-destructive">This action cannot be undone.</p>
+                          <p>Deleting your account will:</p>
+                          <ul className="list-disc space-y-1 pl-5 text-sm">
+                            <li>Permanently remove all your account data</li>
+                            <li>Delete all registered passkeys and authenticators</li>
+                            <li>Sign you out immediately after verification</li>
+                            <li>Make your email address available for new registrations</li>
+                          </ul>
+                          <p className="text-sm">You will receive a verification code via email to confirm this action.</p>
+                        </div>
+                      </AlertDialog.Description>
+                    </AlertDialog.Header>
+                    <AlertDialog.Footer>
+                      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+                      <AlertDialog.Action onClick={handleRequestAccountDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Continue to Verification
+                      </AlertDialog.Action>
+                    </AlertDialog.Footer>
+                  </AlertDialog.Content>
+                </AlertDialog>
+              </div>
+              {deleteFetcher.errors?.form && <SecureFetcherError error={deleteFetcher.errors.form} />}
+              <p className='mt-1 text-destructive/80 text-xs'>Permanently delete your account and all associated data.</p>
+            </div>
+          </div>
+        )}
       </Card.Footer>
     </Card>
   );
 }
 
-export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) {
+export function AuthenticatorsCard({ authenticators, profileUrl }: AuthenticatorsCardProps) {
   const addFetcher = useSecureFetcher();
   const renameFetcher = useSecureFetcher();
   const deleteFetcher = useSecureFetcher();
@@ -254,7 +334,7 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
               formData.append('csrf_token', freshCsrfTokenRef.current);
             }
 
-            addFetcher.submitSecure(formData, { method: 'post', action: '/auth/profile' });
+            addFetcher.submitSecure(formData, { method: 'post', action: profileUrl });
           }
 
           setPendingAction(null);
@@ -331,7 +411,7 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
     // Request registration options from server (server has correct RP ID logic)
     const formData = new FormData();
     formData.append('intent', 'add-passkey-options');
-    optionsFetcher.submitSecure(formData, { method: 'post', action: '/auth/profile' });
+    optionsFetcher.submitSecure(formData, { method: 'post', action: profileUrl });
   };
 
   const handleStartEdit = (authenticator: (typeof authenticators)[0]) => {
@@ -347,7 +427,7 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
     formData.append('authenticatorId', editingId);
     formData.append('name', editingName.trim());
 
-    renameFetcher.submitSecure(formData, { method: 'post', action: '/auth/profile' });
+    renameFetcher.submitSecure(formData, { method: 'post', action: profileUrl });
 
     setEditingId(null);
     setEditingName('');
@@ -363,7 +443,7 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
     formData.append('intent', 'delete-passkey');
     formData.append('authenticatorId', authenticatorId);
 
-    deleteFetcher.submitSecure(formData, { method: 'post', action: '/auth/profile' });
+    deleteFetcher.submitSecure(formData, { method: 'post', action: profileUrl });
   };
 
   // Determine loading states
@@ -375,9 +455,9 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
   return (
     <Card>
       <Card.Header>
-        <div className="flex items-center justify-between">
-          <div>
-            <Card.Title className="flex items-center gap-2">Passkeys</Card.Title>
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Card.Title className="flex items-center">Passkeys</Card.Title>
             <Card.Description>Security keys and devices used to sign in to your account</Card.Description>
           </div>
           <Button onClick={handleAddPasskey} disabled={isAddingPasskey || authenticators.length >= 10 || (isClient && !isWebAuthnSupported())} size="sm">
@@ -390,9 +470,9 @@ export function AuthenticatorsCard({ authenticators }: AuthenticatorsCardProps) 
       <Card.Content>
         {/* WebAuthn error display */}
         {webAuthnError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
-            <p className="font-medium text-red-800 text-sm">Registration Failed</p>
-            <SecureFetcherError error={webAuthnError} className="mt-1 text-red-600 text-xs" />
+          <div className="mb-4 rounded-lg border border-destructive p-3">
+            <p className="font-medium text-destructive text-sm">Registration Failed</p>
+            <SecureFetcherError error={webAuthnError} className="mt-1 text-destructive text-xs" />
           </div>
         )}
 

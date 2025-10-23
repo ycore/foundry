@@ -1,10 +1,7 @@
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, type Result } from '@ycore/forge/result';
-import { getBindings } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
-import type { EmailConfig } from '../../email/@types/email.types';
-import { createEmailProvider, getProviderConfig } from '../../email/email-provider';
 import { createRecoveryVerificationTemplate } from '../../email/templates/recovery-verification';
 import type { User } from '../schema';
 import { getAuthRepository } from './repository';
@@ -18,8 +15,7 @@ import { sendVerificationEmail } from './verification-service';
 async function sendRecoveryVerification(
   email: string,
   context: Readonly<RouterContextProvider>,
-  emailConfig: EmailConfig,
-  verificationUrl?: string
+  verificationUrl?: string,
 ): Promise<Result<void>> {
   try {
     // Generate TOTP code
@@ -48,7 +44,6 @@ async function sendRecoveryVerification(
       purpose: 'recovery',
       metadata: { email },
       context,
-      emailConfig,
       customTemplate,
       verificationUrl,
     });
@@ -79,8 +74,13 @@ async function sendRecoveryVerification(
  * 2. Send combined recovery verification email (notification + verification code)
  *
  * Returns the user object if email exists, null otherwise (for session creation)
+ * Email configuration is automatically retrieved from context (requires email middleware).
  */
-export async function requestAccountRecovery(email: string, context: Readonly<RouterContextProvider>, emailConfig: EmailConfig, verificationUrl?: string): Promise<Result<User | null>> {
+export async function requestAccountRecovery(
+  email: string,
+  context: Readonly<RouterContextProvider>,
+  verificationUrl?: string,
+): Promise<Result<User | null>> {
   const repository = getAuthRepository(context);
 
   // Get user by email
@@ -107,7 +107,7 @@ export async function requestAccountRecovery(email: string, context: Readonly<Ro
   }
 
   // Send combined recovery verification email (notification + code in one email)
-  const verificationResult = await sendRecoveryVerification(email, context, emailConfig, verificationUrl);
+  const verificationResult = await sendRecoveryVerification(email, context, verificationUrl);
 
   if (isError(verificationResult)) {
     logger.error('recovery_request_verification_email_failed', {

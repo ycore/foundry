@@ -7,6 +7,7 @@ import { err, flattenError, isError, isSystemError, ok, respondError, respondOk,
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
 
 import type { SignInActionArgs, SignInLoaderArgs } from '../@types/auth.types';
+import { defaultAuthRoutes } from '../auth.config';
 import type { WebAuthnErrorCode } from '../auth.constants';
 import type { Authenticator } from '../schema';
 import { authConfigContext } from './auth.context';
@@ -33,12 +34,6 @@ export async function signinLoader({ context }: SignInLoaderArgs) {
 export async function signinAction({ request, context }: SignInActionArgs) {
   const repository = getAuthRepository(context);
   const authConfig = getContext(context, authConfigContext);
-
-  if (!authConfig) {
-    logger.error('signin_config_missing');
-    throwSystemError('Auth configuration not found');
-  }
-
   const formData = await request.formData();
 
   const handlers: IntentHandlers = {
@@ -156,44 +151,50 @@ export async function signinAction({ request, context }: SignInActionArgs) {
           // Continue with signin even if update fails
         }
 
-        // Check for pending recovery and cleanup old authenticators
-        if (user!.pending?.type === 'recovery') {
-          const recoveryTimestamp = user!.pending.timestamp;
+        // Handle pending operations - signin clears all dangling pending states
+        if (user?.pending) {
+          const pendingType = user?.pending.type;
 
-          logger.info('recovery_cleanup_detected', {
-            userId: user!.id,
-            email,
-            recoveryTimestamp,
-          });
+          // Recovery mode: delete old authenticators from before recovery
+          if (pendingType === 'recovery') {
+            const recoveryTimestamp = user?.pending.timestamp;
 
-          // Delete all authenticators older than recovery timestamp
-          const deleteResult = await repository.deleteAuthenticatorsByTimestamp(user!.id, recoveryTimestamp);
+            logger.info('recovery_cleanup_detected', { userId: user?.id, email, recoveryTimestamp });
 
-          if (isError(deleteResult)) {
-            logger.warning('recovery_cleanup_delete_failed', {
-              userId: user!.id,
-              email,
-              error: flattenError(deleteResult),
-            });
-            // Continue with signin even if cleanup fails
+            // Delete all authenticators older than recovery timestamp
+            const deleteResult = await repository.deleteAuthenticatorsByTimestamp(user?.id, recoveryTimestamp);
+
+            if (isError(deleteResult)) {
+              logger.warning('recovery_cleanup_delete_failed', { userId: user?.id, email, error: flattenError(deleteResult) });
+              // Continue with signin even if cleanup fails
+            } else {
+              logger.info('recovery_cleanup_completed', { userId: user?.id, email, deletedCount: deleteResult });
+            }
           } else {
-            logger.info('recovery_cleanup_completed', {
-              userId: user!.id,
-              email,
-              deletedCount: deleteResult,
-            });
+            // Email-change or account-delete: user abandoned operation, clear it
+            logger.info('pending_operation_abandoned_on_signin', { userId: user?.id, email, pendingType });
           }
 
-          // Clear pending recovery data
-          const pendingUpdateResult = await repository.updateUserPending(user!.id, null);
+          // Clear pending data for all cases
+          const pendingUpdateResult = await repository.updateUserPending(user?.id, null);
 
           if (isError(pendingUpdateResult)) {
-            logger.warning('recovery_cleanup_pending_clear_failed', {
-              userId: user!.id,
-              email,
-              error: flattenError(pendingUpdateResult),
-            });
+            logger.warning('pending_clear_failed_on_signin', { userId: user?.id, email, pendingType, error: flattenError(pendingUpdateResult) });
             // Continue with signin even if pending clear fails
+          }
+
+          // If user status is not active, restore it (abandoned operations should restore status)
+          if (user?.status !== 'active') {
+            const statusUpdateResult = await repository.updateUserStatus(user?.id, 'active');
+
+            if (isError(statusUpdateResult)) {
+              logger.warning('status_restore_failed_on_signin', { userId: user?.id, email, error: flattenError(statusUpdateResult) });
+              // Continue with signin even if status update fails
+            } else {
+              // Update user object so redirect logic uses correct status
+              user.status = 'active';
+              logger.info('status_restored_on_signin', { userId: user?.id, email });
+            }
           }
         }
 
@@ -205,7 +206,7 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         }
 
         // Create authenticated session
-        const authSessionResult = await createAuthenticatedSession(context, user!, email, 'signin');
+        const authSessionResult = await createAuthenticatedSession(context, user, email, 'signin');
         if (isError(authSessionResult)) {
           // System error - session creation failed
           if (isSystemError(authSessionResult)) {
@@ -215,9 +216,9 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         }
 
         // Determine redirect path based on user status
-        const redirectTo = user!.status === 'active'
-          ? (authConfig?.routes.signedin || '/dashboard')
-          : (authConfig?.routes.verify || '/auth/verify');
+        const redirectTo = user?.status === 'active'
+          ? (authConfig?.routes.signedin || defaultAuthRoutes.signedin)
+          : (authConfig?.routes.verify || defaultAuthRoutes.verify);
 
         // Return session cookie and redirect info
         return ok({

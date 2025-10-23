@@ -6,8 +6,7 @@ import { err, flattenError, isError, isSystemError, ok, respondError, respondOk,
 import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import type { RouterContextProvider } from 'react-router';
 import { minLength, object, pipe, string } from 'valibot';
-
-import type { EmailConfig } from '../../email/@types/email.types';
+import { defaultAuthRoutes } from '../auth.config';
 import { authConfigContext } from './auth.context';
 import { getAuthRepository } from './repository';
 import { getAuthSession, updateAuthSession } from './session';
@@ -27,7 +26,6 @@ export interface VerifyLoaderArgs {
 export interface VerifyActionArgs {
   request: Request;
   context: Readonly<RouterContextProvider>;
-  emailConfig: EmailConfig;
 }
 
 /**
@@ -50,19 +48,23 @@ export async function verifyLoader({ request, context }: VerifyLoaderArgs) {
   const session = sessionResult;
   if (!session || !session.user) {
     const authConfig = getContext(context, authConfigContext);
-    throw respondRedirect(authConfig?.routes.signin || '/auth/signin');
+    throw respondRedirect(authConfig?.routes.signin || defaultAuthRoutes.signin);
   }
 
-  // Check for pending email change (from database pending field)
+  // Determine verification purpose based on pending state
   let emailToVerify = session.user.email;
   let purpose: VerificationPurpose = 'signup';
 
-  // Check if user has pending email change
+  // Check for pending operations
   if (session.user.pending?.type === 'email-change') {
     emailToVerify = session.user.pending.email;
     purpose = 'email-change';
 
     logger.info('verify_loader_email_change_detected', { userId: session.user.id, oldEmail: session.user.email, newEmail: emailToVerify });
+  } else if (session.user.pending?.type === 'account-delete') {
+    purpose = 'account-delete';
+
+    logger.info('verify_loader_account_delete_detected', { userId: session.user.id, email: session.user.email });
   }
 
   return respondOk({
@@ -77,15 +79,9 @@ export async function verifyLoader({ request, context }: VerifyLoaderArgs) {
  * Verify page action
  * Handles code verification and resend using intent-based routing
  */
-export async function verifyAction({ request, context, emailConfig }: VerifyActionArgs) {
+export async function verifyAction({ request, context }: VerifyActionArgs) {
   const repository = getAuthRepository(context);
   const authConfig = getContext(context, authConfigContext);
-
-  if (!authConfig) {
-    logger.error('verify_config_missing');
-    throwSystemError('Auth configuration not found');
-  }
-
   const formData = await request.formData();
   const purpose = (formData.get('purpose')?.toString() as VerificationPurpose) || 'signup';
 
@@ -130,7 +126,6 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
         email: emailToSendTo,
         purpose,
         context,
-        emailConfig,
       });
 
       if (isError(sendResult)) {
@@ -241,7 +236,7 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
           // Return redirect info
           return ok({
             sessionCookie: isError(sessionUpdateResult) ? undefined : sessionUpdateResult,
-            redirectTo: authConfig.routes.signedin,
+            redirectTo: authConfig?.routes.signedin || defaultAuthRoutes.signedin,
           });
         }
 
@@ -316,10 +311,10 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
             newEmail,
           });
 
-          // Return redirect info
+          // Return redirect info (back to profile page for profile management actions)
           return ok({
             sessionCookie: isError(sessionUpdateResult) ? undefined : sessionUpdateResult,
-            redirectTo: authConfig.routes.signedin,
+            redirectTo: authConfig?.routes.profile || defaultAuthRoutes.profile,
           });
         }
 
@@ -329,13 +324,43 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
           logger.info('recovery_email_verified', { userId: user.id, email });
 
           return ok({
-            redirectTo: authConfig.routes.signup,
+            redirectTo: authConfig?.routes.signup || defaultAuthRoutes.signup,
+          });
+        }
+
+        case 'account-delete': {
+          // User has verified their email for account deletion
+          // Check if user has pending account delete
+          if (!user.pending || user.pending.type !== 'account-delete') {
+            logger.error('verify_account_delete_no_pending_request', { userId: user.id, email });
+            return err('No pending account deletion request found. Request may have expired.');
+          }
+
+          // Delete the account (anonymize email, set status to deleted)
+          const deleteResult = await repository.deleteUserAccount(user.id);
+
+          if (isError(deleteResult)) {
+            // System error - database failure
+            if (isSystemError(deleteResult)) {
+              logger.error('verify_account_delete_system_error', { userId: user.id, error: flattenError(deleteResult) });
+            }
+            return deleteResult;
+          }
+
+          logger.info('account_deleted_successfully', {
+            userId: user.id,
+            email,
+          });
+
+          // Destroy session and redirect to signout
+          return ok({
+            redirectTo: authConfig?.routes.signedout || defaultAuthRoutes.signedout,
+            destroySession: true,
           });
         }
 
         case 'passkey-add':
-        case 'passkey-delete':
-        case 'account-delete': {
+        case 'passkey-delete': {
           // These will be handled by their respective action handlers
           return ok({
             verified: true,
@@ -368,6 +393,17 @@ export async function verifyAction({ request, context, emailConfig }: VerifyActi
   // Check if result contains redirect info
   const resultData = result as any;
   if (resultData.redirectTo) {
+    // Check if session should be destroyed (account deletion)
+    if (resultData.destroySession) {
+      const { destroyAuthSession } = await import('./session');
+      const destroyResult = await destroyAuthSession(request, context);
+
+      // Redirect with session destruction cookie
+      throw respondRedirect(resultData.redirectTo, {
+        headers: { 'Set-Cookie': !isError(destroyResult) ? destroyResult : '' },
+      });
+    }
+
     // Redirect with optional session cookie
     throw respondRedirect(resultData.redirectTo, {
       headers: resultData.sessionCookie ? { 'Set-Cookie': resultData.sessionCookie } : undefined,

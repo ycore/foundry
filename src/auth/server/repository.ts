@@ -25,6 +25,7 @@ export interface AuthRepository {
   updateUserStatus: (id: string, status: UserStatus) => Promise<Result<User>>;
   updateUserPending: (id: string, pending: PendingData | null) => Promise<Result<User>>;
   deleteUser: (id: string) => Promise<Result<boolean>>;
+  deleteUserAccount: (id: string) => Promise<Result<User>>;
 }
 
 /**
@@ -316,6 +317,39 @@ export function createAuthRepository(db: DrizzleD1Database<Record<string, unknow
         return true;
       } catch (error) {
         return serverError('Failed to delete user', error as Error);
+      }
+    },
+
+    /** Delete user account (soft delete with anonymization) */
+    deleteUserAccount: async (id: string) => {
+      try {
+        const timestamp = Date.now();
+        const anonymizedEmail = `deleted_${id}_${timestamp}@deleted.local`;
+
+        const result = await db
+          .update(users)
+          .set({
+            email: anonymizedEmail,
+            displayName: 'Deleted User',
+            status: 'deleted',
+            pending: null,
+          })
+          .where(eq(users.id, id))
+          .returning();
+
+        if (result.length === 0) {
+          return notFoundError('User', id);
+        }
+
+        const deletedUser = result[0];
+        if (!deletedUser) {
+          return serverError('Failed to retrieve deleted user', new Error('Update returned empty result'));
+        }
+
+        // Authenticators are cascade deleted automatically via schema
+        return deletedUser;
+      } catch (error) {
+        return serverError('Failed to delete user account', error as Error);
       }
     },
   };

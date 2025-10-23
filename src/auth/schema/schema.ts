@@ -7,6 +7,7 @@ import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 export type PendingEmailChange = {
   type: 'email-change';
   email: string;
+  timestamp: number;
 };
 
 export type PendingRecovery = {
@@ -14,7 +15,12 @@ export type PendingRecovery = {
   timestamp: number;
 };
 
-export type PendingData = PendingEmailChange | PendingRecovery;
+export type PendingAccountDelete = {
+  type: 'account-delete';
+  timestamp: number;
+};
+
+export type PendingData = PendingEmailChange | PendingRecovery | PendingAccountDelete;
 
 /**
  * User account status values

@@ -25,6 +25,10 @@
       "types": "./src/email/index.ts",
       "import": "./src/email/index.ts"
     },
+    "./email/server": {
+      "types": "./src/email/server/index.ts",
+      "import": "./src/email/server/index.ts"
+    },
     "./secure": {
       "types": "./src/secure/index.ts",
       "import": "./src/secure/index.ts"

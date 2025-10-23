@@ -1,10 +1,9 @@
 import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, type Result } from '@ycore/forge/result';
-import { getBindings } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
-import type { EmailConfig, EmailTemplate } from '../../email/@types/email.types';
-import { createEmailProvider, getProviderConfig } from '../../email/email-provider';
+import type { EmailTemplate } from '../../email/@types/email.types';
+import { sendMail } from '../../email/server';
 import { createTotpTemplate } from '../../email/templates/auth-totp';
 import { createVerificationCode, type VerificationPurpose } from './totp-service';
 
@@ -13,7 +12,6 @@ export interface SendVerificationOptions {
   purpose: VerificationPurpose;
   metadata?: Record<string, unknown>;
   context: Readonly<RouterContextProvider>;
-  emailConfig: EmailConfig;
   customTemplate?: EmailTemplate;
   verificationUrl?: string;
 }
@@ -23,7 +21,7 @@ export interface SendVerificationOptions {
  * Orchestrates code generation and email sending
  */
 export async function sendVerificationEmail(options: SendVerificationOptions): Promise<Result<void>> {
-  const { email, purpose, metadata, context, emailConfig, customTemplate, verificationUrl } = options;
+  const { email, purpose, metadata, context, customTemplate, verificationUrl } = options;
 
   try {
     // Generate TOTP code
@@ -43,50 +41,10 @@ export async function sendVerificationEmail(options: SendVerificationOptions): P
     // Create email content - use custom template if provided, otherwise use default TOTP template
     const emailContent = customTemplate || createTotpTemplate({ code, purpose });
 
-    // Get active email provider
-    const activeProvider = emailConfig.active;
-
-    if (!activeProvider) {
-      logger.error('verification_email_no_provider', { email, purpose });
-      return err('No active email provider configured');
-    }
-
-    const providerConfig = getProviderConfig(emailConfig, activeProvider);
-    if (!providerConfig) {
-      logger.error('verification_email_provider_config_missing', {
-        email,
-        purpose,
-        provider: activeProvider,
-      });
-      return err(`Provider configuration not found for: ${activeProvider}`);
-    }
-
-    // Create email provider instance
-    const emailProviderResult = createEmailProvider(activeProvider);
-    if (isError(emailProviderResult)) {
-      logger.error('verification_email_provider_creation_failed', {
-        email,
-        purpose,
-        provider: activeProvider,
-        error: flattenError(emailProviderResult),
-      });
-      return emailProviderResult;
-    }
-
-    // Get API key from environment using the configured secret key
-    const bindings = getBindings(context);
-    const apiKey = providerConfig.apiKey ? (bindings[providerConfig.apiKey as keyof typeof bindings] as string | undefined) : undefined;
-
-    // Send email
-    const sendResult = await emailProviderResult.sendEmail({
-      apiKey: apiKey || '',
+    // Send email using centralized service (handles provider setup automatically)
+    const sendResult = await sendMail(context, {
       to: email,
-      from: providerConfig.sendFrom,
-      template: {
-        subject: emailContent.subject,
-        text: emailContent.text,
-        html: emailContent.html,
-      },
+      template: emailContent,
     });
 
     if (isError(sendResult)) {

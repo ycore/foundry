@@ -49,7 +49,7 @@ export function VerifyForm({ email, purpose = 'signup', resendCooldown: initialC
     'passkey-add': 'Confirm Adding Passkey',
     'passkey-delete': 'Confirm Removing Passkey',
     'email-change': 'Verify New Email',
-    'account-delete': 'Confirm Removing Account',
+    'account-delete': 'Confirm Account Deletion',
     recovery: 'Recover Account',
   };
 
