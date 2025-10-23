@@ -9,8 +9,8 @@ export interface EmailTemplate {
 
 export interface SendEmailOptions {
   apiKey: string;
-  to: string;
   from: string;
+  to: string;
   template: EmailTemplate;
 }
 
@@ -45,4 +45,12 @@ export interface EmailSendResult {
   to: string;
   provider: string;
   message: string;
+}
+
+export interface SendMailOptions {
+  to: string;
+  template: EmailTemplate;
+  from?: string;
+  provider?: EmailProviders;
+  apiKey?: string;
 }

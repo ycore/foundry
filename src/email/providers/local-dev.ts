@@ -16,7 +16,7 @@ export class MockEmailProvider implements EmailProvider {
 
     return tryCatch(async () => {
       // Simulate a slight delay like a real email service
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       logger.info({
         event: 'local_dev_email_sent',

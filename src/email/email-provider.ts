@@ -34,7 +34,7 @@ export function getSupportedProviders(): EmailProviders[] {
   return Object.keys(providerRegistry) as EmailProviders[];
 }
 
-export function getEmailProviderNames(emailConfig: EmailConfig): string[] {
+export function getEmailProviderNames(emailConfig: EmailConfig): EmailProviders[] {
   return emailConfig.providers.map(provider => provider.name);
 }
 
