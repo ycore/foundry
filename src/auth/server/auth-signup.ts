@@ -10,10 +10,12 @@ import { requireCSRFToken } from '@ycore/foundry/secure/server';
 import type { SignUpActionArgs, SignUpLoaderArgs } from '../@types/auth.types';
 import { defaultAuthRoutes } from '../auth.config';
 import type { WebAuthnErrorCode } from '../auth.constants';
+import type { User } from '../schema';
 import { authConfigContext } from './auth.context';
 import { signupFormSchema } from './auth.validation';
 import { getAuthRepository } from './repository';
 import { createChallengeSession, destroyChallengeSession, getChallengeFromSession } from './session';
+import { sendVerificationEmail } from './verification-service';
 import { generateChallenge, getWebAuthnErrorMessage, verifyRegistration } from './webauthn';
 import { createAuthenticatedSession, parseWebAuthnCredential } from './webauthn-utils';
 import { validateWebAuthnRequest } from './webauthn-validation';
@@ -108,7 +110,7 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
         };
 
         // Get metadata KV from config (follows CSRF pattern)
-        const metadataKV = authConfig.webauthn.kvBinding ? getKVStore(context, authConfig.webauthn.kvBinding) : undefined;
+        const metadataKV = authConfig?.webauthn.kvBinding ? getKVStore(context, authConfig.webauthn.kvBinding) : undefined;
 
         // Verify registration using the validated challenge, origin, and rpId
         const verificationResult = await verifyRegistration(registrationData, challenge, origin, rpId, metadataKV);
@@ -125,7 +127,7 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
         }
 
         // Get or create user based on mode
-        let user;
+        let user: User;
         if (isRecoveryMode) {
           // Use existing user for recovery
           user = existingUserResult;
@@ -177,11 +179,7 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
             // Continue anyway - user can still sign in
           }
 
-          logger.info('recovery_passkey_registered', {
-            userId: user.id,
-            email,
-            recoveryTimestamp,
-          });
+          logger.info('recovery_passkey_registered', { userId: user.id, email, recoveryTimestamp });
         }
 
         // Clear challenge from session
@@ -201,16 +199,19 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
           return authSessionResult;
         }
 
+        if (user.status !== 'active') {
+          const verificationResult = await sendVerificationEmail({ email, purpose: 'signup', context });
+
+          if (isError(verificationResult)) {
+            logger.warning('signup_verification_email_error', { email, error: flattenError(verificationResult) });
+          }
+        }
+
         // Determine redirect path based on user status
-        const redirectTo = user.status === 'active'
-          ? (authConfig?.routes.signedin || defaultAuthRoutes.signedin)
-          : (authConfig?.routes.verify || defaultAuthRoutes.verify);
+        const redirectTo = user.status === 'active' ? authConfig?.routes.signedin || defaultAuthRoutes.signedin : authConfig?.routes.verify || defaultAuthRoutes.verify;
 
         // Return session cookie and redirect info
-        return ok({
-          sessionCookie: authSessionResult,
-          redirectTo
-        });
+        return ok({ sessionCookie: authSessionResult, redirectTo });
       } catch (error) {
         if (error instanceof Response) {
           throw error;
@@ -242,6 +243,6 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
   };
 
   throw respondRedirect(redirectTo, {
-    headers: { 'Set-Cookie': sessionCookie }
+    headers: { 'Set-Cookie': sessionCookie },
   });
 }
