@@ -36,7 +36,7 @@ export function FormField({ label, description, error, className, children }: Fo
 
   return (
     <FormFieldContext.Provider value={contextValue}>
-      <div className={clsx("space-y-2", className)} data-slot="form-field">
+      <div className={clsx('space-y-2', className)} data-slot="form-field">
         {label && (
           <Label htmlFor={fieldId} data-slot="form-label" data-error={hasError} className={clsx(hasError && 'text-destructive')}>
             {label}

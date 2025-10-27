@@ -26,7 +26,7 @@ export async function signoutAction({ request, context }: SignOutActionArgs) {
   const redirectTo = authConfig?.routes.signedout || defaultAuthRoutes.signedout;
 
   throw respondRedirect(redirectTo, {
-    headers: { 'Set-Cookie': !isError(destroyResult) ? destroyResult : '' }
+    headers: { 'Set-Cookie': !isError(destroyResult) ? destroyResult : '' },
   });
 }
 

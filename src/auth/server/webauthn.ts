@@ -204,11 +204,11 @@ export function createAuthenticationOptions(rpId: string, challenge: string, all
     allowCredentials:
       allowCredentials.length > 0
         ? allowCredentials.map(cred => ({
-          id: toArrayBuffer(decodeBase64url(cred.id)),
-          type: 'public-key' as PublicKeyCredentialType,
-          // Use actual transports if available, otherwise omit (let browser decide)
-          ...(cred.transports && cred.transports.length > 0 ? { transports: cred.transports } : {}),
-        }))
+            id: toArrayBuffer(decodeBase64url(cred.id)),
+            type: 'public-key' as PublicKeyCredentialType,
+            // Use actual transports if available, otherwise omit (let browser decide)
+            ...(cred.transports && cred.transports.length > 0 ? { transports: cred.transports } : {}),
+          }))
         : [],
   };
 }
@@ -457,19 +457,27 @@ export async function verifyAuthentication(
       publicKeyData = JSON.parse(storedKeyJson);
 
       if (!publicKeyData) {
-        return err('Invalid stored public key', {
-          field: 'publicKey',
-          code: WebAuthnErrorCode.INVALID_KEY_FORMAT,
-        }, { status: 500 }); // System error - corrupted data in DB
+        return err(
+          'Invalid stored public key',
+          {
+            field: 'publicKey',
+            code: WebAuthnErrorCode.INVALID_KEY_FORMAT,
+          },
+          { status: 500 }
+        ); // System error - corrupted data in DB
       }
     } catch (error) {
       logger.error('webauthn_authentication_key_parse_error', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      return err('Failed to parse stored public key', {
-        field: 'publicKey',
-        code: WebAuthnErrorCode.INVALID_KEY_FORMAT,
-      }, { status: 500 }); // System error - corrupted data in DB
+      return err(
+        'Failed to parse stored public key',
+        {
+          field: 'publicKey',
+          code: WebAuthnErrorCode.INVALID_KEY_FORMAT,
+        },
+        { status: 500 }
+      ); // System error - corrupted data in DB
     }
 
     // Verify the signature using ECDSA with P-256
@@ -603,10 +611,14 @@ export async function verifyAuthentication(
         error: error instanceof Error ? error.message : 'Unknown error',
         credentialId: credential.id,
       });
-      return err('Signature verification failed', {
-        field: 'signature',
-        code: WebAuthnErrorCode.SIGNATURE_FAILED,
-      }, { status: 500 }); // System error - crypto operation failed
+      return err(
+        'Signature verification failed',
+        {
+          field: 'signature',
+          code: WebAuthnErrorCode.SIGNATURE_FAILED,
+        },
+        { status: 500 }
+      ); // System error - crypto operation failed
     }
 
     return {

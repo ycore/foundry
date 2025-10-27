@@ -216,14 +216,12 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         }
 
         // Determine redirect path based on user status
-        const redirectTo = user?.status === 'active'
-          ? (authConfig?.routes.signedin || defaultAuthRoutes.signedin)
-          : (authConfig?.routes.verify || defaultAuthRoutes.verify);
+        const redirectTo = user?.status === 'active' ? authConfig?.routes.signedin || defaultAuthRoutes.signedin : authConfig?.routes.verify || defaultAuthRoutes.verify;
 
         // Return session cookie and redirect info
         return ok({
           sessionCookie: authSessionResult,
-          redirectTo
+          redirectTo,
         });
       } catch (error) {
         if (error instanceof Response) {
@@ -256,6 +254,6 @@ export async function signinAction({ request, context }: SignInActionArgs) {
   };
 
   throw respondRedirect(redirectTo, {
-    headers: { 'Set-Cookie': sessionCookie }
+    headers: { 'Set-Cookie': sessionCookie },
   });
 }

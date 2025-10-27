@@ -1,4 +1,15 @@
-export type { AuthenticatorsCardProps, ProfileCardProps, ProfilePageProps, RecoverFormProps, RecoverPageProps, SignInFormProps, SignInPageProps, SignUpFormProps, SignUpPageProps, WebAuthnCredentialResponse } from './@types/auth.component.types';
+export type {
+  AuthenticatorsCardProps,
+  ProfileCardProps,
+  ProfilePageProps,
+  RecoverFormProps,
+  RecoverPageProps,
+  SignInFormProps,
+  SignInPageProps,
+  SignUpFormProps,
+  SignUpPageProps,
+  WebAuthnCredentialResponse,
+} from './@types/auth.component.types';
 export type { AuthConfig, AuthRoutes, SessionConfig, VerificationConfig, WebAuthnConfig } from './@types/auth.config.types';
 export type {
   SessionData,

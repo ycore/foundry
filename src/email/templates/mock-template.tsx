@@ -18,14 +18,14 @@ export function MockEmailTemplate({ subject, message, recipientName = 'there' }:
       <Tailwind config={emailTailwindConfig}>
         <Body className="bg-white font-sans">
           <Container className="mx-auto max-w-2xl text-gray-900">
-            <Section className='border-muted-100 border-b px-5 pt-10 pb-5 text-center'>
+            <Section className="border-muted-100 border-b px-5 pt-10 pb-5 text-center">
               <Heading as="h1">{subject}</Heading>
             </Section>
 
             <Section className="px-5 py-8">
               <Text>Hello {recipientName},</Text>
 
-              <Section className='my-5 rounded border-blue-500 border-l-4 bg-muted-50 p-5 text-muted-600'>
+              <Section className="my-5 rounded border-blue-500 border-l-4 bg-muted-50 p-5 text-muted-600">
                 <Text>{message}</Text>
               </Section>
 
@@ -34,7 +34,7 @@ export function MockEmailTemplate({ subject, message, recipientName = 'there' }:
 
             <Hr className="my-5 border-muted-100" />
 
-            <Section className='px-5 py-5 text-center text-muted-400 text-sm'>
+            <Section className="px-5 py-5 text-center text-muted-400 text-sm">
               <Text>This is a test email sent from the Foundry system.</Text>
               <Text>If you received this email by mistake, please ignore it.</Text>
             </Section>

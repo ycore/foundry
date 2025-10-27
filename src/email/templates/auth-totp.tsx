@@ -75,7 +75,7 @@ export function TotpEmailTemplate({ code, purpose }: TotpTemplateData) {
       <Tailwind config={emailTailwindConfig}>
         <Body className="bg-white font-sans">
           <Container className={`mx-auto max-w-2xl text-gray-900 leading-relaxed ${isAccountDelete ? 'rounded-lg border-2 border-warning-200 bg-warning-100 p-5' : ''}`}>
-            <Section className='px-5 pt-10 pb-5 text-center'>
+            <Section className="px-5 pt-10 pb-5 text-center">
               <Heading as="h1">{content.title}</Heading>
             </Section>
 
@@ -84,10 +84,10 @@ export function TotpEmailTemplate({ code, purpose }: TotpTemplateData) {
             </Section>
 
             <Section className="mx-5 my-5 rounded-lg border-2 border-muted-100 bg-muted-50 p-5 text-center">
-              <Text className='m-0 font-bold text-[32px] text-muted-600 tracking-[8px]'>{code}</Text>
+              <Text className="m-0 font-bold text-[32px] text-muted-600 tracking-[8px]">{code}</Text>
             </Section>
 
-            <Section className='px-5 py-5 text-center text-muted-400 text-sm'>
+            <Section className="px-5 py-5 text-center text-muted-400 text-sm">
               <Text>
                 This code will expire within <strong>8 minutes</strong> of issuing.
               </Text>

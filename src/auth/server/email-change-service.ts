@@ -203,7 +203,7 @@ async function sendEmailChangeVerification(newEmail: string, oldEmail: string, c
       oldEmail,
       newEmail,
       verificationUrl,
-      subject: 'Verify Your New Email Address'
+      subject: 'Verify Your New Email Address',
     });
 
     // Send email directly using centralized service

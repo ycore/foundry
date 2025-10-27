@@ -6,7 +6,7 @@ import { createEmailProviderBase } from './base-provider';
  * Implementation for Resend email service (https://resend.com)
  */
 export function createResendEmailProvider(): EmailProvider {
-  return createEmailProviderBase('resend', async (options) => {
+  return createEmailProviderBase('resend', async options => {
     const { apiKey, to, from, template } = options;
 
     const response = await fetch('https://api.resend.com/emails', {

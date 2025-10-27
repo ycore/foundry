@@ -11,7 +11,7 @@ import { createEmailProviderBase } from './base-provider';
 export function createMailChannelsEmailProvider(): EmailProvider {
   const apiUrl = 'https://api.mailchannels.net/tx/v1/send';
 
-  return createEmailProviderBase('mailchannels', async (options) => {
+  return createEmailProviderBase('mailchannels', async options => {
     const { apiKey, to, from, template } = options;
 
     const payload = {

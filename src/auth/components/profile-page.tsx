@@ -151,7 +151,9 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
                   <Button onClick={handleChangeEmail} disabled={isChangingEmail || !newEmail.trim()} size="sm">
                     {isChangingEmail ? 'Sending...' : 'Send Verification'}
                   </Button>
-                  <Button variant="outline" size="sm"
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setIsEditingEmail(false);
                       setNewEmail('');
@@ -236,7 +238,7 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
                 </AlertDialog>
               </div>
               {deleteFetcher.errors?.form && <SecureFetcherError error={deleteFetcher.errors.form} />}
-              <p className='mt-1 text-destructive/80 text-xs'>Permanently delete your account and all associated data.</p>
+              <p className="mt-1 text-destructive/80 text-xs">Permanently delete your account and all associated data.</p>
             </div>
           </div>
         )}

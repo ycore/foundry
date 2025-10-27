@@ -182,7 +182,7 @@ export function SignUpForm({ signinUrl, recoverUrl }: SignUpFormProps) {
 
       {/* WebAuthn status indicator */}
       {webAuthnSupported && (
-        <div className='flex justify-between text-muted-foreground text-xs'>
+        <div className="flex justify-between text-muted-foreground text-xs">
           {platformAuthAvailable ? (
             <span className="flex items-center gap-2">
               <SvgIcon iconId="CircleCheck" className="h-4 w-4 text-green-500" />

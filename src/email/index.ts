@@ -6,7 +6,23 @@ export { EmailSchema } from './email-validator';
 export { createLocalDevEmailProvider } from './providers/local-dev';
 export { createMailChannelsEmailProvider } from './providers/mailchannels';
 export { createResendEmailProvider } from './providers/resend';
-export { assertTestEmailCount, assertTestEmailSent, assertTestNoEmailsSent, clearTestSentEmails, createTestMockEmailProvider, findTestEmailByTo, findTestEmailsBySubject, getTestEmailCount, getTestEmailFailureState, getTestLastSentEmail, getTestSentEmails, resetTestEmailProvider, resetTestEmailToSuccess, simulateTestEmailFailure, type StoredTestEmail } from './providers/test-mock';
+export {
+  assertTestEmailCount,
+  assertTestEmailSent,
+  assertTestNoEmailsSent,
+  clearTestSentEmails,
+  createTestMockEmailProvider,
+  findTestEmailByTo,
+  findTestEmailsBySubject,
+  getTestEmailCount,
+  getTestEmailFailureState,
+  getTestLastSentEmail,
+  getTestSentEmails,
+  resetTestEmailProvider,
+  resetTestEmailToSuccess,
+  simulateTestEmailFailure,
+  type StoredTestEmail,
+} from './providers/test-mock';
 export { type TotpContent, TotpEmailTemplate, type TotpRepository, type TotpTemplateData, type VerificationPurpose, totpRepository } from './templates/auth-totp';
 export { type EmailChangeNotificationData, EmailChangeNotificationTemplate } from './templates/email-change-notification';
 export { type EmailChangeVerificationData, EmailChangeVerificationTemplate } from './templates/email-change-verification';

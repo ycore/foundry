@@ -265,11 +265,7 @@ export function createAuthRepository(db: DrizzleD1Database<Record<string, unknow
     /** Update user pending data */
     updateUserPending: async (id: string, pending: PendingData | null) => {
       try {
-        const result = await db
-          .update(users)
-          .set({ pending })
-          .where(eq(users.id, id))
-          .returning();
+        const result = await db.update(users).set({ pending }).where(eq(users.id, id)).returning();
 
         if (result.length === 0) {
           return notFoundError('User', id);

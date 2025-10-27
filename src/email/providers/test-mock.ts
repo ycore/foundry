@@ -54,8 +54,8 @@ export function createTestMockEmailProvider(): EmailProvider {
       }
 
       // Use base provider for consistent behavior
-      const baseProvider = createEmailProviderBase('test-mock', async (opts) => {
-        await new Promise((resolve) => setTimeout(resolve, EMAIL_PROVIDER_DELAYS.TEST_MOCK));
+      const baseProvider = createEmailProviderBase('test-mock', async opts => {
+        await new Promise(resolve => setTimeout(resolve, EMAIL_PROVIDER_DELAYS.TEST_MOCK));
 
         logger.debug('email_test_mock_sent', {
           provider: 'test-mock',
@@ -80,7 +80,7 @@ export function createTestMockEmailProvider(): EmailProvider {
  * Get all sent emails (returns copy to prevent mutation)
  */
 export function getTestSentEmails(): StoredTestEmail[] {
-  return sentEmails.map((email) => ({
+  return sentEmails.map(email => ({
     to: email.to,
     from: email.from,
     template: {
@@ -122,14 +122,14 @@ export function getTestEmailCount(): number {
  * Find email sent to specific recipient
  */
 export function findTestEmailByTo(to: string): StoredTestEmail | undefined {
-  return sentEmails.find((email) => email.to === to);
+  return sentEmails.find(email => email.to === to);
 }
 
 /**
  * Find all emails with subject containing search string
  */
 export function findTestEmailsBySubject(subject: string): StoredTestEmail[] {
-  return sentEmails.filter((email) => email.template.subject.includes(subject));
+  return sentEmails.filter(email => email.template.subject.includes(subject));
 }
 
 /**

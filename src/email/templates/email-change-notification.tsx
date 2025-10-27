@@ -23,14 +23,20 @@ export function EmailChangeNotificationTemplate({ oldEmail, newEmail }: EmailCha
             </Section>
 
             <Section className="m-5 rounded-lg border-2 border-muted-100 bg-muted-50 p-5 text-center">
-              <Text>A request was received to change the account access email from <strong>{oldEmail}</strong> to <strong>{newEmail}</strong>, and is pending approval.</Text>
-              <Text>A verification code was sent to <strong>{newEmail}</strong>.</Text>
+              <Text>
+                A request was received to change the account access email from <strong>{oldEmail}</strong> to <strong>{newEmail}</strong>, and is pending approval.
+              </Text>
+              <Text>
+                A verification code was sent to <strong>{newEmail}</strong>.
+              </Text>
               <Text>The account email will only be changed once the new address is successfully verified.</Text>
             </Section>
 
             <Section className="m-4 text-center text-muted-400 text-sm">
               <Text>If the email change was not requested, consider that someone may have unauthorized access to the account. It may be necessary to secure the account.</Text>
-              <Heading as="h3" className="text-red-500">If unauthorized, take immediate action:</Heading>
+              <Heading as="h3" className="text-red-500">
+                If unauthorized, take immediate action:
+              </Heading>
               <Section className="text-left mx-auto max-w-md">
                 <Text className="italic">• Sign in to the account at {oldEmail}</Text>
                 <Text className="italic">• Review the security settings and passkeys</Text>
