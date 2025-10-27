@@ -4,10 +4,10 @@ import { getKVStore, type KVBindings } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
 
 import { sendMail } from '../../email/server';
-import { createEmailChangeNotificationTemplate } from '../../email/templates/email-change-notification';
-import { createEmailChangeVerificationTemplate } from '../../email/templates/email-change-verification';
+import { renderEmailTemplate } from '../../email/server/render-email';
+import { EmailChangeNotificationTemplate } from '../../email/templates/email-change-notification';
+import { EmailChangeVerificationTemplate } from '../../email/templates/email-change-verification';
 import { createVerificationCode } from './totp-service';
-import { sendVerificationEmail } from './verification-service';
 
 /**
  * Pending email change request structure
@@ -141,14 +141,13 @@ export async function deleteEmailChangeRequest(userId: string, context: Readonly
  * Send notification to old email address about email change request
  * Does NOT include a verification code - just informational
  */
-export async function sendEmailChangeNotification(
-  oldEmail: string,
-  newEmail: string,
-  context: Readonly<RouterContextProvider>,
-): Promise<Result<void>> {
+export async function sendEmailChangeNotification(oldEmail: string, newEmail: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
   try {
-    // Create email content
-    const emailContent = createEmailChangeNotificationTemplate({ oldEmail, newEmail });
+    const emailContent = await renderEmailTemplate(EmailChangeNotificationTemplate, {
+      oldEmail,
+      newEmail,
+      subject: 'Email Change Request - Action May Be Required',
+    });
 
     // Send email using centralized service (handles provider setup automatically)
     const sendResult = await sendMail(context, {
@@ -180,14 +179,9 @@ export async function sendEmailChangeNotification(
 
 /**
  * Send email change verification email with custom template
- * Generates TOTP code and creates custom email template with email change context
+ * Generates TOTP code and sends custom email template with email change context
  */
-async function sendEmailChangeVerification(
-  newEmail: string,
-  oldEmail: string,
-  context: Readonly<RouterContextProvider>,
-  verificationUrl?: string,
-): Promise<Result<void>> {
+async function sendEmailChangeVerification(newEmail: string, oldEmail: string, context: Readonly<RouterContextProvider>, verificationUrl?: string): Promise<Result<void>> {
   try {
     // Generate TOTP code
     const codeResult = await createVerificationCode(newEmail, 'email-change', context, { oldEmail, newEmail });
@@ -204,21 +198,18 @@ async function sendEmailChangeVerification(
     const code = codeResult;
 
     // Create custom email template with code and email change context
-    const customTemplate = createEmailChangeVerificationTemplate({
+    const emailTemplate = await renderEmailTemplate(EmailChangeVerificationTemplate, {
       code,
       oldEmail,
       newEmail,
       verificationUrl,
+      subject: 'Verify Your New Email Address'
     });
 
-    // Send verification email with custom template
-    const sendResult = await sendVerificationEmail({
-      email: newEmail,
-      purpose: 'email-change',
-      metadata: { oldEmail, newEmail },
-      context,
-      customTemplate,
-      verificationUrl,
+    // Send email directly using centralized service
+    const sendResult = await sendMail(context, {
+      to: newEmail,
+      template: emailTemplate,
     });
 
     if (isError(sendResult)) {
@@ -249,14 +240,7 @@ async function sendEmailChangeVerification(
  * 2. Send verification code to new email
  * 3. Send notification to old email
  */
-export async function requestEmailChange(
-  userId: string,
-  oldEmail: string,
-  newEmail: string,
-  context: Readonly<RouterContextProvider>,
-  kvBinding: string,
-  verificationUrl?: string,
-): Promise<Result<void>> {
+export async function requestEmailChange(userId: string, oldEmail: string, newEmail: string, context: Readonly<RouterContextProvider>, kvBinding: string, verificationUrl?: string): Promise<Result<void>> {
   // Create pending change request
   const createResult = await createEmailChangeRequest(userId, oldEmail, newEmail, context, kvBinding);
 

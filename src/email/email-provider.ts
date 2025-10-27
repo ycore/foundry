@@ -1,16 +1,16 @@
 import type { Result } from '@ycore/forge/result';
-import { err } from '@ycore/forge/result';
+import { err, ok } from '@ycore/forge/result';
 import type { EmailConfig, EmailProvider, EmailProviderConfig, EmailProviders } from './@types/email.types';
-import { MockEmailProvider } from './providers/local-dev';
-import { MailChannelsEmailProvider } from './providers/mailchannels';
-import { ResendEmailProvider } from './providers/resend';
-import { TestMockEmailProvider } from './providers/test-mock';
+import { createLocalDevEmailProvider } from './providers/local-dev';
+import { createMailChannelsEmailProvider } from './providers/mailchannels';
+import { createResendEmailProvider } from './providers/resend';
+import { createTestMockEmailProvider } from './providers/test-mock';
 
 const providerRegistry: Record<EmailProviders, () => EmailProvider> = {
-  'local-dev': () => new MockEmailProvider(),
-  mailchannels: () => new MailChannelsEmailProvider(),
-  resend: () => new ResendEmailProvider(),
-  'test-mock': () => new TestMockEmailProvider(),
+  'local-dev': createLocalDevEmailProvider,
+  mailchannels: createMailChannelsEmailProvider,
+  resend: createResendEmailProvider,
+  'test-mock': createTestMockEmailProvider,
 };
 
 export function createEmailProvider(providerName: string): Result<EmailProvider> {
@@ -20,7 +20,8 @@ export function createEmailProvider(providerName: string): Result<EmailProvider>
 
   try {
     const factory = providerRegistry[providerName];
-    return factory();
+    const provider = factory();
+    return ok(provider);
   } catch (error) {
     return err(`Failed to create email provider: ${providerName}`, undefined, { cause: error });
   }

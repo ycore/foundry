@@ -10,8 +10,8 @@ import { emailContext } from '../email.context';
  * This eliminates prop-drilling of email config through function parameters.
  */
 export function emailConfigMiddleware(emailConfig: EmailConfig): MiddlewareFunction<Response> {
-	return async ({ context }, next) => {
-		setContext(context, emailContext, emailConfig);
-		return next();
-	};
+  return async ({ context }, next) => {
+    setContext(context, emailContext, emailConfig);
+    return next();
+  };
 }

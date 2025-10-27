@@ -2,9 +2,9 @@ import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, type Result } from '@ycore/forge/result';
 import type { RouterContextProvider } from 'react-router';
 
-import type { EmailTemplate } from '../../email/@types/email.types';
 import { sendMail } from '../../email/server';
-import { createTotpTemplate } from '../../email/templates/auth-totp';
+import { renderEmailTemplate } from '../../email/server/render-email';
+import { TotpEmailTemplate, totpRepository } from '../../email/templates/auth-totp';
 import { createVerificationCode, type VerificationPurpose } from './totp-service';
 
 export interface SendVerificationOptions {
@@ -12,16 +12,15 @@ export interface SendVerificationOptions {
   purpose: VerificationPurpose;
   metadata?: Record<string, unknown>;
   context: Readonly<RouterContextProvider>;
-  customTemplate?: EmailTemplate;
-  verificationUrl?: string;
 }
 
 /**
  * Send verification email with TOTP code
- * Orchestrates code generation and email sending
+ * Generates TOTP code and sends default TOTP template
+ * For custom templates, use createVerificationCode + renderEmailTemplate + sendMail directly
  */
 export async function sendVerificationEmail(options: SendVerificationOptions): Promise<Result<void>> {
-  const { email, purpose, metadata, context, customTemplate, verificationUrl } = options;
+  const { email, purpose, metadata, context } = options;
 
   try {
     // Generate TOTP code
@@ -38,8 +37,12 @@ export async function sendVerificationEmail(options: SendVerificationOptions): P
 
     const code = codeResult;
 
-    // Create email content - use custom template if provided, otherwise use default TOTP template
-    const emailContent = customTemplate || createTotpTemplate({ code, purpose });
+    // Create default TOTP email template
+    const emailContent = await renderEmailTemplate(TotpEmailTemplate, {
+      code,
+      purpose,
+      subject: totpRepository[purpose].title,
+    });
 
     // Send email using centralized service (handles provider setup automatically)
     const sendResult = await sendMail(context, {
