@@ -1,6 +1,6 @@
 {
   "name": "@ycore/foundry",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "private": true,
   "type": "module",
   "repository": {
@@ -9,33 +9,33 @@
   },
   "exports": {
     "./auth": {
-      "types": "./src/auth/index.ts",
-      "import": "./src/auth/index.ts"
+      "types": "./dist/auth/index.d.ts",
+      "import": "./dist/auth/index.js"
     },
     "./auth/server": {
-      "types": "./src/auth/server/index.ts",
-      "import": "./src/auth/server/index.ts"
+      "types": "./dist/auth/server/index.d.ts",
+      "import": "./dist/auth/server/index.js"
     },
     "./auth/schema": {
-      "types": "./src/auth/schema/index.ts",
-      "import": "./src/auth/schema/index.ts",
-      "require": "./src/auth/schema/index.ts"
+      "types": "./dist/auth/schema/index.d.ts",
+      "import": "./dist/auth/schema/index.js",
+      "require": "./dist/auth/schema/index.js"
     },
     "./email": {
-      "types": "./src/email/index.ts",
-      "import": "./src/email/index.ts"
+      "types": "./dist/email/index.d.ts",
+      "import": "./dist/email/index.js"
     },
     "./email/server": {
-      "types": "./src/email/server/index.ts",
-      "import": "./src/email/server/index.ts"
+      "types": "./dist/email/server/index.d.ts",
+      "import": "./dist/email/server/index.js"
     },
     "./secure": {
-      "types": "./src/secure/index.ts",
-      "import": "./src/secure/index.ts"
+      "types": "./dist/secure/index.d.ts",
+      "import": "./dist/secure/index.js"
     },
     "./secure/server": {
-      "types": "./src/secure/server/index.ts",
-      "import": "./src/secure/server/index.ts"
+      "types": "./dist/secure/server/index.d.ts",
+      "import": "./dist/secure/server/index.js"
     },
     "./package.json": "./package.json"
   },
