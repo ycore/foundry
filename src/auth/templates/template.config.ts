@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { EmailTailwindConfig } from '../../email/@types/email-tailwind.types';
 
 /**
@@ -6,7 +7,7 @@ import type { EmailTailwindConfig } from '../../email/@types/email-tailwind.type
 export const authTemplateConfig: EmailTailwindConfig = {
   inputFilespec: ['workspaces/foundry/src/auth/templates/**/*.tsx'],
   outputFile: 'workspaces/foundry/src/auth/templates/tailwind.styles.ts',
-  baseDir: process.cwd(),
+  baseDir: path.resolve(process.cwd(), '../..'),
   cssInput: ['workspaces/componentry/src/shadcn-ui/styles/gray.css', 'workspaces/componentry/src/shadcn-ui/styles/shadcn-ui.css'],
   validate: true,
 };

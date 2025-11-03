@@ -58,6 +58,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist node_modules",
+    "ws:email": "bun ./src/email/create-tailwind-cli.ts ./src/auth/templates/template.config.ts ./src/email/templates/template.config.ts",
     "ws:format": "biome format src",
     "ws:lint": "biome lint src",
     "ws:types": "wrangler types --include-env=false './src/@types/worker-runtime.d.ts'"
