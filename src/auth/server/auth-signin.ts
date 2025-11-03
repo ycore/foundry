@@ -206,7 +206,7 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         }
 
         // Create authenticated session
-        const authSessionResult = await createAuthenticatedSession(context, user, email, 'signin');
+        const authSessionResult = await createAuthenticatedSession(context, user!, email, 'signin');
         if (isError(authSessionResult)) {
           // System error - session creation failed
           if (isSystemError(authSessionResult)) {

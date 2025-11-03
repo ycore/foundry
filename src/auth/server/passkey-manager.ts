@@ -184,7 +184,7 @@ export async function generateAddPasskeyOptions(
   }
 
   // Map to include both ID and transports for proper exclusion
-  const excludeCredentials = existingAuthsResult.map((auth: Authenticator) => ({ id: auth.id, transports: auth.transports as string[] }));
+  const excludeCredentials = existingAuthsResult.map((auth: Authenticator) => ({ id: auth.id, transports: auth.transports as AuthenticatorTransport[] }));
   const challenge = generateChallenge();
   const options = createRegistrationOptions(rpName, rpId, session.user.email, session.user.displayName, challenge, excludeCredentials);
 
