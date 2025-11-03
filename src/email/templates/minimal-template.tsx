@@ -1,24 +1,30 @@
-import { Body, Container, Head, Html, Tailwind, Text } from '@react-email/components';
-import { emailTailwindConfig } from './email-tailwind.config';
+import { Body, Container, Head, Html, Section, Text } from '@ycore/componentry/email';
+import { defineEmailTemplate } from '../@types/email-template-builder';
+import { TEMPLATE_STYLES_MAP } from './tailwind.styles';
 
 export interface MinimalEmailData {
+  subject: string;
   message: string;
 }
 
 /**
- * Minimal Email Template Component
+ * Minimal Email Template
  */
-export function MinimalEmailTemplate({ message }: MinimalEmailData) {
-  return (
-    <Html>
+export const MinimalEmailTemplate = defineEmailTemplate({
+  component: ({ message }: MinimalEmailData) => (
+    <Html lang="en">
       <Head />
-      <Tailwind config={emailTailwindConfig}>
-        <Body className="bg-white font-sans">
-          <Container className="mx-auto max-w-2xl">
+      <Body className="bg-white font-sans">
+        <Container className="mx-auto max-w-2xl">
+          <Section className="p-4">
             <Text className="text-gray-900">{message}</Text>
-          </Container>
-        </Body>
-      </Tailwind>
+          </Section>
+        </Container>
+      </Body>
     </Html>
-  );
-}
+  ),
+
+  subject: ({ subject }) => subject,
+
+  stylesMap: TEMPLATE_STYLES_MAP,
+});

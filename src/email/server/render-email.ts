@@ -1,45 +1,47 @@
-import { render } from '@react-email/components';
-import type { JSXElementConstructor, ReactElement } from 'react';
+/**
+ * Email Template Renderer
+ *
+ * This file provides the rendering interface for email templates
+ * using the new custom email components system.
+ */
+
+import { type EmailRenderOptions, type EmailTemplatePropsWithSubject as NewEmailTemplatePropsWithSubject, renderEmail } from '@ycore/componentry/email/server';
 import type { EmailTemplate } from '../@types/email.types';
+import type { EmailTemplateObject } from '../@types/email-template-builder';
 
 /**
- * Props wrapper that includes subject metadata
- * The subject is not passed to the component, but used for email metadata
+ * Generic email template renderer - handles rendering React email templates to HTML and plaintext
+ *
+ * Accepts EmailTemplateObject created by defineEmailTemplate() and renders it with the provided data.
+ * Automatically extracts subject from the template definition and applies Tailwind styles map.
+ *
+ * @example
+ * ```typescript
+ * const email = await renderEmailTemplate(ContactEmailTemplate, {
+ *   name: 'John Doe',
+ *   email: 'john@example.com',
+ *   message: 'Hello!',
+ *   origin: 'https://example.com',
+ * });
+ * ```
  */
-export type EmailTemplatePropsWithSubject<TComponentProps> = TComponentProps & {
-  subject: string | ((props: TComponentProps) => string);
-};
-
-/**
- * Generic email template renderer - handles rendering React email components to HTML and plaintext
- */
-export async function renderEmailTemplate<TComponentProps>(
-  component: (props: TComponentProps) => ReactElement<unknown, string | JSXElementConstructor<unknown>>,
-  props: EmailTemplatePropsWithSubject<TComponentProps>
-): Promise<EmailTemplate> {
-  const { subject } = props;
-
-  // Determine email subject and component props based on subject type
-  let emailSubject: string;
-  let componentProps: TComponentProps;
-
-  if (typeof subject === 'function') {
-    // Subject is a function - extract it and derive email subject from component props
-    const { subject: _, ...restProps } = props;
-    componentProps = restProps as TComponentProps;
-    emailSubject = subject(componentProps);
-  } else {
-    // Subject is a string - keep it in component props AND use for email metadata
-    componentProps = props as TComponentProps;
-    emailSubject = subject;
-  }
-
-  // Render component with appropriate props
-  const [html, text] = await Promise.all([render(component(componentProps)), render(component(componentProps), { plainText: true })]);
+export async function renderEmailTemplate<TData>(template: EmailTemplateObject<TData>, data: TData, options?: EmailRenderOptions): Promise<EmailTemplate> {
+  // Use the new renderEmail function from custom components
+  const result = await renderEmail(
+    template.component,
+    {
+      ...data,
+      subject: template.subject,
+    } as NewEmailTemplatePropsWithSubject<TData>,
+    {
+      ...options,
+      tailwindStylesMap: template.stylesMap ?? options?.tailwindStylesMap,
+    }
+  );
 
   return {
-    subject: emailSubject,
-    html,
-    text,
+    subject: result.subject || '',
+    html: result.html,
+    text: result.text,
   };
 }

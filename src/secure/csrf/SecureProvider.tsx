@@ -7,6 +7,6 @@ export interface SecureProviderProps {
 }
 
 /** Provides CSRF protection using remix-utils token context */
-export const SecureProvider = ({ children, token }: SecureProviderProps) => {
+export const SecureProvider: React.FC<SecureProviderProps> = ({ children, token }) => {
   return <AuthenticityTokenProvider token={token}>{children}</AuthenticityTokenProvider>;
 };

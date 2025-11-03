@@ -9,7 +9,7 @@ import type { AuthenticatorsCardProps, ProfileCardProps, ProfilePageProps } from
 import { convertServerOptionsToWebAuthn } from '../server/webauthn-credential';
 import { isWebAuthnSupported, startRegistration } from './webauthn-client';
 
-export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }: ProfileCardProps) {
+export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }: ProfileCardProps): React.JSX.Element {
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const emailFetcher = useSecureFetcher();
@@ -247,7 +247,7 @@ export function ProfileCard({ user, signoutUrl, verifyUrl, pendingEmailChange }:
   );
 }
 
-export function AuthenticatorsCard({ authenticators, profileUrl }: AuthenticatorsCardProps) {
+export function AuthenticatorsCard({ authenticators, profileUrl }: AuthenticatorsCardProps): React.JSX.Element {
   const addFetcher = useSecureFetcher();
   const renameFetcher = useSecureFetcher();
   const deleteFetcher = useSecureFetcher();
@@ -619,7 +619,7 @@ export function AuthenticatorsCard({ authenticators, profileUrl }: Authenticator
   );
 }
 
-export function ProfilePage({ children }: ProfilePageProps) {
+export function ProfilePage({ children }: ProfilePageProps): React.JSX.Element {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-8">

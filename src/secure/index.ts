@@ -16,14 +16,20 @@ export const SecureForm = Object.assign(SecureFormComponent, {
 
 import * as FormComponents from './csrf/form';
 import { Form as FormComponent } from './csrf/form';
-export const Form = Object.assign(FormComponent, {
+export const Form: typeof FormComponent & {
+  Field: typeof FormComponents.FormField;
+  Error: typeof FormComponents.FormError;
+} = Object.assign(FormComponent, {
   Field: FormComponents.FormField,
   Error: FormComponents.FormError,
 });
 
 import * as SecureFetcherComponents from './csrf/SecureFetcher';
 import { SecureFetcherForm as SecureFetcherFormComponent } from './csrf/SecureFetcher';
-export const SecureFetcher = Object.assign(SecureFetcherFormComponent, {
+export const SecureFetcher: typeof SecureFetcherFormComponent & {
+  Field: typeof SecureFetcherComponents.SecureFetcherField;
+  Error: typeof SecureFetcherComponents.SecureFetcherError;
+} = Object.assign(SecureFetcherFormComponent, {
   Field: SecureFetcherComponents.SecureFetcherField,
   Error: SecureFetcherComponents.SecureFetcherError,
 });

@@ -4,7 +4,7 @@ import { FormError, FormField, SecureForm, SecureProvider } from '@ycore/foundry
 import { useActionData, useLoaderData, useNavigation } from 'react-router';
 import type { RecoverFormProps, RecoverPageProps } from '../@types/auth.component.types';
 
-export function RecoverForm({ signinUrl }: RecoverFormProps) {
+export function RecoverForm({ signinUrl }: RecoverFormProps): React.JSX.Element {
   const navigation = useNavigation();
   const actionData = useActionData<any>();
   const isSubmitting = navigation.state === 'submitting';
@@ -33,7 +33,7 @@ export function RecoverForm({ signinUrl }: RecoverFormProps) {
   );
 }
 
-export function RecoverPage({ children, title = 'Account Recovery', description = 'Lost access to your passkeys? Enter your registered email to recover access.' }: RecoverPageProps) {
+export function RecoverPage({ children, title = 'Account Recovery', description = 'Lost access to your passkeys? Enter your registered email to recover access.' }: RecoverPageProps): React.JSX.Element {
   const loaderData = useLoaderData<any>();
   const token = isError(loaderData) ? '' : (loaderData?.token ?? '');
 

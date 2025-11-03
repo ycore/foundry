@@ -13,7 +13,7 @@ export interface VerifyFormProps {
   actionData?: unknown;
 }
 
-export function VerifyForm({ email, purpose = 'signup', resendCooldown: initialCooldown = 60, period = 480, digits = 6, actionData }: VerifyFormProps) {
+export function VerifyForm({ email, purpose = 'signup', resendCooldown: initialCooldown = 60, period = 480, digits = 6, actionData }: VerifyFormProps): React.JSX.Element {
   const [code, setCode] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
 

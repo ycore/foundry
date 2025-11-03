@@ -123,7 +123,7 @@ export const SecureFetcherForm = React.forwardRef<HTMLFormElement, SecureFetcher
 SecureFetcherForm.displayName = 'SecureFetcherForm';
 
 /** Displays fetcher error messages */
-export function SecureFetcherError({ error, className, id }: { error?: string | null; className?: string; id?: string }) {
+export function SecureFetcherError({ error, className, id }: { error?: string | null; className?: string; id?: string }): React.JSX.Element | null {
   if (!error) {
     return null;
   }

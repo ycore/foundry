@@ -8,7 +8,7 @@ import type { SignUpFormProps, SignUpPageProps } from '../@types/auth.component.
 import { createRegistrationOptions } from '../server/webauthn';
 import { isPlatformAuthenticatorAvailable, isWebAuthnSupported, startRegistration } from './webauthn-client';
 
-export function SignUpForm({ signinUrl, recoverUrl }: SignUpFormProps) {
+export function SignUpForm({ signinUrl, recoverUrl }: SignUpFormProps): React.JSX.Element {
   const navigation = useNavigation();
   const submit = useSubmit();
   const actionData = useActionData<any>();
@@ -203,7 +203,7 @@ export function SignUpForm({ signinUrl, recoverUrl }: SignUpFormProps) {
   );
 }
 
-export function SignUpPage({ children, title = 'Create Account', description = 'Sign up for a new account with your passkey' }: SignUpPageProps) {
+export function SignUpPage({ children, title = 'Create Account', description = 'Sign up for a new account with your passkey' }: SignUpPageProps): React.JSX.Element {
   const loaderData = useLoaderData<any>();
   const token = isError(loaderData) ? '' : (loaderData?.token ?? '');
 

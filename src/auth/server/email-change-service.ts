@@ -5,8 +5,8 @@ import type { RouterContextProvider } from 'react-router';
 
 import { sendMail } from '../../email/server';
 import { renderEmailTemplate } from '../../email/server/render-email';
-import { EmailChangeNotificationTemplate } from '../../email/templates/email-change-notification';
-import { EmailChangeVerificationTemplate } from '../../email/templates/email-change-verification';
+import { EmailChangeNotificationTemplate } from '../templates/email-change-notification';
+import { EmailChangeVerificationTemplate } from '../templates/email-change-verification';
 import { createVerificationCode } from './totp-service';
 
 /**
@@ -146,7 +146,6 @@ export async function sendEmailChangeNotification(oldEmail: string, newEmail: st
     const emailContent = await renderEmailTemplate(EmailChangeNotificationTemplate, {
       oldEmail,
       newEmail,
-      subject: 'Email Change Request - Action May Be Required',
     });
 
     // Send email using centralized service (handles provider setup automatically)
@@ -203,7 +202,6 @@ async function sendEmailChangeVerification(newEmail: string, oldEmail: string, c
       oldEmail,
       newEmail,
       verificationUrl,
-      subject: 'Verify Your New Email Address',
     });
 
     // Send email directly using centralized service

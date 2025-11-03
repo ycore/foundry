@@ -1,5 +1,6 @@
-import { Body, Container, Head, Heading, Html, Section, Tailwind, Text } from '@react-email/components';
-import { emailTailwindConfig } from './email-tailwind.config';
+import { Body, Container, Head, Heading, Html, Section, Text } from '@ycore/componentry/email';
+import { defineEmailTemplate } from '../../email/@types/email-template-builder';
+import { TEMPLATE_STYLES_MAP } from './tailwind.styles';
 
 export type VerificationPurpose = 'signup' | 'passkey-add' | 'passkey-delete' | 'email-change' | 'account-delete' | 'recovery';
 
@@ -61,44 +62,45 @@ export const totpRepository = {
 } as const satisfies TotpRepository;
 
 /**
- * TOTP Email Template Component
+ * TOTP Email Template
  * Email template for TOTP verification codes with purpose-specific content
  */
-export function TotpEmailTemplate({ code, purpose }: TotpTemplateData) {
-  const content = totpRepository[purpose];
-  const isHighRisk = purpose === 'account-delete' || purpose === 'passkey-delete';
-  const isAccountDelete = purpose === 'account-delete';
+export const TotpEmailTemplate = defineEmailTemplate({
+  component: ({ code, purpose }: TotpTemplateData) => {
+    const content = totpRepository[purpose];
+    const isHighRisk = purpose === 'account-delete' || purpose === 'passkey-delete';
+    const isAccountDelete = purpose === 'account-delete';
 
-  return (
-    <Html>
-      <Head />
-      <Tailwind config={emailTailwindConfig}>
+    return (
+      <Html lang="en">
+        <Head />
         <Body className="bg-white font-sans">
-          <Container className={`mx-auto max-w-2xl text-gray-900 leading-relaxed ${isAccountDelete ? 'rounded-lg border-2 border-warning-200 bg-warning-100 p-5' : ''}`}>
+          <Container className={`mx-auto max-w-2xl text-foreground leading-relaxed ${isAccountDelete ? 'rounded-lg border-2 border-warning-200 bg-warning-100 p-5' : ''}`}>
             <Section className="px-5 pt-10 pb-5 text-center">
-              <Heading as="h1">{content.title}</Heading>
+              <Heading level={1}>{content.title}</Heading>
             </Section>
 
-            <Section className="px-5 pb-5 text-center text-gray-600">
+            <Section className="px-5 pb-5 text-center text-muted-foreground">
               <Text>{content.message}</Text>
             </Section>
 
-            <Section className="mx-5 my-5 rounded-lg border-2 border-muted-100 bg-muted-50 p-5 text-center">
-              <Text className="m-0 font-bold text-[32px] text-muted-600 tracking-[8px]">{code}</Text>
+            <Section className="mx-5 my-5 rounded-lg border-2 border-border bg-muted p-5 text-center">
+              <Text className="m-0 font-bold text-3xl text-foreground tracking-[8px]">{code}</Text>
             </Section>
 
-            <Section className="px-5 py-5 text-center text-muted-400 text-sm">
+            <Section className="px-5 py-5 text-center text-muted-foreground text-sm">
               <Text>
                 This code will expire within <strong>8 minutes</strong> of issuing.
               </Text>
-              <Text>
-                If this code was not requested,
-                {isHighRisk ? ' consider securing your account' : ' it can be safely ignored'}.
-              </Text>
+              <Text>If this code was not requested,{isHighRisk ? ' consider securing your account' : ' it can be safely ignored'}.</Text>
             </Section>
           </Container>
         </Body>
-      </Tailwind>
-    </Html>
-  );
-}
+      </Html>
+    );
+  },
+
+  subject: ({ purpose }) => totpRepository[purpose].title,
+
+  stylesMap: TEMPLATE_STYLES_MAP,
+});

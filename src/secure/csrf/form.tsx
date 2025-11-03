@@ -7,7 +7,7 @@ const FormFieldContext = React.createContext<FormFieldContextValue | null>(null)
 
 export { Form } from 'react-router';
 
-export function FormField({ label, description, error, className, children }: FormFieldProps) {
+export function FormField({ label, description, error, className, children }: FormFieldProps): React.JSX.Element {
   const id = React.useId();
   const fieldId = `${id}-field`;
   const descriptionId = `${id}-description`;
@@ -57,7 +57,7 @@ export function FormField({ label, description, error, className, children }: Fo
   );
 }
 
-export function FormError({ error, className, id }: FormErrorProps) {
+export function FormError({ error, className, id }: FormErrorProps): React.JSX.Element | null {
   if (!error) {
     return null;
   }

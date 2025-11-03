@@ -9,7 +9,7 @@ import { minLength, object, pipe, string } from 'valibot';
 import { defaultAuthRoutes } from '../auth.config';
 import { authConfigContext } from './auth.context';
 import { getAuthRepository } from './repository';
-import { getAuthSession, updateAuthSession } from './session';
+import { destroyAuthSession, getAuthSession, updateAuthSession } from './session';
 import { type VerificationPurpose, verifyCode } from './totp-service';
 import { sendVerificationEmail } from './verification-service';
 
@@ -395,7 +395,6 @@ export async function verifyAction({ request, context }: VerifyActionArgs) {
   if (resultData.redirectTo) {
     // Check if session should be destroyed (account deletion)
     if (resultData.destroySession) {
-      const { destroyAuthSession } = await import('./session');
       const destroyResult = await destroyAuthSession(request, context);
 
       // Redirect with session destruction cookie

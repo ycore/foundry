@@ -4,7 +4,7 @@ import type { RouterContextProvider } from 'react-router';
 
 import { sendMail } from '../../email/server';
 import { renderEmailTemplate } from '../../email/server/render-email';
-import { TotpEmailTemplate, totpRepository } from '../../email/templates/auth-totp';
+import { TotpEmailTemplate } from '../templates/auth-totp';
 import { createVerificationCode, type VerificationPurpose } from './totp-service';
 
 export interface SendVerificationOptions {
@@ -41,7 +41,6 @@ export async function sendVerificationEmail(options: SendVerificationOptions): P
     const emailContent = await renderEmailTemplate(TotpEmailTemplate, {
       code,
       purpose,
-      subject: totpRepository[purpose].title,
     });
 
     // Send email using centralized service (handles provider setup automatically)

@@ -29,3 +29,5 @@ export { RecoverForm, RecoverPage } from './components/recover-page';
 export { SignInForm, SignInPage } from './components/signin-page';
 export { SignUpForm, SignUpPage } from './components/signup-page';
 export { VerifyForm } from './components/verify-form';
+export type { EmailChangeNotificationData, EmailChangeVerificationData, RecoveryVerificationData, TotpContent, TotpRepository, TotpTemplateData, VerificationPurpose } from './templates';
+export { EmailChangeNotificationTemplate, EmailChangeVerificationTemplate, RecoveryVerificationTemplate, TotpEmailTemplate, totpRepository } from './templates';

@@ -4,8 +4,8 @@ import type { RouterContextProvider } from 'react-router';
 
 import { sendMail } from '../../email/server';
 import { renderEmailTemplate } from '../../email/server/render-email';
-import { RecoveryVerificationTemplate } from '../../email/templates/recovery-verification';
 import type { User } from '../schema';
+import { RecoveryVerificationTemplate } from '../templates/recovery-verification';
 import { getAuthRepository } from './repository';
 import { createVerificationCode } from './totp-service';
 
@@ -30,7 +30,6 @@ async function sendRecoveryVerification(email: string, context: Readonly<RouterC
       code,
       email,
       verificationUrl,
-      subject: 'Account Recovery - Verification Required',
     });
 
     // Send email directly using centralized service

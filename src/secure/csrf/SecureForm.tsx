@@ -36,7 +36,7 @@ const CSRF_TOKER_ERROR = 'Form load error. Please refresh the page or contact su
 const SecureFormContext = React.createContext<{ errors: FieldErrors | null }>({ errors: null });
 
 /** Form with CSRF protection and error handling */
-export function SecureForm({ children, csrf_name, errors, ...props }: SecureFormProps) {
+export function SecureForm({ children, csrf_name, errors, ...props }: SecureFormProps): React.JSX.Element {
   const token = useAuthenticityToken();
 
   // Use override if provided, otherwise use default 'csrf_token'
@@ -68,7 +68,7 @@ export function SecureForm({ children, csrf_name, errors, ...props }: SecureForm
 }
 
 /** Form field with automatic error display and ARIA attributes */
-export function SecureFormField({ name, label, description, error, required, className, children }: SecureFormFieldProps) {
+export function SecureFormField({ name, label, description, error, required, className, children }: SecureFormFieldProps): React.JSX.Element {
   const { errors } = React.useContext(SecureFormContext);
   const fieldError = error || errors?.[name];
   const errorId = fieldError ? `${name}-error` : undefined;
@@ -103,7 +103,7 @@ export function SecureFormField({ name, label, description, error, required, cla
 }
 
 /** Displays form-level error messages */
-export function SecureFormError({ error, className, id }: SecureFormErrorProps) {
+export function SecureFormError({ error, className, id }: SecureFormErrorProps): React.JSX.Element | null {
   if (!error) {
     return null;
   }
