@@ -1,0 +1,14 @@
+export type { EmailConfig, EmailProvider, EmailProviderConfig, EmailProviders, EmailSendResult, EmailTemplate, SendEmailOptions, SendMailOptions, TotpEmailData } from './@types/email.types';
+export type { EmailTemplateDefinition, EmailTemplateObject } from './@types/email-template-builder';
+export { defineEmailTemplate } from './@types/email-template-builder';
+export { defaultEmailConfig } from './email.config';
+export { emailContext } from './email.context';
+export { createEmailProvider, getEmailProviderNames, getProviderConfig, getSupportedProviders, isValidProvider } from './email-provider';
+export { EmailSchema } from './email-validator';
+export { createLocalDevEmailProvider } from './providers/local-dev';
+export { createMailChannelsEmailProvider } from './providers/mailchannels';
+export { createResendEmailProvider } from './providers/resend';
+export type { StoredTestEmail } from './providers/test-mock';
+export { assertTestEmailCount, assertTestEmailSent, assertTestNoEmailsSent, clearTestSentEmails, createTestMockEmailProvider, findTestEmailByTo, findTestEmailsBySubject, getTestEmailCount, getTestEmailFailureState, getTestLastSentEmail, getTestSentEmails, resetTestEmailProvider, resetTestEmailToSuccess, simulateTestEmailFailure, } from './providers/test-mock';
+export { type MinimalEmailData, MinimalEmailTemplate } from './templates/minimal-template';
+export { type MockEmailData, MockEmailTemplate } from './templates/mock-template';
