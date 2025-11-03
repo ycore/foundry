@@ -278,11 +278,12 @@ function parseCSSToTypeScript(css: string, originalClasses: Set<string>): { stat
 }
 
 /**
- * Extract CSS variables from :root
+ * Extract CSS variables from :root and @property declarations
  */
 function extractCSSVariables(css: string): Map<string, string> {
   const cssVars = new Map<string, string>();
 
+  // Extract from :root and :host blocks (custom theme variables)
   const rootRegex = /(:root|:host)[^{]*\{([^}]+)\}/gs;
   let rootMatch = rootRegex.exec(css);
 
@@ -298,6 +299,23 @@ function extractCSSVariables(css: string): Map<string, string> {
     }
 
     rootMatch = rootRegex.exec(css);
+  }
+
+  // Extract from @property rules (Tailwind v4 internal variables)
+  const propertyRegex = /@property\s+(--[\w-]+)\s*\{([^}]+)\}/gs;
+  let propertyMatch = propertyRegex.exec(css);
+
+  while (propertyMatch !== null) {
+    const [, varName, declarations] = propertyMatch;
+    const initialValueMatch = /initial-value\s*:\s*([^;]+);/i.exec(declarations);
+
+    if (initialValueMatch) {
+      // Remove quotes if present and trim whitespace
+      const initialValue = initialValueMatch[1].trim().replace(/^["']|["']$/g, '');
+      cssVars.set(varName, initialValue);
+    }
+
+    propertyMatch = propertyRegex.exec(css);
   }
 
   return cssVars;
