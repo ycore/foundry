@@ -40,7 +40,6 @@ async function sendRecoveryVerification(email: string, context: Readonly<RouterC
       return sendResult;
     }
 
-    logger.info('recovery_verification_sent', { email });
     return ok(undefined);
   } catch (error) {
     logger.error('recovery_verification_unexpected_error', { email, error: error instanceof Error ? error.message : 'Unknown error', stack: error instanceof Error ? error.stack : undefined });
@@ -56,7 +55,7 @@ export async function requestAccountRecovery(email: string, context: Readonly<Ro
   const userResult = await repository.getUserByEmail(email);
 
   if (isError(userResult)) {
-    logger.info('recovery_request_email_not_found', { email });
+    logger.error('recovery_request_email_not_found', { email });
     return ok(null);
   }
 

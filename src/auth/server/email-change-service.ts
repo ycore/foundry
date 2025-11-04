@@ -57,13 +57,6 @@ export async function createEmailChangeRequest(
       expirationTtl,
     });
 
-    logger.info('email_change_request_created', {
-      userId,
-      oldEmail,
-      newEmail,
-      expirationTtl,
-    });
-
     return ok(undefined);
   } catch (error) {
     logger.error('email_change_request_creation_failed', {
@@ -124,8 +117,6 @@ export async function deleteEmailChangeRequest(userId: string, context: Readonly
     }
 
     await kv.delete(getEmailChangeKey(userId));
-
-    logger.info('email_change_request_deleted', { userId });
 
     return ok(undefined);
   } catch (error) {
@@ -267,8 +258,6 @@ export async function requestEmailChange(userId: string, oldEmail: string, newEm
       error: flattenError(notificationResult),
     });
   }
-
-  logger.info('email_change_request_completed', { userId, oldEmail, newEmail });
 
   return ok(undefined);
 }

@@ -97,11 +97,6 @@ export function createAuthSuccessResponse(context: Readonly<RouterContextProvide
 
   // Always check verification status - active status is mandatory
   if (user && user.status !== 'active') {
-    logger.info('user_not_verified_redirect_to_verify', {
-      userId: user.id,
-      email: user.email,
-      status: user.status,
-    });
     const redirectTo = authConfig?.routes.verify || defaultAuthRoutes.verify;
     return { redirectTo, cookie };
   }

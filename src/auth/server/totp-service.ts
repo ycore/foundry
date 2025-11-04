@@ -95,6 +95,28 @@ function dynamicTruncation(hash: Uint8Array, digits: number): string {
   return (code % 10 ** digits).toString().padStart(digits, '0');
 }
 
+/**
+ * Constant-time bitwise operations to ensure comparison time is independent
+ */
+function constantTimeEqual(a: string, b: string): boolean {
+  // If lengths differ, still compare to maintain constant time - compare up to the longer length
+  const maxLength = Math.max(a.length, b.length);
+  const aPadded = a.padEnd(maxLength, '\0');
+  const bPadded = b.padEnd(maxLength, '\0');
+
+  let result = 0;
+
+  // XOR all characters - result will be 0 only if all characters match
+  for (let i = 0; i < maxLength; i++) {
+    result |= aPadded.charCodeAt(i) ^ bPadded.charCodeAt(i);
+  }
+
+  // Also check length equality (constant time check)
+  result |= a.length ^ b.length;
+
+  return result === 0;
+}
+
 export function generateSecret(length = 32): Uint8Array {
   if (length <= 0) throw new Error('Length must be positive');
   return crypto.getRandomValues(new Uint8Array(length));
@@ -149,7 +171,7 @@ export async function verifyTOTP(options: VerifyTOTPOptions): Promise<{ valid: b
       period,
     });
 
-    if (token === expectedToken) {
+    if (constantTimeEqual(token, expectedToken)) {
       return { valid: true, timestamp: testTimestamp };
     }
   }
@@ -187,8 +209,6 @@ export async function createVerificationCode(email: string, purpose: Verificatio
     };
 
     await kv.put(kvKeyTemplate(purpose, email), JSON.stringify(verificationData), { expirationTtl: period });
-
-    logger.info('verification_code_created', { email, purpose });
 
     return ok(code);
   } catch (error) {
@@ -267,7 +287,6 @@ export async function verifyCode(email: string, code: string, purpose: Verificat
 
     // Success - delete the verification data
     await kv.delete(kvKey);
-    logger.info('verification_code_verified', { email, purpose });
 
     return ok(verification);
   } catch (error) {

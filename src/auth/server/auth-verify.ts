@@ -9,7 +9,7 @@ import { minLength, object, pipe, string } from 'valibot';
 import { defaultAuthRoutes } from '../auth.config';
 import { authConfigContext } from './auth.context';
 import { getAuthRepository } from './repository';
-import { destroyAuthSession, getAuthSession, updateAuthSession } from './session';
+import { createAuthSession, destroyAuthSession, getAuthSession, updateAuthSession } from './session';
 import { type VerificationPurpose, verifyCode } from './totp-service';
 import { sendVerificationEmail } from './verification-service';
 
@@ -59,12 +59,8 @@ export async function verifyLoader({ request, context }: VerifyLoaderArgs) {
   if (session.user.pending?.type === 'email-change') {
     emailToVerify = session.user.pending.email;
     purpose = 'email-change';
-
-    logger.info('verify_loader_email_change_detected', { userId: session.user.id, oldEmail: session.user.email, newEmail: emailToVerify });
   } else if (session.user.pending?.type === 'account-delete') {
     purpose = 'account-delete';
-
-    logger.info('verify_loader_account_delete_detected', { userId: session.user.id, email: session.user.email });
   }
 
   return respondOk({
@@ -114,11 +110,6 @@ export async function verifyAction({ request, context }: VerifyActionArgs) {
       // For email-change, send to the NEW email from pending change
       if (purpose === 'email-change' && session.user.pending?.type === 'email-change') {
         emailToSendTo = session.user.pending.email;
-        logger.info('verify_resend_email_change', {
-          userId: session.user.id,
-          oldEmail: session.user.email,
-          newEmail: emailToSendTo,
-        });
       }
 
       // Send the verification email (this handles code generation internally)
@@ -220,24 +211,28 @@ export async function verifyAction({ request, context }: VerifyActionArgs) {
             return updateResult;
           }
 
-          // Update session with active status (important for auth context)
+          // Session rotation on privilege elevation (unverified -> active) - prevent session fixation
+          const destroyResult = await destroyAuthSession(request, context);
+          if (isError(destroyResult)) {
+            logger.warning('verify_signup_session_destroy_failed', { userId: user.id, error: flattenError(destroyResult) });
+          }
+
+          // Create new session with active user
           const updatedUser = {
             ...user,
             status: 'active' as const,
           };
 
-          const sessionUpdateResult = await updateAuthSession(request, context, { user: updatedUser });
+          const newSessionResult = await createAuthSession(context, { user: updatedUser });
 
-          if (isError(sessionUpdateResult)) {
-            // Log but continue - status was updated in DB
-            logger.warning('verify_session_update_failed', { userId: user.id, error: flattenError(sessionUpdateResult) });
+          if (isError(newSessionResult)) {
+            // System error - session creation failed
+            logger.error('verify_signup_session_creation_failed', { userId: user.id, error: flattenError(newSessionResult) });
+            return err('Failed to create session', undefined, { status: 500 });
           }
 
           // Return redirect info
-          return ok({
-            sessionCookie: isError(sessionUpdateResult) ? undefined : sessionUpdateResult,
-            redirectTo: authConfig?.routes.signedin || defaultAuthRoutes.signedin,
-          });
+          return ok({ sessionCookie: newSessionResult, redirectTo: authConfig?.routes.signedin || defaultAuthRoutes.signedin });
         }
 
         case 'email-change': {
@@ -290,7 +285,13 @@ export async function verifyAction({ request, context }: VerifyActionArgs) {
             });
           }
 
-          // Update session with new email and status (important for auth context)
+          // Session rotation on privilege elevation - prevent session fixation
+          const destroyResult = await destroyAuthSession(request, context);
+          if (isError(destroyResult)) {
+            logger.warning('verify_email_change_session_destroy_failed', { userId: user.id, error: flattenError(destroyResult) });
+          }
+
+          // Create new session with updated email and status
           const updatedUser = {
             ...user,
             email: newEmail,
@@ -298,34 +299,22 @@ export async function verifyAction({ request, context }: VerifyActionArgs) {
             pending: null,
           };
 
-          const sessionUpdateResult = await updateAuthSession(request, context, { user: updatedUser });
+          const newSessionResult = await createAuthSession(context, { user: updatedUser });
 
-          if (isError(sessionUpdateResult)) {
-            // Log but don't fail - email was already updated in DB
-            logger.warning('verify_email_change_session_update_failed', { userId: user.id, error: flattenError(sessionUpdateResult) });
+          if (isError(newSessionResult)) {
+            // System error - session creation failed
+            logger.error('verify_email_change_session_creation_failed', { userId: user.id, error: flattenError(newSessionResult) });
+            return err('Failed to create session', undefined, { status: 500 });
           }
 
-          logger.info('email_changed_successfully', {
-            userId: user.id,
-            oldEmail,
-            newEmail,
-          });
-
           // Return redirect info (back to profile page for profile management actions)
-          return ok({
-            sessionCookie: isError(sessionUpdateResult) ? undefined : sessionUpdateResult,
-            redirectTo: authConfig?.routes.profile || defaultAuthRoutes.profile,
-          });
+          return ok({ sessionCookie: newSessionResult, redirectTo: authConfig?.routes.profile || defaultAuthRoutes.profile });
         }
 
         case 'recovery': {
           // User has verified their email for recovery
           // Redirect to signup page for passkey registration
-          logger.info('recovery_email_verified', { userId: user.id, email });
-
-          return ok({
-            redirectTo: authConfig?.routes.signup || defaultAuthRoutes.signup,
-          });
+          return ok({ redirectTo: authConfig?.routes.signup || defaultAuthRoutes.signup });
         }
 
         case 'account-delete': {
@@ -347,26 +336,14 @@ export async function verifyAction({ request, context }: VerifyActionArgs) {
             return deleteResult;
           }
 
-          logger.info('account_deleted_successfully', {
-            userId: user.id,
-            email,
-          });
-
           // Destroy session and redirect to signout
-          return ok({
-            redirectTo: authConfig?.routes.signedout || defaultAuthRoutes.signedout,
-            destroySession: true,
-          });
+          return ok({ redirectTo: authConfig?.routes.signedout || defaultAuthRoutes.signedout, destroySession: true });
         }
 
         case 'passkey-add':
         case 'passkey-delete': {
           // These will be handled by their respective action handlers
-          return ok({
-            verified: true,
-            purpose,
-            metadata: verification.metadata,
-          });
+          return ok({ verified: true, purpose, metadata: verification.metadata });
         }
 
         default: {

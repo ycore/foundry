@@ -8,8 +8,7 @@ import type { RouterContextProvider, Session } from 'react-router';
 import type { SessionData, SessionFlashData } from '../@types/auth.types';
 import { authConfigContext } from './auth.context';
 
-const challengeKvTemplate = (email: string): string => `challenge:${email}`;
-const challengeUniqueKvTemplate = (challenge: string): string => `challenge-unique:${challenge}`;
+const challengeKvTemplate = (challenge: string): string => `challenge:${challenge}`;
 
 /**
  * Resolves auth bindings from context following CSRF middleware pattern
@@ -97,7 +96,7 @@ export async function verifyChallengeUniqueness(challenge: string, context: Read
   try {
     const { kv } = resolveAuthBindings(context);
 
-    const uniqueKey = challengeUniqueKvTemplate(challenge);
+    const uniqueKey = challengeKvTemplate(challenge);
     const existing = await kv.get(uniqueKey);
 
     if (existing) {
@@ -113,18 +112,20 @@ export async function verifyChallengeUniqueness(challenge: string, context: Read
 }
 
 /**
- * Clean up challenge session
+ * Clean up challenge uniqueness record from KV
+ * Should be called after successful authentication/registration to free KV storage
+ * TTL (5 minutes) acts as a safety net if cleanup fails
  */
-export async function cleanupChallengeSession(email: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
+export async function cleanupChallengeSession(challenge: string, context: Readonly<RouterContextProvider>): Promise<Result<void>> {
   try {
     const { kv } = resolveAuthBindings(context);
 
-    const challengeKey = challengeKvTemplate(email);
-    await kv.delete(challengeKey);
+    const uniqueKey = challengeKvTemplate(challenge);
+    await kv.delete(uniqueKey);
 
     return ok(undefined);
   } catch (error) {
-    return err('Failed to cleanup challenge session', { email, error });
+    return err('Failed to cleanup challenge uniqueness', { challenge, error });
   }
 }
 
@@ -273,12 +274,6 @@ export async function destroyAuthSession(request: Request, context: Readonly<Rou
   try {
     const sessionStorage = createAuthSessionStorage(context);
     const session = await sessionStorage.getSession(request.headers.get('Cookie'));
-
-    // Get email from session for cleanup
-    const email = session.get('email');
-    if (email) {
-      await cleanupChallengeSession(email, context);
-    }
 
     // Destroy the session and get the clearing cookie
     const cookie = await sessionStorage.destroySession(session);

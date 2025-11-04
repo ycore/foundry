@@ -14,7 +14,7 @@ import type { User } from '../schema';
 import { authConfigContext } from './auth.context';
 import { signupFormSchema } from './auth.validation';
 import { getAuthRepository } from './repository';
-import { createChallengeSession, destroyChallengeSession, getChallengeFromSession } from './session';
+import { cleanupChallengeSession, createChallengeSession, destroyAuthSession, destroyChallengeSession, getChallengeFromSession } from './session';
 import { sendVerificationEmail } from './verification-service';
 import { generateChallenge, getWebAuthnErrorMessage, verifyRegistration } from './webauthn';
 import { createAuthenticatedSession, parseWebAuthnCredential } from './webauthn-utils';
@@ -58,8 +58,6 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
         if (!isError(existingUserResult) && !isRecoveryMode) {
           return err('An account already exists with this email', { email: 'An account already exists with this email' });
         }
-
-        logger.info('signup_mode_detected', { email, isRecoveryMode });
 
         // Get stored challenge from session
         const sessionResult = await getChallengeFromSession(request, context);
@@ -131,7 +129,6 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
         if (isRecoveryMode) {
           // Use existing user for recovery
           user = existingUserResult;
-          logger.info('recovery_mode_using_existing_user', { userId: user.id, email });
         } else {
           // Create new user for normal signup
           const createUserResult = await repository.createUser(email, displayName);
@@ -178,15 +175,28 @@ export async function signupAction({ request, context }: SignUpActionArgs) {
             logger.error('recovery_status_update_failed', { userId: user.id, error: flattenError(statusUpdateResult) });
             // Continue anyway - user can still sign in
           }
-
-          logger.info('recovery_passkey_registered', { userId: user.id, email, recoveryTimestamp });
         }
 
         // Clear challenge from session
-        const cleanupResult = await destroyChallengeSession(session, context);
-        if (isError(cleanupResult)) {
+        const destroyResult = await destroyChallengeSession(session, context);
+        if (isError(destroyResult)) {
           // Log but continue - not critical
-          logger.warning('signup_challenge_cleanup_failed', { error: flattenError(cleanupResult) });
+          logger.warning('signup_challenge_cleanup_failed', { error: flattenError(destroyResult) });
+        }
+
+        // Clean up challenge uniqueness record from KV
+        const cleanupResult = await cleanupChallengeSession(challenge, context);
+        if (isError(cleanupResult)) {
+          // Log but continue - TTL will handle cleanup
+          logger.warning('signup_challenge_uniqueness_cleanup_failed', { error: flattenError(cleanupResult) });
+        }
+
+        // Session rotation on privilege elevation (unrecovered -> active) - prevent session fixation
+        if (isRecoveryMode) {
+          const destroyResult = await destroyAuthSession(request, context);
+          if (isError(destroyResult)) {
+            logger.warning('recovery_session_destroy_failed', { userId: user.id, error: flattenError(destroyResult) });
+          }
         }
 
         // Create authenticated session

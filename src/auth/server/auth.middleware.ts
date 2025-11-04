@@ -147,11 +147,6 @@ function unprotectedAuthMiddleware(authConfig: AuthConfig): MiddlewareFunction<R
     // Check if has unverified session (user in session but not active status)
     const sessionResult = await getAuthSession(request, context);
     if (!isError(sessionResult) && sessionResult?.user && sessionResult.user.status !== 'active') {
-      logger.info('unverified_user_redirecting_to_verify', {
-        userId: sessionResult.user.id,
-        email: sessionResult.user.email,
-        status: sessionResult.user.status,
-      });
       throw redirect(authConfig?.routes.verify || defaultAuthRoutes.verify);
     }
 

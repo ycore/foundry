@@ -13,7 +13,7 @@ import type { Authenticator } from '../schema';
 import { authConfigContext } from './auth.context';
 import { signinFormSchema } from './auth.validation';
 import { getAuthRepository } from './repository';
-import { createChallengeSession, destroyChallengeSession, getChallengeFromSession } from './session';
+import { cleanupChallengeSession, createChallengeSession, destroyChallengeSession, getChallengeFromSession } from './session';
 import { generateChallenge, getWebAuthnErrorMessage, verifyAuthentication } from './webauthn';
 import { createAuthenticatedSession, parseWebAuthnCredential } from './webauthn-utils';
 import { validateWebAuthnRequest } from './webauthn-validation';
@@ -193,16 +193,22 @@ export async function signinAction({ request, context }: SignInActionArgs) {
             } else {
               // Update user object so redirect logic uses correct status
               user.status = 'active';
-              logger.info('status_restored_on_signin', { userId: user?.id, email });
             }
           }
         }
 
         // Clear challenge from session
-        const cleanupResult = await destroyChallengeSession(session, context);
-        if (isError(cleanupResult)) {
+        const destroyResult = await destroyChallengeSession(session, context);
+        if (isError(destroyResult)) {
           // Log but continue - not critical
-          logger.warning('signin_challenge_cleanup_failed', { error: flattenError(cleanupResult) });
+          logger.warning('signin_challenge_cleanup_failed', { error: flattenError(destroyResult) });
+        }
+
+        // Clean up challenge uniqueness record from KV
+        const cleanupResult = await cleanupChallengeSession(challenge, context);
+        if (isError(cleanupResult)) {
+          // Log but continue - TTL will handle cleanup
+          logger.warning('signin_challenge_uniqueness_cleanup_failed', { error: flattenError(cleanupResult) });
         }
 
         // Create authenticated session
@@ -219,10 +225,7 @@ export async function signinAction({ request, context }: SignInActionArgs) {
         const redirectTo = user?.status === 'active' ? authConfig?.routes.signedin || defaultAuthRoutes.signedin : authConfig?.routes.verify || defaultAuthRoutes.verify;
 
         // Return session cookie and redirect info
-        return ok({
-          sessionCookie: authSessionResult,
-          redirectTo,
-        });
+        return ok({ sessionCookie: authSessionResult, redirectTo });
       } catch (error) {
         if (error instanceof Response) {
           throw error;

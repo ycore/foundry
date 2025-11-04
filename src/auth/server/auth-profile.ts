@@ -36,8 +36,5 @@ export async function getUserWithAuthenticators(context: Readonly<RouterContextP
     return authenticatorsResult;
   }
 
-  return ok({
-    user: userResult,
-    authenticators: authenticatorsResult,
-  });
+  return ok({ user: userResult, authenticators: authenticatorsResult });
 }

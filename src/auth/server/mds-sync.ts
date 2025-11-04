@@ -319,11 +319,7 @@ export async function syncMetadataFromMDS(metadataKV: KVNamespace): Promise<Resu
       nextUpdate: payload.nextUpdate,
     });
 
-    return ok({
-      synced: successful,
-      failed,
-      lastSync,
-    });
+    return ok({ synced: successful, failed, lastSync });
   } catch (error) {
     logger.error('mds_sync_failed', {
       error: flattenError(transformError(error)),
@@ -344,10 +340,7 @@ export async function getMDSSyncStatus(metadataKV: KVNamespace): Promise<
 
     const stats = statsJson ? JSON.parse(statsJson) : null;
 
-    return ok({
-      lastSync,
-      stats,
-    });
+    return ok({ lastSync, stats });
   } catch (error) {
     logger.error('mds_status_fetch_failed', {
       error: flattenError(transformError(error)),

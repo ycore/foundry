@@ -92,9 +92,7 @@ export async function recoverAction({ request, context }: RecoverActionArgs) {
       }
 
       // Email doesn't exist - return generic message (prevent enumeration)
-      return ok({
-        message: 'If this email exists, a verification code has been sent.',
-      });
+      return ok({ message: 'If this email exists, a verification code has been sent.' });
     },
   };
 
