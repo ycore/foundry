@@ -1,13 +1,18 @@
-import { getContext, requireContext } from '@ycore/forge/context';
+import { createContextSingleton, getContext, requireContext } from '@ycore/forge/context';
 import type { AppLoadContext } from 'react-router';
-import { createContext } from 'react-router';
 
 import type { AuthConfig } from '../@types/auth.config.types';
 import type { User } from '../schema';
 
-export const authConfigContext = createContext<AuthConfig | null>(null);
+/**
+ * Auth configuration context - singleton pattern to prevent context duplication
+ */
+export const authConfigContext = createContextSingleton<AuthConfig | null>('AuthConfigContext', null);
 
-export const authUserContext = createContext<User | null>(null);
+/**
+ * Auth user context - singleton pattern to prevent context duplication
+ */
+export const authUserContext = createContextSingleton<User | null>('AuthUserContext', null);
 
 /**
  * Require authenticated user from context
