@@ -1,4 +1,7 @@
-import { createContext } from 'react-router';
+import { createContextSingleton } from '@ycore/forge/context';
 import type { EmailConfig } from './@types/email.types';
 
-export const emailContext = createContext<EmailConfig | null>(null);
+/**
+ * Email configuration context for React Router - singleton pattern to prevent context duplication
+ */
+export const emailContext = createContextSingleton<EmailConfig | null>('EmailContext', null);

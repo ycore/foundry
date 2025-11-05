@@ -3,10 +3,8 @@ import { logger } from '@ycore/forge/logger';
 import { err, flattenError, isError, ok, type Result } from '@ycore/forge/result';
 import { getBindings } from '@ycore/forge/services';
 import type { RouterContextProvider } from 'react-router';
+import { createEmailProvider, defaultEmailConfig, emailContext, getProviderConfig } from '@ycore/foundry/email';
 import type { EmailProviderConfig, SendMailOptions } from '../@types/email.types';
-import { defaultEmailConfig } from '../email.config';
-import { emailContext } from '../email.context';
-import { createEmailProvider, getProviderConfig } from '../email-provider';
 
 /**
  * Send email with cascading configuration fallback

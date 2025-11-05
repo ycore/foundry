@@ -1,14 +1,12 @@
-import { createContext } from 'react-router';
+import { createContextSingleton } from '@ycore/forge/context';
 import type { CSRFData } from '../@types/csrf.types';
 
 /**
- * CSRF token context for server-side form protection
- * This is a React Router context used to pass CSRF data from middleware to loaders
+ * CSRF token context for server-side form protection - singleton pattern to prevent context duplication
  */
-export const csrfContext = createContext<CSRFData | null>(null);
+export const csrfContext = createContextSingleton<CSRFData | null>('CSRFContext', null);
 
 /**
- * Context to skip CSRF validation for specific requests
- * Used for authenticated API routes or custom validation flows
+ * Context to skip CSRF validation for specific requests - singleton pattern to prevent context duplication
  */
-export const skipCSRFValidation = createContext<boolean>(false);
+export const skipCSRFValidation = createContextSingleton<boolean>('SkipCSRFValidation', false);

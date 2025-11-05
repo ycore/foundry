@@ -1,7 +1,7 @@
 import { setContext } from '@ycore/forge/context';
 import type { MiddlewareFunction } from 'react-router';
+import { emailContext } from '@ycore/foundry/email';
 import type { EmailConfig } from '../@types/email.types';
-import { emailContext } from '../email.context';
 
 /**
  * Email configuration middleware
